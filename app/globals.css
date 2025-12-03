@@ -1,0 +1,777 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   CSS VARIABLES - DARK MODE (Default)
+   ============================================================ */
+:root {
+  --background: #0a0a0b;
+  --foreground: #fafafa;
+  --card: #141416;
+  --card-foreground: #fafafa;
+  --surface: #141416;
+  --surface-elevated: #1c1c1f;
+  --border: #27272a;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --accent-primary: #3b82f6;
+  --accent-success: #22c55e;
+  --accent-warning: #f59e0b;
+  --accent-danger: #ef4444;
+  --accent-purple: #8b5cf6;
+}
+
+/* ============================================================
+   CSS VARIABLES - LIGHT MODE (High Contrast)
+   ============================================================ */
+:root.light {
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+  --surface: #FFFFFF;
+  --surface-elevated: #F1F5F9;
+  --border: #CBD5E1;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --accent-primary: #2563EB;
+  --accent-success: #16A34A;
+  --accent-warning: #D97706;
+  --accent-danger: #DC2626;
+  --accent-purple: #7C3AED;
+}
+
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    @apply antialiased;
+    scroll-behavior: smooth;
+  }
+  
+  /* ============================================================
+     LIGHT MODE OVERRIDES - Comprehensive
+     ============================================================ */
+  html.light body {
+    background-color: #F8FAFC;
+    color: #0F172A;
+  }
+  
+  /* Background colors */
+  html.light .bg-background {
+    background-color: #F8FAFC !important;
+  }
+  
+  html.light .bg-card {
+    background-color: #FFFFFF !important;
+  }
+  
+  html.light .bg-surface {
+    background-color: #FFFFFF !important;
+  }
+  
+  html.light .bg-surface-elevated {
+    background-color: #F1F5F9 !important;
+  }
+  
+  /* Border colors */
+  html.light .border-border {
+    border-color: #CBD5E1 !important;
+  }
+  
+  /* Text colors */
+  html.light .text-text-primary {
+    color: #0F172A !important;
+  }
+  
+  html.light .text-text-secondary {
+    color: #475569 !important;
+  }
+  
+  /* Cards - ensure visible separation */
+  html.light [class*="rounded-xl"][class*="border"] {
+    background-color: #FFFFFF;
+    border-color: #E2E8F0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+  
+  /* Header */
+  html.light header {
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    border-color: #E2E8F0 !important;
+  }
+  
+  /* Buttons - hover states */
+  html.light button:hover:not(:disabled) {
+    background-color: #F1F5F9;
+  }
+  
+  html.light [class*="hover:bg-surface-elevated"]:hover {
+    background-color: #E2E8F0 !important;
+  }
+  
+  /* Navigation tabs */
+  html.light nav [class*="bg-surface"] {
+    background-color: #F1F5F9 !important;
+  }
+  
+  html.light nav button[class*="bg-surface"] {
+    background-color: #FFFFFF !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+  
+  body {
+    @apply bg-background text-text-primary;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+  
+  /* Light mode card styling */
+  html.light .card-light-mode {
+    background-color: #FFFFFF !important;
+    border-color: #E2E8F0 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06) !important;
+  }
+  
+  html.light .card-light-mode:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+  }
+  
+  /* Light mode calendar - high contrast text */
+  html.light [data-radix-popper-content-wrapper] {
+    color: #0F172A !important;
+  }
+  
+  html.light [data-radix-popper-content-wrapper] button {
+    color: #1E293B !important;
+    font-weight: 500;
+  }
+  
+  html.light [data-radix-popper-content-wrapper] .text-slate-900,
+  html.light [data-radix-popper-content-wrapper] .text-slate-700 {
+    color: #0F172A !important;
+  }
+  
+  html.light [data-radix-popper-content-wrapper] .text-slate-600,
+  html.light [data-radix-popper-content-wrapper] .text-slate-400 {
+    color: #475569 !important;
+  }
+  
+  /* Light mode button styling */
+  html.light button[class*="hover:bg-surface-elevated"]:hover {
+    background-color: #E2E8F0 !important;
+  }
+  
+  html.light button[class*="bg-surface-elevated"] {
+    background-color: #F1F5F9 !important;
+    border-color: #CBD5E1 !important;
+  }
+  
+  html.light button[class*="border-border"] {
+    border-color: #CBD5E1 !important;
+  }
+  
+  /* Light mode input styling */
+  html.light input,
+  html.light textarea {
+    background-color: #FFFFFF !important;
+    border-color: #CBD5E1 !important;
+    color: #0F172A !important;
+  }
+  
+  html.light input::placeholder,
+  html.light textarea::placeholder {
+    color: #94A3B8 !important;
+  }
+  
+  html.light input:focus,
+  html.light textarea:focus {
+    border-color: #2563EB !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+  }
+  
+  /* Light mode table styling */
+  html.light table {
+    background-color: #FFFFFF;
+  }
+  
+  html.light th {
+    background-color: #F8FAFC !important;
+    color: #475569 !important;
+    border-color: #E2E8F0 !important;
+  }
+  
+  html.light td {
+    border-color: #E2E8F0 !important;
+    color: #0F172A !important;
+  }
+  
+  html.light tr:hover td {
+    background-color: #F8FAFC !important;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(161, 161, 170, 0.3);
+  }
+  
+  /* Selection */
+  ::selection {
+    background-color: rgba(59, 130, 246, 0.3);
+    @apply text-text-primary;
+  }
+}
+
+/* ============================================================
+   COMPONENT STYLES
+   ============================================================ */
+@layer components {
+  /* Glass morphism effect */
+  .glass {
+    @apply backdrop-blur-xl border;
+    background-color: rgba(20, 20, 22, 0.8);
+    border-color: rgba(39, 39, 42, 0.5);
+  }
+  
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(to right, #3b82f6, #8b5cf6);
+  }
+  
+  /* Gradient background */
+  .gradient-bg {
+    background-image: linear-gradient(to bottom right, #3b82f6, #8b5cf6);
+  }
+  
+  /* Card hover effect */
+  .card-hover {
+    @apply transition-all duration-300;
+  }
+  
+  .card-hover:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 10px 40px rgba(59, 130, 246, 0.05);
+  }
+  
+  /* Glow effect */
+  .glow {
+    box-shadow: 0 0 20px 5px rgba(59, 130, 246, 0.15);
+  }
+  
+  .glow-purple {
+    box-shadow: 0 0 20px 5px rgba(139, 92, 246, 0.15);
+  }
+  
+  /* Shimmer effect for loading */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      #1c1c1f 0%,
+      #141416 50%,
+      #1c1c1f 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+  }
+  
+  /* Dot pattern background */
+  .dot-pattern {
+    background-image: radial-gradient(circle, #27272a 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  
+  /* Grid pattern background */
+  .grid-pattern {
+    background-image: 
+      linear-gradient(#27272a 1px, transparent 1px),
+      linear-gradient(90deg, #27272a 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}
+
+/* ============================================================
+   UTILITY STYLES
+   ============================================================ */
+@layer utilities {
+  /* Hide scrollbar */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Text balance */
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Fade edges */
+  .fade-edges {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black 10%,
+      black 90%,
+      transparent
+    );
+  }
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ============================================================
+   RECHARTS CUSTOMIZATION
+   ============================================================ */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: #27272a;
+}
+
+html.light .recharts-cartesian-grid-horizontal line,
+html.light .recharts-cartesian-grid-vertical line {
+  stroke: #E2E8F0;
+}
+
+/* ============================================================
+   LIGHT MODE - Popover/Dialog Override
+   ============================================================ */
+html.light [data-radix-popper-content-wrapper] .bg-surface {
+  background-color: #FFFFFF !important;
+}
+
+html.light [data-radix-popper-content-wrapper] .bg-surface-elevated {
+  background-color: #F8FAFC !important;
+}
+
+html.light [data-radix-popper-content-wrapper] .border-border {
+  border-color: #E2E8F0 !important;
+}
+
+html.light [data-radix-popper-content-wrapper] .text-text-secondary {
+  color: #64748B !important;
+}
+
+html.light [data-radix-popper-content-wrapper] .text-text-primary {
+  color: #0F172A !important;
+}
+
+html.light [data-radix-popper-content-wrapper] .hover\\:bg-surface-elevated:hover {
+  background-color: #E2E8F0 !important;
+}
+
+html.light [data-radix-popper-content-wrapper] .hover\\:bg-surface:hover {
+  background-color: #FFFFFF !important;
+}
+
+html.light [data-radix-popper-content-wrapper] .hover\\:bg-border:hover {
+  background-color: #CBD5E1 !important;
+}
+
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+
+.recharts-default-tooltip {
+  background: #1c1c1f !important;
+  border: 1px solid #27272a !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.light .recharts-default-tooltip {
+  background: #FFFFFF !important;
+  border: 1px solid #E4E4E7 !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1) !important;
+}
+
+.recharts-tooltip-label {
+  color: #a1a1aa !important;
+}
+
+html.light .recharts-tooltip-label {
+  color: #71717A !important;
+}
+
+.recharts-tooltip-item {
+  color: #fafafa !important;
+}
+
+html.light .recharts-tooltip-item {
+  color: #0A0A0A !important;
+}
+
+/* ============================================================
+   LIGHT MODE - Text Color Fixes
+   ============================================================ */
+html.light .text-text-primary,
+html.light [class*="text-text-primary"] {
+  color: #0F172A !important;
+}
+
+html.light .text-text-secondary,
+html.light [class*="text-text-secondary"] {
+  color: #475569 !important;
+}
+
+/* Ensure dropdown menus have proper text color */
+html.light [role="menu"] .text-text-primary,
+html.light [role="listbox"] .text-text-primary {
+  color: #0F172A !important;
+}
+
+html.light [role="menu"] .text-text-secondary,
+html.light [role="listbox"] .text-text-secondary {
+  color: #475569 !important;
+}
+
+/* Fix calendar text visibility */
+html.light .rdp-caption_label,
+html.light .rdp-head_cell,
+html.light .rdp-day {
+  color: #0F172A !important;
+}
+
+html.light .rdp-day_outside {
+  color: #94A3B8 !important;
+}
+
+/* Dropdown panels */
+html.light [data-state="open"] > div,
+html.light [data-radix-menu-content] {
+  background-color: #FFFFFF;
+  border-color: #E2E8F0;
+}
+
+html.light [data-radix-menu-content] span,
+html.light [data-radix-menu-content] p {
+  color: #0F172A;
+}
+
+/* Skeleton in light mode */
+html.light .animate-pulse {
+  background-color: #E2E8F0 !important;
+}
+
+/* ============================================================
+   RADIX UI OVERRIDES
+   ============================================================ */
+[data-radix-popper-content-wrapper] {
+  z-index: 50 !important;
+}
+
+/* ============================================================
+   REACT DAY PICKER - Compact Dark Mode (default)
+   ============================================================ */
+.rdp {
+  --rdp-cell-size: 32px;
+  --rdp-accent-color: #3b82f6;
+  --rdp-background-color: transparent;
+  margin: 0;
+  font-size: 14px;
+}
+
+.rdp-months {
+  display: flex;
+}
+
+.rdp-month {
+  margin: 0;
+}
+
+.rdp-caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.rdp-caption_label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fafafa;
+}
+
+.rdp-nav {
+  display: flex;
+  align-items: center;
+}
+
+.rdp-nav_button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  color: #a1a1aa;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+
+.rdp-nav_button:hover {
+  background: #27272a;
+  color: #fafafa;
+}
+
+.rdp-nav_button_previous {
+  position: absolute;
+  left: 0;
+}
+
+.rdp-nav_button_next {
+  position: absolute;
+  right: 0;
+}
+
+.rdp-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rdp-head_row {
+  display: flex;
+}
+
+.rdp-head_cell {
+  width: 32px;
+  height: 24px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #71717a;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.rdp-tbody {
+  display: block;
+}
+
+.rdp-row {
+  display: flex;
+  margin-top: 2px;
+}
+
+.rdp-cell {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  text-align: center;
+}
+
+.rdp-day {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: #fafafa;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  transition: all 0.1s;
+}
+
+.rdp-day:hover:not([disabled]):not(.rdp-day_selected):not(.rdp-day_range_middle) {
+  background-color: #27272a;
+}
+
+.rdp-day_outside {
+  color: #52525b !important;
+}
+
+.rdp-day_disabled {
+  color: #3f3f46 !important;
+  cursor: not-allowed;
+}
+
+.rdp-day_selected:not([disabled]),
+.rdp-day_range_start,
+.rdp-day_range_end {
+  background-color: #3b82f6 !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+.rdp-day_range_start {
+  border-radius: 6px 0 0 6px !important;
+}
+
+.rdp-day_range_end {
+  border-radius: 0 6px 6px 0 !important;
+}
+
+.rdp-day_range_start.rdp-day_range_end {
+  border-radius: 6px !important;
+}
+
+.rdp-day_range_middle {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  color: #fafafa !important;
+  border-radius: 0 !important;
+}
+
+.rdp-day_today:not(.rdp-day_selected):not(.rdp-day_range_middle) {
+  background-color: #27272a;
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.rdp-day_selected:focus-visible:not([disabled]) {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   REACT DAY PICKER - Light Mode
+   ============================================================ */
+html.light .rdp {
+  --rdp-background-color: #FFFFFF;
+}
+
+html.light .rdp-caption_label {
+  color: #0F172A;
+}
+
+html.light .rdp-nav_button {
+  color: #64748B;
+}
+
+html.light .rdp-nav_button:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+html.light .rdp-head_cell {
+  color: #64748B;
+}
+
+html.light .rdp-day {
+  color: #0F172A;
+}
+
+html.light .rdp-day:hover:not([disabled]):not(.rdp-day_selected):not(.rdp-day_range_middle) {
+  background-color: #F1F5F9;
+}
+
+html.light .rdp-day_outside {
+  color: #94A3B8 !important;
+}
+
+html.light .rdp-day_disabled {
+  color: #CBD5E1 !important;
+}
+
+html.light .rdp-day_range_middle {
+  background-color: rgba(37, 99, 235, 0.1) !important;
+  color: #0F172A !important;
+}
+
+html.light .rdp-day_today:not(.rdp-day_selected):not(.rdp-day_range_middle) {
+  background-color: #EFF6FF;
+  color: #2563EB;
+}
+
+/* ============================================================
+   PROSE STYLES (for markdown-like content)
+   ============================================================ */
+.prose-invert {
+  --tw-prose-body: #fafafa;
+  --tw-prose-headings: #fafafa;
+  --tw-prose-lead: #a1a1aa;
+  --tw-prose-links: #3b82f6;
+  --tw-prose-bold: #fafafa;
+  --tw-prose-counters: #a1a1aa;
+  --tw-prose-bullets: #3b82f6;
+  --tw-prose-hr: #27272a;
+  --tw-prose-quotes: #fafafa;
+  --tw-prose-quote-borders: #3b82f6;
+  --tw-prose-captions: #a1a1aa;
+  --tw-prose-code: #fafafa;
+  --tw-prose-pre-code: #fafafa;
+  --tw-prose-pre-bg: #1c1c1f;
+  --tw-prose-th-borders: #27272a;
+  --tw-prose-td-borders: #27272a;
+}

@@ -1,0 +1,1471 @@
+{
+  "name": "Email Preparation",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Email Preparation\n",
+        "height": 560,
+        "width": 7056,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        6112,
+        2512
+      ],
+      "typeVersion": 1,
+      "id": "034a5fc0-7b8a-4be3-930f-a62cc7703e28",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: Relevance AI (100% ACCURATE)\n// Fetches REAL credits from Relevance AI API\n// ============================================\n\n// CONFIGURE YOUR PLAN: 'free', 'pro', or 'team'\nconst PLAN = 'pro';\n\n// Credit pricing per plan ($ per credit)\nconst PLAN_CONFIG = {\n  'free':  { monthly_price: 0,   credits_per_month: 1000,  credit_price: 0 },\n  'pro':   { monthly_price: 29,  credits_per_month: 10000, credit_price: 0.0029 },\n  'team':  { monthly_price: 349, credits_per_month: 35000, credit_price: 0.00997 }\n};\n\nconst plan = PLAN_CONFIG[PLAN];\n\nconst leadData = $('Real Estate - California1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Parse ACTUAL credits from Relevance AI history API\nlet actualCredits = 0;\nlet creditsBreakdown = [];\nlet dataSource = 'estimate';\nlet runStatus = 'unknown';\n\ntry {\n  const historyResponse = $('Fetch Relevance AI Run History').first().json;\n  \n  if (historyResponse.results && historyResponse.results.length > 0) {\n    // Find the latest successful 'credit' type run (not 'action' type)\n    const creditRun = historyResponse.results.find(r => r.type === 'credit' && r.status === 'complete');\n    const latestRun = creditRun || historyResponse.results[0];\n    \n    runStatus = latestRun.status;\n    \n    // Get the ACTUAL cost field (this is the total credits)\n    if (latestRun.cost !== undefined && latestRun.cost !== null) {\n      actualCredits = latestRun.cost;\n      dataSource = 'api_exact';\n    }\n    \n    // Get detailed breakdown if available\n    if (latestRun.credits_used && Array.isArray(latestRun.credits_used)) {\n      creditsBreakdown = latestRun.credits_used.map(c => ({\n        name: c.name || 'unknown',\n        credits: c.credits || 0\n      }));\n    }\n  }\n} catch(e) {\n  dataSource = 'estimate_api_error';\n  actualCredits = 5; // fallback estimate\n}\n\n// Calculate USD cost\nlet cost_usd = 0;\nif (PLAN === 'free') {\n  cost_usd = 0; // Free tier - no monetary cost\n} else {\n  cost_usd = actualCredits * plan.credit_price;\n}\n\nlet costEvents = $('💰 Init Cost Tracking1').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'relevance_ai',\n  model: 'linkedin_research_tool',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: Math.round(cost_usd * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'linkedin_scraping',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    plan: PLAN,\n    credits_used: actualCredits,\n    credits_breakdown: creditsBreakdown,\n    data_source: dataSource,\n    run_status: runStatus,\n    credit_price: plan.credit_price,\n    tracking_method: '100%_accurate_api'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7984,
+        2688
+      ],
+      "id": "ac0db5ce-59eb-4b54-a614-c195fbfde6e0",
+      "name": "💰 Track Relevance AI1"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "40 3 * * SUN-THU"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        6192,
+        2768
+      ],
+      "id": "0666c72c-ad00-4970-a1f6-99d30aa72606",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-bcbe5a.stack.tryrelevance.com/latest/studios/24a29cfb-bd8c-4b2f-a45b-58b00f1a8e91/trigger_webhook?project=9eefb509-a6c5-4a45-8e8f-f971816b99f6",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "9eefb509-a6c5-4a45-8e8f-f971816b99f6:sk-OTljMWM3M2ItZjQ2My00ZTk0LTg2YzktOTNmODIxYjlhM2Zl"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n\"linkedin_url\":\"{{ $json.linkedin_url }}\",\n\"last_x_days\":30\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7536,
+        2688
+      ],
+      "id": "efaacda2-21e6-4ecc-97f9-ccc8addfec52",
+      "name": "Scrape Profiles + Posts - Relevance AI"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Force single-timezone: Los Angeles (PT) for all leads\nfor (const item of items) {\n  // If your downstream still checks the \"Time Zone\" flag, keep T1:\n  item.json[\"Time Zone\"] = \"T1\";\n\n  // Also store the real IANA timezone (safer + clearer)\n  item.json[\"Timezone\"] = \"America/Los_Angeles\";\n}\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12080,
+        2688
+      ],
+      "id": "b876db97-74b0-434c-aead-419d33599205",
+      "name": "Time Zone1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Single sender email\nconst SENDER = 'nishchith.m@smartieagents.online';\n\nfor (let i = 0; i < items.length; i++) {\n  items[i].json['Sender Email'] = SENDER;\n\n  // optional fields (uncomment if needed)\n  // items[i].json['Sender Name'] = 'Nishchith from Smartie Agents';\n  // items[i].json['Provider'] = 'gmail_api';\n  // items[i].json['Credential'] = 'GMAIL_SmartieAgents_Nishchith';\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12288,
+        2688
+      ],
+      "id": "efa81f51-4334-490e-bf41-4ff7ec215aa0",
+      "name": "Sender Email1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Function to generate a random 6-digit number\nfunction generateRandomToken() {\n  return Math.floor(100000 + Math.random() * 900000);\n}\n\n// Process each item from the Sender Email node\nfor (let i = 0; i < items.length; i++) {\n  // Add the token parameter to each item\n  items[i].json.token = generateRandomToken();\n}\n\n// Return the modified items\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        12496,
+        2688
+      ],
+      "id": "c46e9397-620c-44b1-8eca-4a825fda1c45",
+      "name": "Opt Out Token1"
+    },
+    {
+      "parameters": {
+        "url": "={{ (() => {\nconst p = $('Scrape Profiles + Posts - Relevance AI').last().json.linkedin_profile_details_data || {};\nconst company = (p.company || '').trim();\nconst raw = (p.company_domain || p.company_website || '').trim();\nconst domain = raw.replace(/^https?:\\/\\//g,'').replace(/^www\\./g,'').split('/')[0];\nconst site = domain ? ' site:' + domain : '';\nconst q = company + site + ' (about OR overview OR products OR services)';\nconst apiKey = 'AIzaSyBk5UXFdaexZ0DsRAQRPcBIw2lr-J2BmAg';\nconst cx = '66b3808ad62e941b1';\nreturn 'https://www.googleapis.com/customsearch/v1?key=' + apiKey + '&cx=' + cx + '&num=10&safe=active&hl=en&gl=us&dateRestrict=m6&q=' + encodeURIComponent(q);\n})() }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8208,
+        2688
+      ],
+      "name": "Google CSE Search1",
+      "id": "2af33c9b-cad4-46a8-b12a-c9545b318158",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "9z6Laho4Xwr3N9sS",
+          "name": "Query Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse & Select Top Results  — PRESERVE ITEMS\nconst MAX = 3;\n\nreturn items.map(i => {\n  const res = i.json || {};\n  const arr = (res.items || []).slice(0, MAX);\n\n  const sources = arr.map((it, idx) => ({\n    rank: idx + 1,\n    title: it.title || \"\",\n    link: it.link || \"\",\n    snippet: ((it.snippet || it.htmlSnippet || \"\") + \"\")\n      .replace(/\\s+/g, \" \")\n      .trim(),\n  }));\n\n  // compact context blob the summarizer will read\n  const context = sources\n    .map(s => `[#${s.rank}] ${s.title}\\n${s.link}\\n${s.snippet}`)\n    .join(\"\\n\\n\");\n\n  // IMPORTANT: keep original fields so downstream nodes still see row data\n  return {\n    json: {\n      ...i.json,\n      cse_sources: sources,\n      cse_context: context,\n    },\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8656,
+        2688
+      ],
+      "name": "Parse & Select Top Results1",
+      "id": "3fe80417-4060-4354-a5a9-061c77bfef4d"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"o3-mini\",\n  messages: [\n    {\n      role: \"user\",\n      content: \"You are a careful company researcher. Using the short web snippets below, produce a concise, factual brief about the prospect's company: what they do, core products/services, who they serve, and any **recent** notable items (only if clearly evidenced by the snippets). If a detail is uncertain, state it as uncertain or omit it. Finish with a bullet list of sources as \\\"Title — URL\\\".\\n\\nCompany:\\n\" + (($('Scrape Profiles + Posts - Relevance AI').last().json.linkedin_profile_details_data.company || '').trim() || '(unknown)') + \"\\nDomain:\\n\" + (($('Scrape Profiles + Posts - Relevance AI').last().json.linkedin_profile_details_data.company_domain || $('Scrape Profiles + Posts - Relevance AI').last().json.linkedin_profile_details_data.company_website || '(unknown)').replace('https://','').replace('http://','').replace('www.','').split('/')[0]) + \"\\n\\nSnippets:\\n\" + $json.cse_context\n    }\n  ]\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8880,
+        2688
+      ],
+      "name": "Summarize (O3-mini)1",
+      "id": "914eb7b9-d3c0-4816-bdf9-6d480d3d988d",
+      "credentials": {
+        "openAiApi": {
+          "id": "EzDErZcUtMKUzyRO",
+          "name": "Smartie Agents OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8",
+          "mode": "list",
+          "cachedResultName": "3547 Leads - Ohio ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Ohio",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email_prep"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        6416,
+        2768
+      ],
+      "id": "c9fcc1f5-e6ed-4f46-af5d-e865f25f3aaa",
+      "name": "Real Estate - California1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2EUpgH0WFkM3Lr6E",
+          "name": "Nishchith Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Shape CSE → OpenAI (preserve items)\nreturn items.map(i => {\n  const j = i.json || {};\n  const content =\n    j?.message?.content ??\n    j?.choices?.[0]?.message?.content ??\n    \"\";\n\n  const sources = j?.cse_sources ?? [];\n\n  // Keep the original row fields so Sheets can match on LinkedIn URL, etc.\n  return {\n    json: {\n      ...j,\n      choices: [{ message: { content } }],\n      sources,\n    },\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9360,
+        2688
+      ],
+      "id": "88aa377b-715a-4f45-87a9-37a8ff8201ac",
+      "name": "Shape CSE → OpenAI (preserve items)1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        7088,
+        2688
+      ],
+      "id": "6e8143e8-edb1-409b-8d4f-d80a2a71584d",
+      "name": "Wait1",
+      "webhookId": "db88eb0e-977c-4b6f-bfb5-8a9aaf8a10ef"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        6640,
+        2768
+      ],
+      "id": "5e836c4d-f689-4e46-a453-681cb4fad9f6",
+      "name": "Limit1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        6864,
+        2768
+      ],
+      "id": "e4413880-5e32-4113-97d6-7163cce11e20",
+      "name": "Loop Over Items1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Subject Curiosity Tuner — natural 8–12 word question, no filler padding\n// Works on email1.subject and email3.subject.\n// Adjust MIN_WORDS / MAX_WORDS if you want a different range.\n\nconst MIN_WORDS = 8;\nconst MAX_WORDS = 12;\n\nconst BANNED = /\\b(free|guarantee|no obligation|price|100%|sale)\\b/i;\nconst Q_START = /^(who|what|when|where|why|how|does|do|did|is|are|was|were|can|could|should|will|would|may|might)$/i;\n\nconst STOP = new Set([\n  'a','an','and','or','but','the','to','for','of','in','on','at','by','from','with','into','about',\n  'you','your','our','we','us','them','their','they','this','that','these','those',\n  'as','it','its','be','been','being','am','is','are','was','were','do','does','did',\n  'today','now','right','week','month','months','day','days','lately','currently','just'\n]);\n\nfunction stripHtml(s='') {\n  return String(s).replace(/<[^>]*>/g, ' ');\n}\nfunction tokens(s='') {\n  return String(s)\n    .toLowerCase()\n    .replace(/[^\\w\\s]/g, ' ')\n    .split(/\\s+/)\n    .filter(w => w && !STOP.has(w));\n}\nfunction uniq(arr) {\n  const seen = new Set();\n  const out = [];\n  for (const w of arr) {\n    const k = w.toLowerCase();\n    if (!seen.has(k)) { seen.add(k); out.push(w); }\n  }\n  return out;\n}\nfunction topKeywords(txt, limit=8) {\n  const t = tokens(stripHtml(txt));\n  const freq = new Map();\n  for (const w of t) freq.set(w, (freq.get(w) || 0) + 1);\n  return Array.from(freq.entries())\n    .sort((a,b) => b[1]-a[1] || b[0].length - a[0].length)\n    .slice(0, limit)\n    .map(([w]) => w);\n}\n\nfunction tuneSubject(s, ctx) {\n  if (!s) return '';\n\n  // Normalize / strip spam / collapse spaces\n  let base = String(s)\n    .replace(/^[\\s]*((re|fwd)\\s*:?\\s*)+/i, '')\n    .replace(/[“”]/g,'\"').replace(/[\\u2018\\u2019]/g,\"'\")\n    .replace(/\\?+/g,'') // remove all ?; we'll add one later\n    .replace(BANNED, '')\n    .replace(/\\s+/g,' ')\n    .trim();\n\n  let words = base.split(' ').filter(Boolean);\n\n  // If it doesn't already start like a question, add a light verb\n  if (words.length && !Q_START.test(words[0])) {\n    words.unshift('Is');\n  }\n\n  // Expand with real context if short (no generic padding)\n  if (words.length < MIN_WORDS) {\n    const ctxKeywords = uniq([\n      ...(ctx.company || '').split(/\\s+/),\n      ...topKeywords(ctx.e1body, 6),\n      ...topKeywords(ctx.e3body, 6),\n      ...topKeywords(ctx.analysis, 6),\n    ]).filter(w => w.length > 2 && !/^\\d+$/.test(w) && !BANNED.test(w));\n\n    for (const kw of ctxKeywords) {\n      if (words.length >= MIN_WORDS) break;\n      if (!words.map(x => x.toLowerCase()).includes(kw.toLowerCase())) {\n        words.push(kw);\n      }\n    }\n  }\n\n  // Clamp to MAX_WORDS (stay concise)\n  if (words.length > MAX_WORDS) words = words.slice(0, MAX_WORDS);\n\n  // Join and finalize\n  let out = words.join(' ').replace(/\\s+/g,' ').trim();\n\n  if (!out) out = 'Quick question about your local pipeline';\n  out = out.charAt(0).toUpperCase() + out.slice(1);\n  out = out.replace(/\\?+$/,'') + '?'; // exactly one '?'\n\n  return out;\n}\n\nfor (const item of items) {\n  const j = item.json || {};\n\n  // Pull context if available; safe if missing\n  const ctx = {\n    company: j.company || (j.research && j.research.company) || '',\n    e1body: j.email1 && j.email1.body,\n    e3body: j.email3 && j.email3.body,\n    analysis: (j.analysis && (j.analysis.text || j.analysis)) || ''\n  };\n\n  if (j.email1 && typeof j.email1.subject === 'string') {\n    j.email1.subject = tuneSubject(j.email1.subject, ctx);\n  }\n  if (j.email3 && typeof j.email3.subject === 'string') {\n    j.email3.subject = tuneSubject(j.email3.subject, ctx);\n  }\n\n  item.json = j;\n}\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11872,
+        2688
+      ],
+      "id": "390f0cff-6384-48e3-bc5b-6506aa91ab1a",
+      "name": "Subject Curiosity Tuner1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "67abf7d9-0f84-4034-aba9-be80088f35b8",
+              "leftValue": "={{!!$json.gmaps_query}}",
+              "rightValue": "=true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        9824,
+        2688
+      ],
+      "id": "5d1b6b14-caaa-4f9a-88cc-501fd19606cc",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a 5-item summary from Google reviews rated 1–3★\nconst out = [];\nfor (const it of items) {\n  const src = it.json.reviews || it.json.reviewsAll || it.json.userReviews || [];\n  const low = [];\n  for (const r of src) {\n    const rating = Number(r.rating || r.stars || r.score);\n    if (rating && rating <= 3) {\n      low.push({\n        rating,\n        text: String(r.text || r.reviewText || r.comment || '').trim().slice(0, 400),\n        date: r.publishAt || r.time || r.date || '',\n        url:  r.url || r.link || ''\n      });\n      if (low.length === 5) break; // stop at 5\n    }\n  }\n\n  const summary = low.length\n    ? low.map((r,i)=>`${i+1}. ${'★'.repeat(r.rating)}${r.date?` (${r.date})`:''}\\n${r.text}${r.url?`\\n${r.url}`:''}`).join('\\n\\n')\n    : 'None found';\n\n  out.push({ json: { google_reviews_summary: summary } });\n}\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10496,
+        2688
+      ],
+      "id": "9260d4d2-cac4-4307-be88-a2fc4605271c",
+      "name": "Reviews1"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"emptyReviews\": true,\n  \"reviewsHTML\": \"No recent 1–3 Google reviews found.\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        10160,
+        2784
+      ],
+      "id": "67cbeea1-d772-4937-8ab5-59ea0cbd4eba",
+      "name": "No Reviews1"
+    },
+    {
+      "parameters": {
+        "url": "https://api.apify.com/v2/acts/compass~google-maps-reviews-scraper/run-sync-get-dataset-items?token=apify_api_LYrSpTfFDNcedzKiMq0JiTxKLU4jgu2P0iZN",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"search\": \"={{ $json.gmaps_query || ($json.company_name || '') }}\",\n  \"maxCrawledPlacesPerSearch\": 1,\n  \"includeReviews\": true,\n  \"reviewsMaxCount\": 50,\n  \"reviewsSort\": \"newest\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10048,
+        2592
+      ],
+      "id": "ecb24e65-6df2-40de-b00b-d0822d036ff7",
+      "name": "Google Reviews (1-3 Stars)1",
+      "alwaysOutputData": false,
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "9z6Laho4Xwr3N9sS",
+          "name": "Query Auth account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build a Google Maps search query like: \"<Company> <City> <State>\"\n\nreturn items.map(item => {\n  const p = item.json.linkedin_profile_details_data || {};\n\n  const company = String(item.json.company ?? p.company ?? '').trim();\n  const city    = String(item.json.city ?? p.city ?? '').trim();\n  const state   = String(\n    item.json.state ?? item.json.company_state ?? p.company_state ?? ''\n  ).trim();\n\n  const gmaps_query = [company, city, state].filter(Boolean).join(' ').trim();\n\n  return {\n    json: {\n      ...item.json,\n      // keep if your downstream still uses these\n      'Time Zone': item.json['Time Zone'] ?? 'T1',\n      Timezone: item.json.Timezone ?? 'Europe/London',\n\n      gmaps_query,\n      company_name: company,\n    },\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9600,
+        2688
+      ],
+      "id": "d6faafb8-2220-4b61-9e8c-4fb122fde414",
+      "name": "Build Google Maps Query1"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8",
+          "mode": "list",
+          "cachedResultName": "3547 Leads - Ohio ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Ohio",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "linkedin_url": "={{ $('Real Estate - California1').item.json.linkedin_url }}",
+            "research_report": "={{ (() => {\n  const o = $('Analyze').last().json;\n  const txt =\n    o?.message?.content ??\n    o?.choices?.[0]?.message?.content ??\n    o?.data?.[0]?.content ??\n    '';\n  return String(txt)\n    .replace(/^\"|\"$/g, '')        // strip accidental wrap quotes\n    .replace(/\\r\\n/g, '\\n')       // normalize newlines\n    .replace(/\\n{2,}/g, '<br><br>') // blank line -> double <br>\n    .replace(/\\n/g, '<br>');      // single newline -> <br>\n})() }}",
+            "email_1_subject": "={{ $json.email1?.subject || '' }}",
+            "email_1_body": "={{ ($json.email1?.body || '').replace(/\\r?\\n/g,'<br>') }}",
+            "email_2_body": "={{ ($json.email2?.body || '').replace(/\\r?\\n/g,'<br>') }}",
+            "email_3_subject": "={{ $json.email3?.subject || '' }}",
+            "email_3_body": "={{ ($json.email3?.body || '').replace(/\\r?\\n/g,'<br>') }}",
+            "sender_email": "={{ $json['Sender Email'] }}",
+            "email_1_sent": "No",
+            "email_2_sent": "No",
+            "email_3_sent": "No",
+            "replied": "No",
+            "opted_out": "No",
+            "email_prep": "Yes",
+            "token": "={{ $json.token }}",
+            "analyze": "Yes"
+          },
+          "matchingColumns": [
+            "linkedin_url"
+          ],
+          "schema": [
+            {
+              "id": "first_name",
+              "displayName": "first_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "last_name",
+              "displayName": "last_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email_address",
+              "displayName": "email_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "linkedin_url",
+              "displayName": "linkedin_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "state",
+              "displayName": "state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "industry",
+              "displayName": "industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "position",
+              "displayName": "position",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "city",
+              "displayName": "city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "country",
+              "displayName": "country",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "full_name",
+              "displayName": "full_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "organization_city",
+              "displayName": "organization_city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "organization_country",
+              "displayName": "organization_country",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "organization_description",
+              "displayName": "organization_description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "founded_year",
+              "displayName": "founded_year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "organization_linkedin_url",
+              "displayName": "organization_linkedin_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "organization_name",
+              "displayName": "organization_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "organization_size",
+              "displayName": "organization_size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "organization_specialities",
+              "displayName": "organization_specialities",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "organization_state",
+              "displayName": "organization_state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "organization_website",
+              "displayName": "organization_website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "seniority",
+              "displayName": "seniority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "analyze",
+              "displayName": "analyze",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "research_report",
+              "displayName": "research_report",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email_1_subject",
+              "displayName": "email_1_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email_1_body",
+              "displayName": "email_1_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email_2_body",
+              "displayName": "email_2_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email_3_subject",
+              "displayName": "email_3_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email_3_body",
+              "displayName": "email_3_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sender_email",
+              "displayName": "sender_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email_1_sent",
+              "displayName": "email_1_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email_2_sent",
+              "displayName": "email_2_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email_3_sent",
+              "displayName": "email_3_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "replied",
+              "displayName": "replied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "token",
+              "displayName": "token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "opted_out",
+              "displayName": "opted_out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "report_sent",
+              "displayName": "report_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email_prep",
+              "displayName": "email_prep",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        12704,
+        2688
+      ],
+      "id": "5b46b0cf-cb71-48d7-a486-23555790884c",
+      "name": "Google Sheets1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2EUpgH0WFkM3Lr6E",
+          "name": "Nishchith Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: Initialize cost accumulator\n// ============================================\n\n// Initialize cost array for this execution\nconst costEvents = [];\n\n// Store in item for passing through workflow\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7312,
+        2688
+      ],
+      "id": "72cdb599-e787-430c-b1a6-cc349a8b4b84",
+      "name": "💰 Init Cost Tracking1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: Google Custom Search Engine\n// Pricing: $5 per 1,000 queries = $0.005/query\n// This is EXACT pricing (fixed per query)\n// ============================================\nconst COST_PER_QUERY = 0.005; // $5 per 1000 queries\n\nconst leadData = $('Real Estate - California1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\nlet costEvents = $('💰 Track Relevance AI1').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'google',\n  model: 'custom_search_api',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: COST_PER_QUERY,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'company_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    pricing_model: 'fixed_per_query',\n    queries_made: 1\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8432,
+        2688
+      ],
+      "id": "34ea7b04-9106-4b38-ad19-2403cd9930dd",
+      "name": "💰 Track Google CSE1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: OpenAI o3-mini (Summarize)\n// 100% ACCURATE: Uses actual token counts from API\n// Pricing: $1.10/1M input, $4.40/1M output\n// ============================================\nconst PRICING = { input: 1.10, output: 4.40 }; // per 1M tokens\n\nconst leadData = $('Real Estate - California1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Get the actual response from OpenAI\nconst openaiResponse = $('Summarize (O3-mini)1').first().json;\n\n// Get ACTUAL token usage from OpenAI response\nconst usage = openaiResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\n// Determine data source accuracy\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\n\n// Calculate cost using actual tokens\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents = $('💰 Track Google CSE1').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'openai',\n  model: openaiResponse.model || 'o3-mini',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'company_summarization',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9120,
+        2688
+      ],
+      "id": "3c68dd8c-aa4e-4e4f-bcd3-3e935104add3",
+      "name": "💰 Track Summarize Cost1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: Apify Google Reviews\n// ACCURATE: Uses actual Apify run data\n// Apify charges by compute units (CUs)\n// CU = Memory (GB) × Time (hours)\n// ~$0.25 per CU on paid plans\n// ============================================\n\nconst leadData = $('Real Estate - California1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Get Apify response - it may contain run info\nconst apifyResponse = $('Google Reviews (1-3 Stars)1').first().json;\n\n// Count reviews scraped\nconst reviews = apifyResponse.reviews || apifyResponse.reviewsAll || [];\nconst reviewCount = Array.isArray(reviews) ? reviews.length : (Array.isArray(apifyResponse) ? apifyResponse.length : 0);\n\n// Apify Google Maps Reviews Scraper pricing estimate:\n// Typical run: 256MB memory, ~30 seconds per place\n// CU = 0.25GB × 0.0083hr (30s) = 0.002 CU per place\n// At $0.25/CU = ~$0.0005 per place + ~$0.001 per review\nconst BASE_COST_PER_PLACE = 0.0005;\nconst COST_PER_REVIEW = 0.001;\nconst cost = BASE_COST_PER_PLACE + (reviewCount * COST_PER_REVIEW);\n\nlet costEvents = $('💰 Track Summarize Cost1').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'apify',\n  model: 'google-maps-reviews-scraper',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'reviews_scraping',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    reviews_scraped: reviewCount,\n    base_cost: BASE_COST_PER_PLACE,\n    per_review_cost: COST_PER_REVIEW,\n    pricing_model: 'compute_units_estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10272,
+        2592
+      ],
+      "id": "c75cb4b9-3842-4df2-b845-30e3351117fb",
+      "name": "💰 Track Apify Cost1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: Anthropic Claude Sonnet 4.5\n// 100% ACCURATE: Uses actual token counts from API\n// Pricing: $3.00/1M input, $15.00/1M output\n// ============================================\nconst PRICING = { input: 3.00, output: 15.00 }; // per 1M tokens\n\nconst leadData = $('Real Estate - California1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Get the actual response from Anthropic\nconst anthropicResponse = $('Email 1,2,3').first().json;\n\n// Get ACTUAL token usage from Anthropic response\nconst usage = anthropicResponse.usage || {};\nconst inputTokens = usage.input_tokens || 0;\nconst outputTokens = usage.output_tokens || 0;\nconst totalTokens = inputTokens + outputTokens;\n\n// Determine data source accuracy\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\n\n// Calculate cost using actual tokens\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents = $('💰 Track Analyze Cost').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'anthropic',\n  model: anthropicResponse.model || 'claude-sonnet-4-5-20250929',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'email_generation',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        11360,
+        2688
+      ],
+      "id": "a3b83a6a-9946-47e2-8886-978041eb2592",
+      "name": "💰 Track Anthropic Cost1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"claude-sonnet-4-5-20250929\",\n  max_tokens: 4096,\n  messages: [\n    {\n      role: \"user\",\n      content: \"You are part of the cold email team for Smartie Agents, which is an AI Automation Agency offering AI Receptionists, full CRM automation, website chatbots, and social media handling across Facebook, Instagram, and WhatsApp.\\n\\nYour job is to create 3 emails given the following info about a new cold lead: \\n\\n1. Research: Findings about the prospect by researching them on social media and the web. \\n2. Analysis: Insights extracted from analysing the research. \\n3. Tactic: Strategy to create the cold emails. \\n\\nYour job is to create a cold email sequence of 3 emails, which will be sent 2 days apart. The tactic for each email should closely follow the instructions below, whilst the content of each email must follow the research and analysis. \\n\\n# Tactic: \\n\\n1. Email#1: \\n\\n1.1 Subject line (question + curiosity):\\n- Output an 8-12 word QUESTION that ends with \\\"?\\\" (no emojis; one \\\"?\\\" max).\\n- Tie the question to the strongest context from the Research/Analysis (a pain, metric, channel, or recent event). It must be obviously relevant.\\n- Include the prospect's first name OR company name only if it reads naturally (don't force it).\\n- Avoid spam terms (\\\"free\\\", \\\"guarantee\\\", \\\"no obligation\\\", \\\"price\\\", \\\"100%\\\", \\\"sale\\\") and avoid colons, dashes, or excess punctuation.\\n- Keep it neutral and non-salesy (no \\\"we\\\", no offers, no benefits).\\n- Examples (pattern, not templates): \\\"Are missed calls hurting your weekend open houses?\\\", \\\"Zillow leads slowing despite steady ad spend this month?\\\", \\\"Website chat gaps wasting after-hours traffic lately?\\\"\\n\\n1.2 Body\\nStructure: The email must follow this structure closely:\\na) Hook: The first 2 or 3 sentences of the email is a hook. The hook should be the personalization part of the email, capturing the prospects attention so they don't scroll. \\n\\n\\nb) Pain point: After the hook, you must outline a pain point that was analysed about the prospect. This shouldn't sound salesy, but should be directly related to their business. The goal is to capture the readers attention, not sell them a solution. \\n\\n\\nc) CTA: Say that I've worked on solving a similar problem in the past and mention the exact offer based on the problem that is the best suited for that problem they are experiencing and I would love to share what we've built over a quick 15 minute call on \" + ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][(new Date().getDay() + 2) % 7] + \" . Have a clear next step for them (for example \\\"Book a free consultation with us using this Calendly link) \\nhttps://api.leadconnectorhq.com/widget/booking/mHQelVa2sJeNj1euYoCo.\\n\\nGuidelines - The email body should:\\n- Be short (maximum 100 words).\\n- Have short paragraphs (1 or 2 sentences in each) to include white space. \\n- Use a conversational tone to keep the email casual. \\n- Be \\\"You\\\" focused, incorporating \\\"you\\\" as much as possible.\\n- Be at a 6th-grade reading level with simple language. \\n- Avoid images, attachments, videos, custom code, spammy words above, bullet points, punctuation.\\n- Not have absurd claims (it should be believable).\\n- Should always start with \\\"Hey \" + $('Scrape Profiles + Posts - Relevance AI').last().json.linkedin_profile_details_data.first_name + \",\\\"\\n- Should be concise. \\n- Never start with formal openers like \\\"Hope you're doing well\\\" (Get right into the email every time).\\n- Be nice and inviting.\\n- End with \\\"Kind regards,<br>Nishchith<br>Smartie Agents\\\"\\n\\n2. Email#3: \\nThis email should follow the same structure and guidelines as Email#1, with the following differences: \\n- Subject must follow the same \\\"question + curiosity\\\" rules as Email #1 (8-12 words, ends with \\\"?\\\", context-tied, no spam terms).\\n- It should mention a different pain point identified. \\n- The call to action should include the following Calendly link so the prospect can book a time that suits: https://api.leadconnectorhq.com/widget/booking/TvnhKDOTdUV7rPaQqfv7\\n- Should be like you already know them from the previous conversation, so it shouldn't include any personalisation other than the prospect's name. Can start with a variation of I was thinking about {Prospect Company Name} again and...\\n\\n3. Email#2: \\nThis email will be in the same thread as email#1 and is considered a followup email (so it doesn't need a subject line).\\nThe email should be a close variant of this email: \\n\\\"Hey \" + $('Scrape Profiles + Posts - Relevance AI').last().json.linkedin_profile_details_data.first_name + \", \\nJust pushing this back up your inbox in case you missed it. \\nLook forward to hearing from you. \\nKind regards, \\nNishchith\\\" \\n\\n# Rules - Other things to consider: \\n- Your goal is to create an engaging email that will get us a reply. Choose the best pain points and personalization opportunities from the analysis to achieve this objective. \\n- You must closely follow the guidelines provided for each email. \\n- Never come across as condescending or rude when mentioning the pain point. \\n- When using the personalization opportunities from the analysis, always mention where the info was found - usually \\\"Online\\\" or \\\"LinkedIn\\\" (look at Supporting Evidence for this).\\n\\n# Output format\\nYour output must follow this JSON format: \\n\\n{\\n  \\\"email1\\\": {\\n    \\\"subject\\\": \\\"TEXT-HERE\\\",\\n    \\\"body\\\": \\\"HTML-HERE\\\"\\n  },\\n  \\\"email2\\\": {\\n    \\\"body\\\": \\\"HTML-HERE\\\"\\n  },\\n  \\\"email3\\\": {\\n    \\\"subject\\\": \\\"HERE\\\",\\n    \\\"body\\\": \\\"HTML-HERE\\\"\\n  }\\n}\\n\\n- Don't wrap the output in```. \\n- Don't output anything else. \\n- Keep the HTML code to a minimum by using only <br> for line breaks and nothing else.\\n\\n# Task: New prospect\\nThere's a new prospect. Create the emails by considering the following details: \\n\\n1. Research: \\nFirst name: \" + $('Scrape Profiles + Posts - Relevance AI').last().json.linkedin_profile_details_data.first_name + \"\\nCompany name: \" + $('Scrape Profiles + Posts - Relevance AI').last().json.linkedin_profile_details_data.company + \" (ignore any legal suffixes like pty ltd or llc) \\n\\n2. Analysis: \\n\" + ($('Analyze').last().json?.choices?.[0]?.message?.content || 'None') + \"\\n\\n3. Google Reviews (1-3 stars):\\n\" + ($json.google_reviews_summary || 'None found')\n    }\n  ]\n}) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        11152,
+        2688
+      ],
+      "name": "Email 1,2,3",
+      "id": "72b043f8-6536-4516-a924-9c6d62c7a28c",
+      "credentials": {
+        "anthropicApi": {
+          "id": "aoWKHXiRqhK3nMDW",
+          "name": "Smartie agents Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ (() => { let t = $json.content[0].text; if(t.indexOf('```') > -1) { t = t.substring(t.indexOf('{'), t.lastIndexOf('}') + 1); } const emails = JSON.parse(t); emails._cost_events = $json._cost_events || []; return emails; })() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        11648,
+        2688
+      ],
+      "id": "3e9f9013-86b7-4ab2-948d-30d80d5353b8",
+      "name": "Edit Email fields",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"o3-mini\",\n  messages: [\n    {\n      role: \"user\",\n      content: \"# Overview\\nYou are a sales research analyst for Smartie Agents, an AI automation agency that helps real estate teams capture more leads\\n\\nSmartie Agents offers the following services:\\n- AI Receptionist: Answers calls 24/7, qualifies leads, books appointments directly into calendars\\n- CRM Automation: Automates follow-ups, lead nurturing, and pipeline management\\n- Website Chatbots: Captures and qualifies website visitors in real-time\\n- Social Media Automation: Responds to inquiries on Facebook, Instagram, WhatsApp instantly\\n\\n# Your Task\\nAnalyze research on a real estate professional to identify:\\n1. Recent, specific activities that show relevance\\n2. Operational pain points our services can solve\\n3. Business context that makes our offer timely\\nFor each prospect you must find the following: \\n\\n*1. Personalization opportunity:* Cold emails perform much better when personalized. You must analyse the research found on the prospect to identify the top personalization opportunities. The personalization can be one of the following: \\n- Referencing content they've posted [best one].\\n- Mentioning a specific achievement or news related to themselves or their business.\\n- personalized compliment or observation about the recipient's work.\\n- Mentioning unique aspects of their professional background. \\nThe references must be highly specific that couldn't be mass-generated. Adding each reference to the cold email should feel like a 1 to 1 communication, showing we've done our research on the prospect. Aim: Reader thinks \\\"Whoa, this is for me.\\\" If you can't find any good personalization opportunities, then leave this blank. Avoid company description regurgitation\\n\\n\\n*2. Pain points and solutions:* Analyse the research to identify the prospects biggest pain points. Take into consideration their role, their company details and all other research to predict what their biggest bottle necks are. Then think of these pain points in terms of Smartie Agents services - Which ones can we solve? List the 2 biggest pain points that we can help with and define the actionable solution we can offer them. Turn the actionable solution into a clear and concise offer. \\n- The solutions should be specific offerings, not broad services. So instead of saying \\\"automation\\\", you must clearly define exactly what process will be automated.\\n\\n\\n# Output Format \\nYour output must be in the following format: \\n\\n*Personalization*\\n1. Opportunity: HERE\\nSupporting Evidence: HERE\\n\\n2. Opportunity: HERE\\nSupporting Evidence: HERE\\n\\n(...add more as needed)\\n\\n---\\n\\n*Pain Points & Solutions*\\n1. Pain Point: HERE\\nSupporting Evidence: HERE\\nOffer: HERE\\n\\n2. Pain Point: HERE\\nSupporting Evidence: HERE\\nOffer: HERE\\n\\nWhere supporting evidence is where you must include specific examples and evidence from the research that support your findings. You must give enough detail in the HERE sections so the reader does not need to revisit the research to create a cold email.\\nThe opportunities should also be explained in detail, so the reader has enough context to understand the opportunity. So for example, instead of saying \\\"news A\\\", you must explain exactly what \\\"news A\\\" entitles and why it's significant. \\n\\n- Don't output anything else.\\n- Replace HERE with the relevant string.\\n- If there are no clear personalization opportunities, then replace HERE with null. \\n- Make sure your outputs are well thought out. \\n\\n# Complete the analysis for the following prospect. \\n\\nResearch: \\n\\n1. Scraped LinkedIn profile in JSON format: \\n\" + JSON.stringify($('Scrape Profiles + Posts - Relevance AI').last().json.linkedin_profile_details_data || {}, null, 2) + \"\\n\\n2. Company research from searching the web: \\n\" + ($json?.choices?.[0]?.message?.content || 'None')\n    }\n  ]\n}) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        10720,
+        2688
+      ],
+      "name": "Analyze",
+      "id": "1581ff9c-5ae6-49b8-bcf5-5910708c0c3c",
+      "credentials": {
+        "openAiApi": {
+          "id": "EzDErZcUtMKUzyRO",
+          "name": "Smartie Agents OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: OpenAI o3-mini (Analyse)\n// 100% ACCURATE: Uses actual token counts from API\n// Pricing: $1.10/1M input, $4.40/1M output\n// ============================================\nconst PRICING = { input: 1.10, output: 4.40 }; // per 1M tokens\n\nconst leadData = $('Real Estate - California1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Get the actual response from OpenAI Analyse\nconst analyseResponse = $('Analyze').first().json;\n\n// Get ACTUAL token usage from OpenAI response\nconst usage = analyseResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\n// Determine data source accuracy\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\n\n// Calculate cost using actual tokens\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents;\ntry {\n  costEvents = $('💰 Track Apify Cost1').first().json._cost_events || [];\n} catch(e) {\n  costEvents = $('💰 Track Summarize Cost1').first().json._cost_events || [];\n}\n\ncostEvents.push({\n  provider: 'openai',\n  model: analyseResponse.model || 'o3-mini',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'prospect_analysis',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10912,
+        2688
+      ],
+      "id": "5cc7bcfb-c408-44f4-99e8-9a5dac67fc89",
+      "name": "💰 Track Analyze Cost"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://tracee-tabernacular-brandee.ngrok-free.dev/api/cost-events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-webhook-token",
+              "value": "6de5a8d03ad6348f4110782372a82f1bb7c6ef43a8ce8810bf0459e73abaeb61"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Edit Email fields').first().json._cost_events || []) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        12960,
+        2736
+      ],
+      "id": "1f36378b-bf4e-4a34-873d-cf04b155a871",
+      "name": "Send Cost Events to Dashboard"
+    },
+    {
+      "parameters": {
+        "url": "https://api-bcbe5a.stack.tryrelevance.com/latest/studios/run_history/list",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "page_size",
+              "value": "1"
+            },
+            {
+              "name": "filters",
+              "value": "=[\n  {\n    \"filter_type\": \"exact_match\",\n    \"field\": \"project\",\n    \"condition\": \"==\",\n    \"condition_value\": \"9eefb509-a6c5-4a45-8e8f-f971816b99f6\"\n  },\n  {\n    \"filter_type\": \"exact_match\",\n    \"field\": \"studio_id\",\n    \"condition\": \"==\",\n    \"condition_value\": \"24a29cfb-bd8c-4b2f-a45b-58b00f1a8e91\"\n  }\n]"
+            },
+            {
+              "name": "with_agent_details",
+              "value": "true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "9eefb509-a6c5-4a45-8e8f-f971816b99f6:sk-OTljMWM3M2ItZjQ2My00ZTk0LTg2YzktOTNmODIxYjlhM2Zl"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7760,
+        2688
+      ],
+      "id": "e5207558-b72e-4ce3-a24b-40076664a3ce",
+      "name": "Fetch Relevance AI Run History",
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "💰 Track Relevance AI1": {
+      "main": [
+        [
+          {
+            "node": "Google CSE Search1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Real Estate - California1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Profiles + Posts - Relevance AI": {
+      "main": [
+        [
+          {
+            "node": "Fetch Relevance AI Run History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Time Zone1": {
+      "main": [
+        [
+          {
+            "node": "Sender Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sender Email1": {
+      "main": [
+        [
+          {
+            "node": "Opt Out Token1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Opt Out Token1": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google CSE Search1": {
+      "main": [
+        [
+          {
+            "node": "💰 Track Google CSE1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Select Top Results1": {
+      "main": [
+        [
+          {
+            "node": "Summarize (O3-mini)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize (O3-mini)1": {
+      "main": [
+        [
+          {
+            "node": "💰 Track Summarize Cost1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Real Estate - California1": {
+      "main": [
+        [
+          {
+            "node": "Limit1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shape CSE → OpenAI (preserve items)1": {
+      "main": [
+        [
+          {
+            "node": "Build Google Maps Query1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "💰 Init Cost Tracking1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subject Curiosity Tuner1": {
+      "main": [
+        [
+          {
+            "node": "Time Zone1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Google Reviews (1-3 Stars)1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Reviews1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reviews1": {
+      "main": [
+        [
+          {
+            "node": "Analyze",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Reviews1": {
+      "main": [
+        [
+          {
+            "node": "Reviews1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Reviews (1-3 Stars)1": {
+      "main": [
+        [
+          {
+            "node": "💰 Track Apify Cost1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Google Maps Query1": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets1": {
+      "main": [
+        [
+          {
+            "node": "Send Cost Events to Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 Init Cost Tracking1": {
+      "main": [
+        [
+          {
+            "node": "Scrape Profiles + Posts - Relevance AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 Track Google CSE1": {
+      "main": [
+        [
+          {
+            "node": "Parse & Select Top Results1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 Track Summarize Cost1": {
+      "main": [
+        [
+          {
+            "node": "Shape CSE → OpenAI (preserve items)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 Track Apify Cost1": {
+      "main": [
+        [
+          {
+            "node": "Reviews1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 Track Anthropic Cost1": {
+      "main": [
+        [
+          {
+            "node": "Edit Email fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email 1,2,3": {
+      "main": [
+        [
+          {
+            "node": "💰 Track Anthropic Cost1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Email fields": {
+      "main": [
+        [
+          {
+            "node": "Subject Curiosity Tuner1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze": {
+      "main": [
+        [
+          {
+            "node": "💰 Track Analyze Cost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💰 Track Analyze Cost": {
+      "main": [
+        [
+          {
+            "node": "Email 1,2,3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Cost Events to Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Relevance AI Run History": {
+      "main": [
+        [
+          {
+            "node": "💰 Track Relevance AI1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Los_Angeles",
+    "callerPolicy": "workflowsFromSameOwner",
+    "saveExecutionProgress": true,
+    "errorWorkflow": "CiaofBF4zkgB2bhR",
+    "timeSavedPerExecution": 1
+  },
+  "versionId": "3c052ffa-9917-4fa5-beb6-756f6a82ce0e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fb0f3042150127121074617aaee31b106c313805cbc452132240d35f72eba898"
+  },
+  "id": "CiaofBF4zkgB2bhR",
+  "tags": [
+    {
+      "updatedAt": "2025-09-27T07:54:51.546Z",
+      "createdAt": "2025-09-27T07:54:51.546Z",
+      "id": "r8CZ5Y6mZ7dctfjE",
+      "name": "Cold Email"
+    }
+  ]
+}

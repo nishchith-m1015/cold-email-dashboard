@@ -1,0 +1,364 @@
+{
+  "name": "Backfill Historical Emails",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        300
+      ],
+      "id": "trigger-1",
+      "name": "Manual Trigger",
+      "notes": "Run this workflow ONCE manually to backfill historical data. Then disable or delete this workflow."
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8",
+          "mode": "list",
+          "cachedResultName": "3547 Leads - Ohio ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Ohio",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -200,
+        300
+      ],
+      "id": "sheets-1",
+      "name": "Get All Leads",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ESE0UMGdJsRvZv",
+          "name": "Smartie Agents"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.email_1_sent }}",
+              "rightValue": "Yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        300
+      ],
+      "id": "filter-1",
+      "name": "Filter Sent Emails"
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        200,
+        300
+      ],
+      "id": "batch-1",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build events array for this lead\nconst lead = $input.first().json;\nconst events = [];\n\n// Get email address (handle different column names)\nconst email = lead.email_address || lead['Email Adress '] || lead.Email || '';\nif (!email) {\n  return [{ json: { events: [], skipped: true, reason: 'No email address' } }];\n}\n\n// Campaign name\nconst campaign = 'Ohio';\n\n// Generate random timestamp between Nov 20-28 (weekdays only)\n// Campaign ran: Nov 20-28, 2025 (weekdays: 20,21,22,25,26,27,28)\nconst getRandomWeekdayTimestamp = () => {\n  const weekdays = [\n    '2025-11-20', // Wed\n    '2025-11-21', // Thu\n    '2025-11-22', // Fri\n    '2025-11-25', // Mon\n    '2025-11-26', // Tue\n    '2025-11-27', // Wed\n    '2025-11-28'  // Thu\n  ];\n  const randomDay = weekdays[Math.floor(Math.random() * weekdays.length)];\n  // Random time between 9 AM - 5 PM\n  const randomHour = 9 + Math.floor(Math.random() * 8);\n  const randomMinute = Math.floor(Math.random() * 60);\n  const randomSecond = Math.floor(Math.random() * 60);\n  return new Date(`${randomDay}T${String(randomHour).padStart(2,'0')}:${String(randomMinute).padStart(2,'0')}:${String(randomSecond).padStart(2,'0')}.000Z`).toISOString();\n};\n\n// Check Email 1\nif (lead.email_1_sent === 'Yes' || lead['Email #1 Sent'] === 'Yes') {\n  events.push({\n    contact_email: email,\n    campaign: campaign,\n    step: 1,\n    event_type: 'sent',\n    provider: 'gmail',\n    provider_message_id: lead.message_id || lead['Message ID'] || `backfill-e1-${email}-${Date.now()}`,\n    event_ts: getRandomWeekdayTimestamp(),\n    subject: lead.email_1_subject || lead['Email #1 Subject'] || 'Email 1',\n    body: lead.email_1_body || lead['Email #1 Body '] || ''\n  });\n}\n\n// Check Email 2\nif (lead.email_2_sent === 'Yes' || lead['Email #2 Sent'] === 'Yes') {\n  events.push({\n    contact_email: email,\n    campaign: campaign,\n    step: 2,\n    event_type: 'sent',\n    provider: 'gmail',\n    provider_message_id: lead.message_id || lead['Message ID'] || `backfill-e2-${email}-${Date.now()}`,\n    event_ts: getRandomWeekdayTimestamp(),\n    subject: 'Re: ' + (lead.email_1_subject || lead['Email #1 Subject'] || 'Email 1'),\n    body: lead.email_2_body || lead['Email #2 Body '] || ''\n  });\n}\n\n// Check Email 3\nif (lead.email_3_sent === 'Yes' || lead['Email #3 Sent'] === 'Yes') {\n  events.push({\n    contact_email: email,\n    campaign: campaign,\n    step: 3,\n    event_type: 'sent',\n    provider: 'gmail',\n    provider_message_id: `backfill-e3-${email}-${Date.now()}`,\n    event_ts: getRandomWeekdayTimestamp(),\n    subject: lead.email_3_subject || lead['Email #3 Subject'] || 'Email 3',\n    body: lead.email_3_body || lead['Email #3 Body'] || ''\n  });\n}\n\n// Check Replied\nif (lead.replied === 'Yes' || lead.Replied === 'Yes') {\n  events.push({\n    contact_email: email,\n    campaign: campaign,\n    event_type: 'replied',\n    event_ts: getRandomWeekdayTimestamp()\n  });\n}\n\n// Check Opted Out\nif (lead.opted_out === 'Yes' || lead['Opted Out'] === 'Yes') {\n  events.push({\n    contact_email: email,\n    campaign: campaign,\n    event_type: 'opt_out',\n    event_ts: getRandomWeekdayTimestamp()\n  });\n}\n\nreturn [{ json: { events: events, lead_email: email, event_count: events.length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        300
+      ],
+      "id": "code-1",
+      "name": "Build Events"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "condition-2",
+              "leftValue": "={{ $json.event_count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        300
+      ],
+      "id": "if-1",
+      "name": "Has Events?"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "events",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        800,
+        200
+      ],
+      "id": "split-1",
+      "name": "Split Events"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://tracee-tabernacular-brandee.ngrok-free.dev/api/events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-token",
+              "value": "6de5a8d03ad6348f4110782372a82f1bb7c6ef43a8ce8810bf0459e73abaeb61"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "timeout": 30000,
+          "retry": {
+            "maxRetries": 3,
+            "retryDelay": 2000
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1000,
+        200
+      ],
+      "id": "http-1",
+      "name": "Send Event to Dashboard",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "unit": "seconds",
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1000,
+        200
+      ],
+      "id": "wait-1",
+      "name": "Rate Limit",
+      "webhookId": "backfill-wait"
+    },
+    {
+      "parameters": {
+        "content": "## Backfill Historical Emails\n\nThis workflow imports your historical email data from Google Sheets into the dashboard.\n\n### Instructions:\n1. Run this workflow ONCE manually\n2. Watch the execution to ensure it completes\n3. Check your dashboard at http://localhost:3000\n4. DISABLE or DELETE this workflow after running\n\n### What it does:\n- Reads all leads from your Google Sheet\n- For each lead with sent emails, creates events\n- Sends events to /api/events endpoint\n- Includes: Email 1, 2, 3 sends, replies, opt-outs\n\n### Notes:\n- Timestamps are estimated (spread across past 30 days)\n- LLM costs cannot be backfilled (no historical data)\n- Rate limited to avoid overwhelming the API",
+        "height": 480,
+        "width": 400,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -600,
+        100
+      ],
+      "typeVersion": 1,
+      "id": "note-1",
+      "name": "Instructions"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get All Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Leads": {
+      "main": [
+        [
+          {
+            "node": "Filter Sent Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Sent Emails": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Build Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Events": {
+      "main": [
+        [
+          {
+            "node": "Has Events?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Events?": {
+      "main": [
+        [
+          {
+            "node": "Split Events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Events": {
+      "main": [
+        [
+          {
+            "node": "Send Event to Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Event to Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Los_Angeles",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "backfill-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "backfill-historical",
+  "tags": [
+    {
+      "id": "r8CZ5Y6mZ7dctfjE",
+      "name": "Cold Email"
+    }
+  ]
+}
+
