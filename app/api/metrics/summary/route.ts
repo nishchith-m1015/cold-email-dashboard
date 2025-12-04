@@ -102,6 +102,36 @@ export async function GET(req: NextRequest) {
       { sends: 0, replies: 0, opt_outs: 0, bounces: 0 }
     );
 
+    // Query opens and clicks from email_events
+    let opensQuery = supabaseAdmin
+      .from('email_events')
+      .select('id', { count: 'exact' })
+      .eq('workspace_id', workspaceId)
+      .eq('event_type', 'opened')
+      .gte('created_at', `${startDate}T00:00:00Z`)
+      .lte('created_at', `${endDate}T23:59:59Z`);
+
+    let clicksQuery = supabaseAdmin
+      .from('email_events')
+      .select('id', { count: 'exact' })
+      .eq('workspace_id', workspaceId)
+      .eq('event_type', 'clicked')
+      .gte('created_at', `${startDate}T00:00:00Z`)
+      .lte('created_at', `${endDate}T23:59:59Z`);
+
+    if (campaign) {
+      opensQuery = opensQuery.eq('campaign_name', campaign);
+      clicksQuery = clicksQuery.eq('campaign_name', campaign);
+    }
+
+    const [opensResult, clicksResult] = await Promise.all([
+      opensQuery,
+      clicksQuery,
+    ]);
+
+    const opens = opensResult.count || 0;
+    const clicks = clicksResult.count || 0;
+
     // Calculate rates
     const replyRatePct = totals.sends > 0 
       ? Number(((totals.replies / totals.sends) * 100).toFixed(2)) 
@@ -111,6 +141,12 @@ export async function GET(req: NextRequest) {
       : 0;
     const bounceRatePct = totals.sends > 0 
       ? Number(((totals.bounces / totals.sends) * 100).toFixed(2)) 
+      : 0;
+    const openRatePct = totals.sends > 0 
+      ? Number(((opens / totals.sends) * 100).toFixed(2)) 
+      : 0;
+    const clickRatePct = totals.sends > 0 
+      ? Number(((clicks / totals.sends) * 100).toFixed(2)) 
       : 0;
 
     // Query LLM costs for the period
@@ -182,9 +218,13 @@ export async function GET(req: NextRequest) {
       replies: totals.replies,
       opt_outs: totals.opt_outs,
       bounces: totals.bounces,
+      opens,
+      clicks,
       reply_rate_pct: replyRatePct,
       opt_out_rate_pct: optOutRatePct,
       bounce_rate_pct: bounceRatePct,
+      open_rate_pct: openRatePct,
+      click_rate_pct: clickRatePct,
       cost_usd: Number(totalCost.toFixed(2)),
       // Comparison data
       sends_change_pct: sendsChange,

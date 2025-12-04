@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields: contact_email, event_type' }, { status: 400 });
   }
 
-  if (!['sent', 'delivered', 'bounced', 'replied', 'opt_out'].includes(event_type)) {
+  if (!['sent', 'delivered', 'bounced', 'replied', 'opt_out', 'opened', 'clicked'].includes(event_type)) {
     return NextResponse.json({ error: 'Invalid event_type' }, { status: 400 });
   }
 

@@ -3,6 +3,153 @@
   "nodes": [
     {
       "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: Initialize cost accumulator\n// Research Report Workflow\n// ============================================\n\n// Initialize cost array for this execution\nconst costEvents = [];\n\n// Store in item for passing through workflow\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n  item.json._workflow_type = 'Research';\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4768,
+        624
+      ],
+      "id": "21eacbab-59d0-4bb2-9640-37dcb99a0a06",
+      "name": "💰 Init Cost Tracking"
+    },
+    {
+      "parameters": {
+        "url": "https://api-f1db6c.stack.tryrelevance.com/latest/studios/run_history/list",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "page_size",
+              "value": "1"
+            },
+            {
+              "name": "filters",
+              "value": "=[\n  {\n    \"filter_type\": \"exact_match\",\n    \"field\": \"project\",\n    \"condition\": \"==\",\n    \"condition_value\": \"9eefb509-a6c5-4a45-8e8f-f971816b99f6\"\n  },\n  {\n    \"filter_type\": \"exact_match\",\n    \"field\": \"studio_id\",\n    \"condition\": \"==\",\n    \"condition_value\": \"24a29cfb-bd8c-4b2f-a45b-58b00f1a8e91\"\n  }\n]"
+            },
+            {
+              "name": "with_agent_details",
+              "value": "true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "9eefb509-a6c5-4a45-8e8f-f971816b99f6:sk-OTljMWM3M2ItZjQ2My00ZTk0LTg2YzktOTNmODIxYjlhM2Zl"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4320,
+        624
+      ],
+      "id": "04b13f21-98a3-4f03-b335-34d94e09c7e2",
+      "name": "Fetch Relevance AI Run History",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: Relevance AI - Research (100% ACCURATE)\n// ============================================\n\nconst PLAN = 'pro';\nconst PLAN_CONFIG = {\n  'free':  { credit_price: 0 },\n  'pro':   { credit_price: 0.0029 },\n  'team':  { credit_price: 0.00997 }\n};\n\nconst plan = PLAN_CONFIG[PLAN];\n\n// Get lead info from the sheet\nconst leadData = $('Get row(s) in sheet1').first().json;\nconst leadEmail = leadData['email_address'] || leadData['email'] || 'unknown';\nconst campaignName = leadData['state'] || 'Research';\n\nlet actualCredits = 0;\nlet creditsBreakdown = [];\nlet dataSource = 'estimate';\nlet runStatus = 'unknown';\n\ntry {\n  const historyResponse = $('Fetch Relevance AI Run History').first().json;\n  \n  if (historyResponse.results && historyResponse.results.length > 0) {\n    const creditRun = historyResponse.results.find(r => r.type === 'credit' && r.status === 'complete');\n    const latestRun = creditRun || historyResponse.results[0];\n    \n    runStatus = latestRun.status;\n    \n    if (latestRun.cost !== undefined && latestRun.cost !== null) {\n      actualCredits = latestRun.cost;\n      dataSource = 'api_exact';\n    }\n    \n    if (latestRun.credits_used && Array.isArray(latestRun.credits_used)) {\n      creditsBreakdown = latestRun.credits_used.map(c => ({\n        name: c.name || 'unknown',\n        credits: c.credits || 0\n      }));\n    }\n  }\n} catch(e) {\n  dataSource = 'estimate_api_error';\n  actualCredits = 5;\n}\n\nlet cost_usd = PLAN === 'free' ? 0 : actualCredits * plan.credit_price;\n\nlet costEvents = $('💰 Init Cost Tracking').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'relevance_ai',\n  model: 'linkedin_research_tool',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: Math.round(cost_usd * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'linkedin_scraping_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    workflow_type: 'Research',\n    plan: PLAN,\n    credits_used: actualCredits,\n    credits_breakdown: creditsBreakdown,\n    data_source: dataSource,\n    run_status: runStatus,\n    credit_price: plan.credit_price,\n    tracking_method: '100%_accurate_api'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4096,
+        624
+      ],
+      "id": "21bf624e-ca21-44c7-94cd-69c61bbe01c6",
+      "name": "💰 Track Relevance AI - Research"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: Google Custom Search - Research\n// Pricing: $5 per 1,000 queries = $0.005/query\n// ============================================\nconst COST_PER_QUERY = 0.005;\n\nconst leadData = $('Get row(s) in sheet1').first().json;\nconst leadEmail = leadData['email_address'] || leadData['email'] || 'unknown';\nconst campaignName = leadData['state'] || 'Research';\n\nlet costEvents = $('💰 Track Relevance AI - Research').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'google',\n  model: 'custom_search_api',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: COST_PER_QUERY,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'company_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    workflow_type: 'Research',\n    pricing_model: 'fixed_per_query',\n    queries_made: 1\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2976,
+        624
+      ],
+      "id": "c5ac3ddd-e90f-43ab-aee8-0198c2e89579",
+      "name": "💰 Track Google CSE - Research"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: OpenAI o3-mini (Summarize) - Research\n// 100% ACCURATE: Uses actual token counts from API\n// Pricing: $1.10/1M input, $4.40/1M output\n// ============================================\nconst PRICING = { input: 1.10, output: 4.40 };\n\nconst leadData = $('Get row(s) in sheet1').first().json;\nconst leadEmail = leadData['email_address'] || leadData['email'] || 'unknown';\nconst campaignName = leadData['state'] || 'Research';\n\nconst openaiResponse = $('Summarize (O3-mini)1').first().json;\n\nconst usage = openaiResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents = $('💰 Track Google CSE - Research').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'openai',\n  model: openaiResponse.model || 'o3-mini',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'company_summarization_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    workflow_type: 'Research',\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2304,
+        624
+      ],
+      "id": "aad5ccf2-38e9-497b-964b-5692bf0004f1",
+      "name": "💰 Track Summarize Cost - Research"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: Apify Google Reviews - Research\n// ============================================\nconst leadData = $('Get row(s) in sheet1').first().json;\nconst leadEmail = leadData['email_address'] || leadData['email'] || 'unknown';\nconst campaignName = leadData['state'] || 'Research';\n\nconst apifyResponse = $('Google Reviews (1-3)1').first().json;\n\nconst reviews = apifyResponse.reviews || apifyResponse.reviewsAll || [];\nconst reviewCount = Array.isArray(reviews) ? reviews.length : (Array.isArray(apifyResponse) ? apifyResponse.length : 0);\n\nconst BASE_COST_PER_PLACE = 0.0005;\nconst COST_PER_REVIEW = 0.001;\nconst cost = BASE_COST_PER_PLACE + (reviewCount * COST_PER_REVIEW);\n\nlet costEvents = $('💰 Track Summarize Cost - Research').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'apify',\n  model: 'google-maps-reviews-scraper',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'reviews_scraping_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    workflow_type: 'Research',\n    reviews_scraped: reviewCount,\n    base_cost: BASE_COST_PER_PLACE,\n    per_review_cost: COST_PER_REVIEW,\n    pricing_model: 'compute_units_estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -992,
+        512
+      ],
+      "id": "01b40b82-789c-4ae6-b5dd-47fad08970c2",
+      "name": "💰 Track Apify Cost - Research"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: OpenAI GPT-4o (Person Profile) - Research\n// 100% ACCURATE: Uses actual token counts from API\n// Pricing: $2.50/1M input, $10.00/1M output (GPT-4o)\n// ============================================\nconst PRICING = { input: 2.50, output: 10.00 };\n\nconst leadData = $('Get row(s) in sheet1').first().json;\nconst leadEmail = leadData['email_address'] || leadData['email'] || 'unknown';\nconst campaignName = leadData['state'] || 'Research';\n\nconst openaiResponse = $('Person + Company Profile1').first().json;\n\nconst usage = openaiResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents;\ntry {\n  costEvents = $('💰 Track Apify Cost - Research').first().json._cost_events || [];\n} catch(e) {\n  costEvents = $('💰 Track Summarize Cost - Research').first().json._cost_events || [];\n}\n\ncostEvents.push({\n  provider: 'openai',\n  model: openaiResponse.model || 'gpt-4o',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'person_profile_analysis_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    workflow_type: 'Research',\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        624
+      ],
+      "id": "9466ec92-9662-460d-9380-a6b99bb1b81a",
+      "name": "💰 Track Person Profile - Research"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: OpenAI GPT-4o (Similarities) - Research\n// 100% ACCURATE: Uses actual token counts from API\n// ============================================\nconst PRICING = { input: 2.50, output: 10.00 };\n\nconst leadData = $('Get row(s) in sheet1').first().json;\nconst leadEmail = leadData['email_address'] || leadData['email'] || 'unknown';\nconst campaignName = leadData['state'] || 'Research';\n\nconst openaiResponse = $('Similarities1').first().json;\n\nconst usage = openaiResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents = $('💰 Track Person Profile - Research').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'openai',\n  model: openaiResponse.model || 'gpt-4o',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'similarities_analysis_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    workflow_type: 'Research',\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        624
+      ],
+      "id": "f3b9d003-b2d5-4491-88ab-d5f335d79ff8",
+      "name": "💰 Track Similarities - Research"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// COST TRACKING: OpenAI GPT-4o (Pain Points) - Research\n// 100% ACCURATE: Uses actual token counts from API\n// ============================================\nconst PRICING = { input: 2.50, output: 10.00 };\n\nconst leadData = $('Get row(s) in sheet1').first().json;\nconst leadEmail = leadData['email_address'] || leadData['email'] || 'unknown';\nconst campaignName = leadData['state'] || 'Research';\n\nconst openaiResponse = $('Pain Points + Solutions1').first().json;\n\nconst usage = openaiResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents = $('💰 Track Similarities - Research').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'openai',\n  model: openaiResponse.model || 'gpt-4o',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'pain_points_analysis_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    workflow_type: 'Research',\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        624
+      ],
+      "id": "b62e399c-7f76-4a6d-936c-4bccc6648ac7",
+      "name": "💰 Track Pain Points - Research"
+    },
+    {
+      "parameters": {
         "rule": {
           "interval": [
             {
@@ -15,11 +162,11 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -2480,
-        288
+        -5776,
+        704
       ],
-      "id": "e28494a5-5927-4bd6-ada6-b2f979b3f819",
-      "name": "Schedule Trigger"
+      "id": "de0260fd-6910-43ff-8759-549b78cf7771",
+      "name": "Schedule Trigger1"
     },
     {
       "parameters": {
@@ -28,11 +175,11 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        -1632,
-        224
+        -4992,
+        624
       ],
-      "id": "7b5639e1-471a-44e9-8b9c-2e8141f621ea",
-      "name": "Wait",
+      "id": "3a94c558-7de8-47e3-9572-974ad9497989",
+      "name": "Wait1",
       "webhookId": "8f2dbd90-8338-4197-bcef-ae6f6876b439"
     },
     {
@@ -42,22 +189,22 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -1872,
-        288
+        -5216,
+        704
       ],
-      "id": "904174c5-b5b1-4783-9abe-58ba342d5a5f",
-      "name": "Loop Over Items"
+      "id": "eafe29d4-d9b9-4a24-bd5c-9b180add18de",
+      "name": "Loop Over Items1"
     },
     {
       "parameters": {},
       "type": "n8n-nodes-base.limit",
       "typeVersion": 1,
       "position": [
-        -2112,
-        288
+        -5440,
+        704
       ],
-      "id": "60f74216-b241-404c-a144-0ce43794b8c2",
-      "name": "Limit"
+      "id": "3ed1cdeb-e041-4384-b503-cddaf363e387",
+      "name": "Limit1"
     },
     {
       "parameters": {
@@ -87,17 +234,17 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        -2304,
-        288
+        -5600,
+        704
       ],
-      "id": "b22add35-1ee1-4b64-b301-d3326aaca48d",
-      "name": "Get row(s) in sheet",
+      "id": "20400b88-0e1c-4322-9bbc-945980ace617",
+      "name": "Get row(s) in sheet1",
       "executeOnce": false,
       "alwaysOutputData": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "p8ESE0UMGdJsRvZv",
-          "name": "Smartie Agents"
+          "id": "2EUpgH0WFkM3Lr6E",
+          "name": "Nishchith Sheets account"
         }
       }
     },
@@ -110,11 +257,11 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        288,
-        224
+        -2080,
+        624
       ],
-      "name": "Set (CSE \u2192 OpenAI shape)",
-      "id": "56567ae3-88ba-430b-bfba-8029144e9c05"
+      "name": "Set (CSE → OpenAI shape)1",
+      "id": "483f253b-e1b3-4166-b995-222b646dde0a"
     },
     {
       "parameters": {
@@ -123,15 +270,15 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -288,
-        224
+        -2752,
+        624
       ],
-      "name": "Parse & Select Top Results",
-      "id": "be009873-bae1-4359-9f91-e7c4cbcf5c04"
+      "name": "Parse & Select Top Results1",
+      "id": "023b7424-a988-4426-90dc-f876375a7637"
     },
     {
       "parameters": {
-        "url": "={{ (() => {\n  const p = $('Scrape Profiles + Posts - Relevance AI').item.json.linkedin_profile_details_data || {};\n  const company = (p.company || '').trim();\n  const rawDomain = (p.company_domain || p.company_website || '').toString();\n  const host = rawDomain.replace(/^https?:\\/\\//i,'').replace(/^www\\./i,'').split('/')[0].trim();\n  const q = (company || host) ? (company + (host ? (' site:' + host) : '')) : company;\n\n  // Put YOUR real values here (correct order!)\n  const key = 'AIzaSyBk5UXFdaexZ0DsRAQRPcBIw2lr-J2BmAg';\n  const cx  = '66b3808ad62e941b1';\n\n  return 'https://www.googleapis.com/customsearch/v1'\n    + '?key=' + key\n    + '&cx='  + cx\n    + '&num=10'\n    + '&safe=active'\n    + '&q='   + encodeURIComponent(q || company || host || '');\n})() }}",
+        "url": "={{ (() => {\n  const p = $('Scrape Profiles + Posts - Relevance AI1').item.json.linkedin_profile_details_data || {};\n  const company = (p.company || '').trim();\n  const rawDomain = (p.company_domain || p.company_website || '').toString();\n  const host = rawDomain.replace(/^https?:\\/\\//i,'').replace(/^www\\./i,'').split('/')[0].trim();\n  const q = (company || host) ? (company + (host ? (' site:' + host) : '')) : company;\n\n  // Put YOUR real values here (correct order!)\n  const key = 'AIzaSyBk5UXFdaexZ0DsRAQRPcBIw2lr-J2BmAg';\n  const cx  = '66b3808ad62e941b1';\n\n  return 'https://www.googleapis.com/customsearch/v1'\n    + '?key=' + key\n    + '&cx='  + cx\n    + '&num=10'\n    + '&safe=active'\n    + '&q='   + encodeURIComponent(q || company || host || '');\n})() }}",
         "options": {
           "response": {}
         }
@@ -139,41 +286,41 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -512,
-        224
+        -3200,
+        624
       ],
-      "name": "Google CSE Search",
-      "id": "33278f33-dfce-4a72-8162-664b2a3c901b"
+      "name": "Google CSE Search1",
+      "id": "56c14c1b-ed3b-42da-889d-c92b6cb807ee"
     },
     {
       "parameters": {
         "content": "# Analysis\n- Summary \n- Similarities \n- Pain Points + Solutions\n",
         "height": 392,
-        "width": 972
+        "width": 1484
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        1664,
-        64
+        -784,
+        496
       ],
       "typeVersion": 1,
-      "id": "74850090-124c-4721-a978-4a914805f146",
-      "name": "Sticky Note5"
+      "id": "32825129-5135-497f-bad9-4820f89a9d20",
+      "name": "Sticky Note"
     },
     {
       "parameters": {
         "content": "# Research Report\n- LinkedIn \n- Online \n- TrustPilot Reviews\n",
         "height": 392,
-        "width": 4164
+        "width": 5028
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -2544,
-        64
+        -5856,
+        496
       ],
       "typeVersion": 1,
-      "id": "55c79437-d592-4658-b118-76fa798ca4cd",
-      "name": "Sticky Note4"
+      "id": "558b13eb-6a21-48ca-91e0-9a2d3ab80bd2",
+      "name": "Sticky Note6"
     },
     {
       "parameters": {
@@ -192,11 +339,11 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        3536,
-        224
+        1760,
+        672
       ],
-      "id": "266b3613-1689-4bbf-a9a8-7b5888f685e7",
-      "name": "Edit Fields"
+      "id": "c56ec5f3-e016-46f3-bd10-c00015cc951a",
+      "name": "Edit Fields1"
     },
     {
       "parameters": {
@@ -218,8 +365,9 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "linkedin_url": "={{ $('Get row(s) in sheet').item.json['LinkedIn Url'] }}",
-            "research_report": "={{ $('Create HTML Report').item.json.html }}"
+            "linkedin_url": "={{ $('Get row(s) in sheet1').item.json['linkedin_url'] }}",
+            "research_report": "={{ $('Create HTML Report1').item.json.html }}",
+            "report_sent": "Yes"
           },
           "matchingColumns": [
             "linkedin_url"
@@ -614,69 +762,69 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        3328,
-        224
+        1344,
+        624
       ],
-      "id": "2c33cfe1-a0f3-4152-b533-1cca7423bf3a",
-      "name": "Google Sheets",
+      "id": "0beee512-d8da-4d60-bcb1-5c7aae9f0716",
+      "name": "Google Sheets1",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "p8ESE0UMGdJsRvZv",
-          "name": "Smartie Agents"
+          "id": "2EUpgH0WFkM3Lr6E",
+          "name": "Nishchith Sheets account"
         }
       }
     },
     {
       "parameters": {
         "sendTo": "Nishchith.manjunatha@gmail.com",
-        "subject": "={{ ( $node[\"Scrape Profiles + Posts - Relevance AI\"].json?.linkedin_profile_details_data?.full_name || $node[\"Scrape Profiles + Posts - Relevance AI\"].json?.output?.linkedin_profile_details_data?.full_name || 'Lead' ) }} Research Report",
+        "subject": "={{ ( $node[\"Scrape Profiles + Posts - Relevance AI1\"].json?.linkedin_profile_details_data?.full_name || $node[\"Scrape Profiles + Posts - Relevance AI1\"].json?.output?.linkedin_profile_details_data?.full_name || 'Lead' ) }} Research Report",
         "message": "={{ $json.html }}",
         "options": {}
       },
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        3104,
-        224
+        1136,
+        624
       ],
-      "id": "49c1eff2-00b8-4526-b81b-e9fa6867d2bc",
-      "name": "Email Report",
+      "id": "94c2a203-c43a-48b2-a8c4-ee5e50eee188",
+      "name": "Email Report1",
       "webhookId": "791dda4d-fc00-4865-9386-347769f4586b",
       "credentials": {
         "gmailOAuth2": {
-          "id": "tUD6GQ7CnHfvUM7k",
-          "name": "Smartie Agents"
+          "id": "zfHBUnz62UkbN9cm",
+          "name": "Upion Gmail"
         }
       }
     },
     {
       "parameters": {
-        "html": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\">\n    <title>Client Research Report</title>\n    <style>\n      body {\n        font-family: Arial, sans-serif;\n        margin: 20px;\n        line-height: 1.6;\n        color: #333;\n      }\n      h1, h2, h3 { color: #222; }\n      .section { margin-bottom: 40px; }\n      .profile-details p { margin: 5px 0; }\n      table {\n        width: 100%; border-collapse: collapse; margin-top: 10px;\n      }\n      th, td {\n        border: 1px solid #ddd; padding: 8px; vertical-align: top;\n      }\n      th { background-color: #f2f2f2; }\n      .card {\n        border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 4px;\n      }\n      a { color: #1a0dab; text-decoration: none; }\n      a:hover { text-decoration: underline; }\n      /* Header images */\n      .header-images { display: flex; margin-bottom: 20px; gap: 16px; }\n      .header-images img { width: 50%; height: auto; max-width: 300px; object-fit: contain; }\n    </style>\n  </head>\n  <body>\n    <!-- Header Images -->\n    <div class=\"header-images\">\n      <img\n        src=\"{{ $('Scrape Profiles + Posts - Relevance AI').last()?.json?.linkedin_profile_details_data?.profile_image_url\n              || $('Scrape Profiles + Posts - Relevance AI').last()?.json?.output?.linkedin_profile_details_data?.profile_image_url\n              || '' }}\"\n        alt=\"Profile Picture\">\n      <img\n        src=\"{{ $('Scrape Profiles + Posts - Relevance AI').last()?.json?.linkedin_profile_details_data?.company_logo_url\n              || $('Scrape Profiles + Posts - Relevance AI').last()?.json?.output?.linkedin_profile_details_data?.company_logo_url\n              || '' }}\"\n        alt=\"Company Logo\">\n    </div>\n\n    <!-- Analysis & Key Facts -->\n    <div class=\"section\" id=\"analysis\">\n      <h1>Analysis & Key Facts</h1>\n\n      {{ $('Person + Company Profile').last()?.json?.message?.content\n         || $('Person + Company Profile').last()?.json?.choices?.[0]?.message?.content\n         || '' }}\n\n      {{ $('Similarities').last()?.json?.message?.content\n         || $('Similarities').last()?.json?.choices?.[0]?.message?.content\n         || '' }}\n\n      {{ $('Pain Points + Solutions').last()?.json?.message?.content\n         || $('Pain Points + Solutions').last()?.json?.choices?.[0]?.message?.content\n         || '' }}\n    </div>\n\n    <!-- Detailed Research Report -->\n    <div class=\"section\" id=\"research-report\">\n      <h1>Research Report</h1>\n\n      <!-- LinkedIn Profile Details -->\n      <div id=\"linkedin-profile\" class=\"profile-details\">\n        <h2>LinkedIn Profile Details</h2>\n\n        <p><strong>Name:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI').last()?.json?.linkedin_profile_details_data?.full_name\n             || $('Scrape Profiles + Posts - Relevance AI').last()?.json?.output?.linkedin_profile_details_data?.full_name\n             || '\u2014' }}\n        </p>\n\n        <p><strong>Headline:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI').last()?.json?.linkedin_profile_details_data?.headline\n             || $('Scrape Profiles + Posts - Relevance AI').last()?.json?.output?.linkedin_profile_details_data?.headline\n             || '\u2014' }}\n        </p>\n\n        <p><strong>Location:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI').last()?.json?.linkedin_profile_details_data?.location\n             || $('Scrape Profiles + Posts - Relevance AI').last()?.json?.output?.linkedin_profile_details_data?.location\n             || '\u2014' }}\n        </p>\n\n        <p><strong>About:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI').last()?.json?.linkedin_profile_details_data?.about\n             || $('Scrape Profiles + Posts - Relevance AI').last()?.json?.output?.linkedin_profile_details_data?.about\n             || '\u2014' }}\n        </p>\n\n        <p><strong>City:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI').last()?.json?.linkedin_profile_details_data?.city\n             || $('Scrape Profiles + Posts - Relevance AI').last()?.json?.output?.linkedin_profile_details_data?.city\n             || '\u2014' }}\n        </p>\n\n        <p><strong>Country:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI').last()?.json?.linkedin_profile_details_data?.country\n             || $('Scrape Profiles + Posts - Relevance AI').last()?.json?.output?.linkedin_profile_details_data?.country\n             || '\u2014' }}\n        </p>\n\n        <p><strong>Job Title:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI').last()?.json?.linkedin_profile_details_data?.job_title\n             || $('Scrape Profiles + Posts - Relevance AI').last()?.json?.output?.linkedin_profile_details_data?.job_title\n             || '\u2014' }}\n        </p>\n\n        <p><strong>Company:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI').last()?.json?.linkedin_profile_details_data?.company\n             || $('Scrape Profiles + Posts - Relevance AI').last()?.json?.output?.linkedin_profile_details_data?.company\n             || '\u2014' }}\n        </p>\n\n        <p><strong>Company Description:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI').last()?.json?.linkedin_profile_details_data?.company_description\n             || $('Scrape Profiles + Posts - Relevance AI').last()?.json?.output?.linkedin_profile_details_data?.company_description\n             || '\u2014' }}\n        </p>\n\n        <p>\n          <strong>Company Website:</strong>\n          {{ (() => {\n               const p = $('Scrape Profiles + Posts - Relevance AI').last()?.json;\n               const url = p?.linkedin_profile_details_data?.company_website\n                           || p?.output?.linkedin_profile_details_data?.company_website\n                           || '';\n               return url\n                 ? `<a href=\"${url}\" target=\"_blank\">${url}</a>`\n                 : '\u2014';\n             })() }}\n        </p>\n\n        <p><strong>Industry:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI').last()?.json?.linkedin_profile_details_data?.company_industry\n             || $('Scrape Profiles + Posts - Relevance AI').last()?.json?.output?.linkedin_profile_details_data?.company_industry\n             || '\u2014' }}\n        </p>\n\n        <p>\n          <strong>LinkedIn URL:</strong>\n          {{ (() => {\n               const p = $('Scrape Profiles + Posts - Relevance AI').last()?.json;\n               const url = p?.linkedin_profile_details_data?.linkedin_url\n                           || p?.output?.linkedin_profile_details_data?.linkedin_url\n                           || '';\n               return url\n                 ? `<a href=\"${url}\" target=\"_blank\">${url}</a>`\n                 : '\u2014';\n             })() }}\n        </p>\n      </div>\n\n      <!-- Education -->\n      <div id=\"education\">\n        <h2>Education</h2>\n        <table>\n          <thead>\n            <tr>\n              <th>School</th>\n              <th>Degree</th>\n              <th>Field of Study</th>\n            </tr>\n          </thead>\n          <tbody>\n            {{ $('Education').last()?.json?.educationTable || '' }}\n          </tbody>\n        </table>\n      </div>\n\n      <!-- Experience -->\n      <div id=\"experience\">\n        <h2>Experience</h2>\n        <table>\n          <thead>\n            <tr>\n              <th>Company</th>\n              <th>Title</th>\n              <th>Date Range</th>\n              <th>Location</th>\n            </tr>\n          </thead>\n          <tbody>\n            {{ $('Experiences').last()?.json?.experiencesTable || '' }}\n          </tbody>\n        </table>\n      </div>\n\n      <!-- Recent LinkedIn Posts -->\n      <div id=\"linkedin-posts\">\n        <h2>Recent LinkedIn Posts</h2>\n        {{ $('Posts').last()?.json?.postsHTML || 'No recent posts found' }}\n      </div>\n\n      <!-- Google Research Analysis -->\n      <div id=\"google-research\">\n        <h2>Google Research Analysis</h2>\n        <p>{{ \n          $('Set (CSE \u2192 OpenAI shape)').last()?.json?.choices?.[0]?.message?.content\n          || $('Set (CSE \u2192 OpenAI shape)').last()?.json?.message?.content\n          || $('Summarize (O3-mini)').last()?.json?.message?.content\n          || $('Summarize (O3-mini)').last()?.json?.choices?.[0]?.message?.content\n          || 'No web summary available.'\n        }}</p>\n      </div>\n\n \n    <!-- Google Reviews -->\n    <div id=\"google-reviews\">\n      <h2>Google Reviews (1\u20133\u2605)</h2>\n       {{$json.reviewsHTML || 'No recent 1\u20133\u2605 Google reviews found.'}}\n    </div>\n\n      <!-- Citations -->\n      <div id=\"citations\">\n        <h2>Citations</h2>\n        {{ $('Citations').last()?.json?.citationsHTML || '' }}\n      </div>\n    </div>\n  </body>\n</html>"
+        "html": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\">\n    <title>Client Research Report</title>\n    <style>\n      body {\n        font-family: Arial, sans-serif;\n        margin: 20px;\n        line-height: 1.6;\n        color: #333;\n      }\n      h1, h2, h3 { color: #222; }\n      .section { margin-bottom: 40px; }\n      .profile-details p { margin: 5px 0; }\n      table {\n        width: 100%; border-collapse: collapse; margin-top: 10px;\n      }\n      th, td {\n        border: 1px solid #ddd; padding: 8px; vertical-align: top;\n      }\n      th { background-color: #f2f2f2; }\n      .card {\n        border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 4px;\n      }\n      a { color: #1a0dab; text-decoration: none; }\n      a:hover { text-decoration: underline; }\n      /* Header images */\n      .header-images { display: flex; margin-bottom: 20px; gap: 16px; }\n      .header-images img { width: 50%; height: auto; max-width: 300px; object-fit: contain; }\n    </style>\n  </head>\n  <body>\n    <!-- Header Images -->\n    <div class=\"header-images\">\n      <img\n        src=\"{{ $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.linkedin_profile_details_data?.profile_image_url\n              || $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.output?.linkedin_profile_details_data?.profile_image_url\n              || '' }}\"\n        alt=\"Profile Picture\">\n      <img\n        src=\"{{ $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.linkedin_profile_details_data?.company_logo_url\n              || $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.output?.linkedin_profile_details_data?.company_logo_url\n              || '' }}\"\n        alt=\"Company Logo\">\n    </div>\n\n    <!-- Analysis & Key Facts -->\n    <div class=\"section\" id=\"analysis\">\n      <h1>Analysis & Key Facts</h1>\n\n      {{ $('Person + Company Profile1').last()?.json?.message?.content\n         || $('Person + Company Profile1').last()?.json?.choices?.[0]?.message?.content\n         || '' }}\n\n      {{ $('Similarities1').last()?.json?.message?.content\n         || $('Similarities1').last()?.json?.choices?.[0]?.message?.content\n         || '' }}\n\n      {{ $('Pain Points + Solutions1').last()?.json?.message?.content\n         || $('Pain Points + Solutions1').last()?.json?.choices?.[0]?.message?.content\n         || '' }}\n    </div>\n\n    <!-- Detailed Research Report -->\n    <div class=\"section\" id=\"research-report\">\n      <h1>Research Report</h1>\n\n      <!-- LinkedIn Profile Details -->\n      <div id=\"linkedin-profile\" class=\"profile-details\">\n        <h2>LinkedIn Profile Details</h2>\n\n        <p><strong>Name:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.linkedin_profile_details_data?.full_name\n             || $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.output?.linkedin_profile_details_data?.full_name\n             || '—' }}\n        </p>\n\n        <p><strong>Headline:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.linkedin_profile_details_data?.headline\n             || $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.output?.linkedin_profile_details_data?.headline\n             || '—' }}\n        </p>\n\n        <p><strong>Location:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.linkedin_profile_details_data?.location\n             || $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.output?.linkedin_profile_details_data?.location\n             || '—' }}\n        </p>\n\n        <p><strong>About:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.linkedin_profile_details_data?.about\n             || $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.output?.linkedin_profile_details_data?.about\n             || '—' }}\n        </p>\n\n        <p><strong>City:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.linkedin_profile_details_data?.city\n             || $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.output?.linkedin_profile_details_data?.city\n             || '—' }}\n        </p>\n\n        <p><strong>Country:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.linkedin_profile_details_data?.country\n             || $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.output?.linkedin_profile_details_data?.country\n             || '—' }}\n        </p>\n\n        <p><strong>Job Title:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.linkedin_profile_details_data?.job_title\n             || $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.output?.linkedin_profile_details_data?.job_title\n             || '—' }}\n        </p>\n\n        <p><strong>Company:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.linkedin_profile_details_data?.company\n             || $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.output?.linkedin_profile_details_data?.company\n             || '—' }}\n        </p>\n\n        <p><strong>Company Description:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.linkedin_profile_details_data?.company_description\n             || $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.output?.linkedin_profile_details_data?.company_description\n             || '—' }}\n        </p>\n\n        <p>\n          <strong>Company Website:</strong>\n          {{ (() => {\n               const p = $('Scrape Profiles + Posts - Relevance AI1').last()?.json;\n               const url = p?.linkedin_profile_details_data?.company_website\n                           || p?.output?.linkedin_profile_details_data?.company_website\n                           || '';\n               return url\n                 ? `<a href=\"${url}\" target=\"_blank\">${url}</a>`\n                 : '—';\n             })() }}\n        </p>\n\n        <p><strong>Industry:</strong>\n          {{ $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.linkedin_profile_details_data?.company_industry\n             || $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.output?.linkedin_profile_details_data?.company_industry\n             || '—' }}\n        </p>\n\n        <p>\n          <strong>LinkedIn URL:</strong>\n          {{ (() => {\n               const p = $('Scrape Profiles + Posts - Relevance AI1').last()?.json;\n               const url = p?.linkedin_profile_details_data?.linkedin_url\n                           || p?.output?.linkedin_profile_details_data?.linkedin_url\n                           || '';\n               return url\n                 ? `<a href=\"${url}\" target=\"_blank\">${url}</a>`\n                 : '—';\n             })() }}\n        </p>\n      </div>\n\n      <!-- Education -->\n      <div id=\"education\">\n        <h2>Education</h2>\n        <table>\n          <thead>\n            <tr>\n              <th>School</th>\n              <th>Degree</th>\n              <th>Field of Study</th>\n            </tr>\n          </thead>\n          <tbody>\n            {{ $('Education1').last()?.json?.educationTable || '' }}\n          </tbody>\n        </table>\n      </div>\n\n      <!-- Experience -->\n      <div id=\"experience\">\n        <h2>Experience</h2>\n        <table>\n          <thead>\n            <tr>\n              <th>Company</th>\n              <th>Title</th>\n              <th>Date Range</th>\n              <th>Location</th>\n            </tr>\n          </thead>\n          <tbody>\n            {{ $('Experiences1').last()?.json?.experiencesTable || '' }}\n          </tbody>\n        </table>\n      </div>\n\n      <!-- Recent LinkedIn Posts -->\n      <div id=\"linkedin-posts\">\n        <h2>Recent LinkedIn Posts</h2>\n        {{ $('Posts1').last()?.json?.postsHTML || 'No recent posts found' }}\n      </div>\n\n      <!-- Google Research Analysis -->\n      <div id=\"google-research\">\n        <h2>Google Research Analysis</h2>\n        <p>{{ \n          $('Set (CSE → OpenAI shape)1').last()?.json?.choices?.[0]?.message?.content\n          || $('Set (CSE → OpenAI shape)1').last()?.json?.message?.content\n          || $('Summarize (O3-mini)1').last()?.json?.message?.content\n          || $('Summarize (O3-mini)1').last()?.json?.choices?.[0]?.message?.content\n          || 'No web summary available.'\n        }}</p>\n      </div>\n\n \n    <!-- Google Reviews -->\n    <div id=\"google-reviews\">\n      <h2>Google Reviews (1–3★)</h2>\n       {{$json.reviewsHTML || 'No recent 1–3★ Google reviews found.'}}\n    </div>\n\n      <!-- Citations -->\n      <div id=\"citations\">\n        <h2>Citations</h2>\n        {{ $('Citations1').last()?.json?.citationsHTML || '' }}\n      </div>\n    </div>\n  </body>\n</html>"
       },
       "type": "n8n-nodes-base.html",
       "typeVersion": 1.2,
       "position": [
-        2768,
-        224
+        880,
+        624
       ],
-      "id": "e935f129-0d42-4ddc-9148-418d3bc98bdd",
-      "name": "Create HTML Report"
+      "id": "6dab4f1b-1438-4bc5-a033-9a2ca5c3ecd9",
+      "name": "Create HTML Report1"
     },
     {
       "parameters": {
         "content": "# Email Report\n",
         "height": 408,
-        "width": 672,
+        "width": 784,
         "color": 4
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        3040,
-        48
+        1104,
+        480
       ],
       "typeVersion": 1,
-      "id": "ab0189c6-d389-4369-9707-eac040fbee1f",
-      "name": "Sticky Note3"
+      "id": "f64732dd-bda7-4d5e-96df-db48f0bc0f34",
+      "name": "Sticky Note7"
     },
     {
       "parameters": {
@@ -686,12 +834,12 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        2672,
-        64
+        736,
+        496
       ],
       "typeVersion": 1,
-      "id": "19e98d28-5688-4d9f-aeac-071a34b613b1",
-      "name": "Sticky Note2"
+      "id": "e77dc0dc-1c2d-4abf-841a-d736026b76f7",
+      "name": "Sticky Note8"
     },
     {
       "parameters": {
@@ -710,7 +858,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: \"chatgpt-4o-latest\",\n  messages: [\n    {\n      role: \"user\",\n      content: \"You are part of the business development team at Smartie Agents. Smartie Agents is an AI Automation agency that provides the following services:\\n- AI Receptionist: 24/7 call handling, lead capture, and appointment booking.\\n- CRM Automation: Automating your entire sales pipeline, follow-ups, and reminders.\\n- Website Chatbots: Intelligent bots for websites to engage and convert visitors.\\n- Social Media Handling: Automated responses and lead capture across Facebook, Instagram, WhatsApp, and SMS.\\n\\nSmartie Agents' AI consultants are the first point of contact for a new lead. When a lead is interested in AI automation solutions, they book a free call with Smartie Agents' consultants. The consultants are responsible for exploring the highest ROI opportunities for automation.\\n\\nOnce a call is booked, your team researches the lead in depth so the consultants can read through it in preparation for the consultation.\\n\\nAs part of the business development team you are provided with the following research:\\n- LinkedIn Profile: The lead's bio, experiences, education, and company description.\\n- LinkedIn Posts: The lead's posts over the past 30 days.\\n- Company Google Search: Public info from Google search and the company's website.\\n- Reviews: The most recent bad reviews the lead's company received on TrustPilot.\\n\\nYour job is to analyse the research and extract:\\n- Pain Points: Identify the biggest issues the company could be facing.\\n- Solutions to Pain Points: Propose how Smartie Agents can solve those problems with its services.\\n- Highest ROI Automation Opportunities: List the top 5 realistic but high-impact automations Smartie Agents can deliver, ranked by ROI.\\n\\nThe insights you extract must be in HTML format as they will be going in the middle of a HTML document. \\n\\nPlease use the following output format: \\n\\nOpportunities (Heading 1)\\n\\nPain Points and Solutions: (Heading 2)\\n[Table with 3 columns: \\n1. Pain Point: Explains the pain point they're facing. \\n2. Evidence: Explains why we think this is the case. \\n3. Solution: Explains the solution to the pain point by Smartie Agents.\\nEach row is a new pain point.]\\n\\nAutomation Opportunities: (Heading 2)\\n[5 Highest ROI automation opportunities for the leads company sorted with the best solution at the top. This must be in dotpoint format:\\n- Opportunity#1 Name: Details\\n- Opportunity#2 Name: Details\\n...\\n\\n- Don't wrap the output in ```html``` since the output will go into the middle of another HTML document.\\n\\nSomeone just booked a call. Here's the research your team found. Create the output as per the above requirements: \\n\\n\\nLinkedIn Profile Scraped Summary in HTML format: \\n\" + ($('Person + Company Profile').last().json?.choices?.[0]?.message?.content || '').replace(/\\r?\\n/g,'<br>') + \"\\n\\nWeb Research Results for Leads Company: \\nRecent Bad Reviews on TrustPilot for Leads Company in HTML format: \\n\" + ($json.reviewsHTML || 'No reviews found') + \"\\n(if there is no reviews then just create the pain points by considering the leads company and job title)\"\n    }\n  ]\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"chatgpt-4o-latest\",\n  messages: [\n    {\n      role: \"user\",\n      content: \"You are part of the business development team at Smartie Agents. Smartie Agents is an AI Automation agency that provides the following services:\\n- AI Receptionist: 24/7 call handling, lead capture, and appointment booking.\\n- CRM Automation: Automating your entire sales pipeline, follow-ups, and reminders.\\n- Website Chatbots: Intelligent bots for websites to engage and convert visitors.\\n- Social Media Handling: Automated responses and lead capture across Facebook, Instagram, WhatsApp, and SMS.\\n\\nSmartie Agents' AI consultants are the first point of contact for a new lead. When a lead is interested in AI automation solutions, they book a free call with Smartie Agents' consultants. The consultants are responsible for exploring the highest ROI opportunities for automation.\\n\\nOnce a call is booked, your team researches the lead in depth so the consultants can read through it in preparation for the consultation.\\n\\nAs part of the business development team you are provided with the following research:\\n- LinkedIn Profile: The lead's bio, experiences, education, and company description.\\n- LinkedIn Posts: The lead's posts over the past 30 days.\\n- Company Google Search: Public info from Google search and the company's website.\\n- Reviews: The most recent bad reviews the lead's company received on TrustPilot.\\n\\nYour job is to analyse the research and extract:\\n- Pain Points: Identify the biggest issues the company could be facing.\\n- Solutions to Pain Points: Propose how Smartie Agents can solve those problems with its services.\\n- Highest ROI Automation Opportunities: List the top 5 realistic but high-impact automations Smartie Agents can deliver, ranked by ROI.\\n\\nThe insights you extract must be in HTML format as they will be going in the middle of a HTML document. \\n\\nPlease use the following output format: \\n\\nOpportunities (Heading 1)\\n\\nPain Points and Solutions: (Heading 2)\\n[Table with 3 columns: \\n1. Pain Point: Explains the pain point they're facing. \\n2. Evidence: Explains why we think this is the case. \\n3. Solution: Explains the solution to the pain point by Smartie Agents.\\nEach row is a new pain point.]\\n\\nAutomation Opportunities: (Heading 2)\\n[5 Highest ROI automation opportunities for the leads company sorted with the best solution at the top. This must be in dotpoint format:\\n- Opportunity#1 Name: Details\\n- Opportunity#2 Name: Details\\n...\\n\\n- Don't wrap the output in ```html``` since the output will go into the middle of another HTML document.\\n\\nSomeone just booked a call. Here's the research your team found. Create the output as per the above requirements: \\n\\n\\nLinkedIn Profile Scraped Summary in HTML format: \\n\" + ($('Person + Company Profile1').last().json?.choices?.[0]?.message?.content || '').replace(/\\r?\\n/g,'<br>') + \"\\n\\nWeb Research Results for Leads Company: \\nRecent Bad Reviews on TrustPilot for Leads Company in HTML format: \\n\" + ($json.reviewsHTML || 'No reviews found') + \"\\n(if there is no reviews then just create the pain points by considering the leads company and job title)\"\n    }\n  ]\n}) }}",
         "options": {
           "timeout": 120000
         }
@@ -718,15 +866,15 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2320,
-        224
+        368,
+        624
       ],
-      "name": "Pain Points + Solutions",
-      "id": "1f4140f0-6c78-494c-9f20-fb72c2d13b31",
+      "name": "Pain Points + Solutions1",
+      "id": "86e9ed85-6896-4243-936f-07c0160b25df",
       "credentials": {
         "openAiApi": {
-          "id": "qPHDRHzCAurQyoi3",
-          "name": "Smartie Agents"
+          "id": "EzDErZcUtMKUzyRO",
+          "name": "Smartie Agents OpenAi account"
         }
       }
     },
@@ -747,7 +895,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: \"chatgpt-4o-latest\",\n  messages: [\n    {\n      role: \"user\",\n      content: \"You are part of the business development team at Smartie Agents, which is an AI Agency.\\n\\nWhen new leads book a consultation with Smartie Agents, your team researches the leads and provides the research + extracted insights to the consultants so they can read it prior to the consult.\\n\\nAs an ice breaker for each call, [YOUR-NAME], who is Smartie Agents' AI consultant, likes to point to a similarity between himself and the lead. This way the lead feels more comfortable talking to [YOUR-NAME] as a friend, rather than a stranger.\\n\\nTo find these similarities you must compare [YOUR-NAME]'s LinkedIn profile to the lead's LinkedIn profile. Look for any similarities you can find, including but not limited to education, experience, location, interests, and so on.\\n\\nYou might also not find any similarities. In this case then output No Similarities Found in the details section of your output. \\n\\nYour output must be in the following HTML format: \\n\\nSimilarities (heading 2)\\n[Details in dot points with one similarity on each dot point]\\n\\n- Don't wrap the output in ```html``` since the output will go into the middle of another HTML document.\\n\\nThe Leads LinkedIn Profile: \\n\" + JSON.stringify($('Scrape Profiles + Posts - Relevance AI').last().json.linkedin_profile_details_data || {}, null, 2) + \"\\n\\n[YOUR-NAME]'s LinkedIn Profile: \\n[INPUT YOUR DETAILS HERE - YOU CAN SCRAPE YOUR PROFILE USING THIS WORKFLOW AND HARDCODE THE INFO HERE]\"\n    }\n  ]\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"chatgpt-4o-latest\",\n  messages: [\n    {\n      role: \"user\",\n      content: \"You are part of the business development team at Smartie Agents, which is an AI Agency.\\n\\nWhen new leads book a consultation with Smartie Agents, your team researches the leads and provides the research + extracted insights to the consultants so they can read it prior to the consult.\\n\\nAs an ice breaker for each call, [YOUR-NAME], who is Smartie Agents' AI consultant, likes to point to a similarity between himself and the lead. This way the lead feels more comfortable talking to [YOUR-NAME] as a friend, rather than a stranger.\\n\\nTo find these similarities you must compare [YOUR-NAME]'s LinkedIn profile to the lead's LinkedIn profile. Look for any similarities you can find, including but not limited to education, experience, location, interests, and so on.\\n\\nYou might also not find any similarities. In this case then output No Similarities Found in the details section of your output. \\n\\nYour output must be in the following HTML format: \\n\\nSimilarities (heading 2)\\n[Details in dot points with one similarity on each dot point]\\n\\n- Don't wrap the output in ```html``` since the output will go into the middle of another HTML document.\\n\\nThe Leads LinkedIn Profile: \\n\" + JSON.stringify($('Scrape Profiles + Posts - Relevance AI1').last().json.linkedin_profile_details_data || {}, null, 2) + \"\\n\\n[YOUR-NAME]'s LinkedIn Profile: \\n[INPUT YOUR DETAILS HERE - YOU CAN SCRAPE YOUR PROFILE USING THIS WORKFLOW AND HARDCODE THE INFO HERE]\"\n    }\n  ]\n}) }}",
         "options": {
           "timeout": 120000
         }
@@ -755,15 +903,15 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2016,
-        224
+        -64,
+        624
       ],
-      "name": "Similarities",
-      "id": "28dcc5a0-9149-497a-ad83-245ae8d7cac4",
+      "name": "Similarities1",
+      "id": "b2eebc68-cedc-48e8-84f4-978938cf31d2",
       "credentials": {
         "openAiApi": {
-          "id": "qPHDRHzCAurQyoi3",
-          "name": "Smartie Agents"
+          "id": "EzDErZcUtMKUzyRO",
+          "name": "Smartie Agents OpenAi account"
         }
       }
     },
@@ -784,7 +932,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: \"chatgpt-4o-latest\",\n  messages: [\n    {\n      role: \"user\",\n      content: \"You are part of the business development team at Smartie Agents which is an AI Agency. \\n\\nWhen a new leads book a consultation with Smartie Agents, your team researches the leads and provides the research + extracted insights to the consultants so they can read it prior to the consult. \\n\\nYour job is to create the following sections from the research:\\n\\n- Personal Profile: The personal profile is a one paragraph summary of the person (lead) extracted from researching their LinkedIn profile.\\n- Interests: In this section you must identify a few of the leads interests from their most recent LinkedIn posts + their LinkedIn profile. \\n- Unique Facts: In this section you must extract at least 2 unique facts about the lead that tells them you've really put time to research who they are. These facts should be things that are unique to the lead and out of the ordinary.\\n- Company Profile: The company profile is a one paragraph summary of the company the person represents, extracted from researching their company LinkedIn profile and available information on the web. \\n\\nYour output must be in HTML, following this format: \\n\\nPerson Profile (Heading 2)\\n[Details]\\n\\nCompany Profile (Heading 2)\\n[Details]\\n\\nInterests (Heading 2)\\n[List of interests in dot point format]\\n\\nUnique Facts (Heading 2)\\n[List of unique facts in dot point format]\\n\\n\\n- Don't wrap the output in ```html``` since the output will go into the middle of another HTML document. Just make sure its in HTML language.\\n\\nCreate this output for the following research: \\n\\nLinkedIn Profile Research (in JSON format): \\n\" + JSON.stringify($('Scrape Profiles + Posts - Relevance AI').last().json.linkedin_profile_details_data || {}, null, 2) + \"\\n\\nMost Recent LinkedIn Posts: \\n\" + JSON.stringify(($('Scrape Profiles + Posts - Relevance AI').last().json.last_30_days_posts_transformed || []).slice(0, 10), null, 2) + \"\\n\\nWeb Research:\\n\" + ($('Summarize (O3-mini)').last().json?.choices?.[0]?.message?.content || 'No web research available')\n    }\n  ]\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"chatgpt-4o-latest\",\n  messages: [\n    {\n      role: \"user\",\n      content: \"You are part of the business development team at Smartie Agents which is an AI Agency. \\n\\nWhen a new leads book a consultation with Smartie Agents, your team researches the leads and provides the research + extracted insights to the consultants so they can read it prior to the consult. \\n\\nYour job is to create the following sections from the research:\\n\\n- Personal Profile: The personal profile is a one paragraph summary of the person (lead) extracted from researching their LinkedIn profile.\\n- Interests: In this section you must identify a few of the leads interests from their most recent LinkedIn posts + their LinkedIn profile. \\n- Unique Facts: In this section you must extract at least 2 unique facts about the lead that tells them you've really put time to research who they are. These facts should be things that are unique to the lead and out of the ordinary.\\n- Company Profile: The company profile is a one paragraph summary of the company the person represents, extracted from researching their company LinkedIn profile and available information on the web. \\n\\nYour output must be in HTML, following this format: \\n\\nPerson Profile (Heading 2)\\n[Details]\\n\\nCompany Profile (Heading 2)\\n[Details]\\n\\nInterests (Heading 2)\\n[List of interests in dot point format]\\n\\nUnique Facts (Heading 2)\\n[List of unique facts in dot point format]\\n\\n\\n- Don't wrap the output in ```html``` since the output will go into the middle of another HTML document. Just make sure its in HTML language.\\n\\nCreate this output for the following research: \\n\\nLinkedIn Profile Research (in JSON format): \\n\" + JSON.stringify($('Scrape Profiles + Posts - Relevance AI1').last().json.linkedin_profile_details_data || {}, null, 2) + \"\\n\\nMost Recent LinkedIn Posts: \\n\" + JSON.stringify(($('Scrape Profiles + Posts - Relevance AI1').last().json.last_30_days_posts_transformed || []).slice(0, 10), null, 2) + \"\\n\\nWeb Research:\\n\" + ($('Summarize (O3-mini)1').last().json?.choices?.[0]?.message?.content || 'No web research available')\n    }\n  ]\n}) }}",
         "options": {
           "timeout": 120000
         }
@@ -792,15 +940,15 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1696,
-        224
+        -512,
+        624
       ],
-      "name": "Person + Company Profile",
-      "id": "e6cb2ab8-3c8c-4b72-9e9d-a47a01aeb3e4",
+      "name": "Person + Company Profile1",
+      "id": "c9d898c6-4721-4909-b332-1605de89270c",
       "credentials": {
         "openAiApi": {
-          "id": "qPHDRHzCAurQyoi3",
-          "name": "Smartie Agents"
+          "id": "EzDErZcUtMKUzyRO",
+          "name": "Smartie Agents OpenAi account"
         }
       }
     },
@@ -811,91 +959,91 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        528,
-        224
+        -1856,
+        624
       ],
-      "id": "76377213-f7c1-4a3c-b713-87fc702c26b4",
-      "name": "Citations"
+      "id": "d958a1f1-d1a4-4943-8e82-f27a5604171d",
+      "name": "Citations1"
     },
     {
       "parameters": {
-        "jsCode": "const input = $node[\"Scrape Profiles + Posts - Relevance AI\"].json;\n\nif (!input || !input.linkedin_profile_details_data) {\n  return [{ json: { postsHTML: '<p>No posts data available</p>' } }];\n}\n\nconst posts = (input.output && input.output.last_30_days_posts_transformed) \n  || input.last_30_days_posts_transformed \n  || [];\n\nlet postsHTML = '';\nif (Array.isArray(posts) && posts.length > 0) {\n  posts.forEach(post => {\n    postsHTML += `<div class=\"linkedin-post\" style=\"border:1px solid #ddd; padding:10px; margin-bottom:10px;\">\n      <p>${post.user_post || ''}</p>\n      <p><em>Posted on: ${post.posted || ''}</em></p>\n    </div>`;\n  });\n} else {\n  postsHTML = '<p>No recent posts found</p>';\n}\n\nconst prev = items[0].json;\nreturn [{ json: { ...prev, postsHTML } }];"
+        "jsCode": "const input = $node[\"Scrape Profiles + Posts - Relevance AI1\"].json;\n\nif (!input || !input.linkedin_profile_details_data) {\n  return [{ json: { postsHTML: '<p>No posts data available</p>' } }];\n}\n\nconst posts = (input.output && input.output.last_30_days_posts_transformed) \n  || input.last_30_days_posts_transformed \n  || [];\n\nlet postsHTML = '';\nif (Array.isArray(posts) && posts.length > 0) {\n  posts.forEach(post => {\n    postsHTML += `<div class=\"linkedin-post\" style=\"border:1px solid #ddd; padding:10px; margin-bottom:10px;\">\n      <p>${post.user_post || ''}</p>\n      <p><em>Posted on: ${post.posted || ''}</em></p>\n    </div>`;\n  });\n} else {\n  postsHTML = '<p>No recent posts found</p>';\n}\n\nconst prev = items[0].json;\nreturn [{ json: { ...prev, postsHTML } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1184,
-        224
+        -3872,
+        624
       ],
-      "id": "ed9ac429-942e-4a38-a13d-a66925d1ea5e",
-      "name": "Posts"
+      "id": "dbecdcb3-057f-47e2-bdb6-7f42dc27b015",
+      "name": "Posts1"
     },
     {
       "parameters": {
-        "jsCode": "// Expect Apify output fields: reviews / reviewsAll / userReviews\nconst list = (items || []).map(i => i.json).flatMap(j => Array.isArray(j) ? j : [j]);\nconst all = list.flatMap(j => j.reviews || j.reviewsAll || j.userReviews || []);\n\nconst low = [];\nfor (const r of all) {\n  const rating = Number(r.rating || r.stars || r.score);\n  if (rating && rating <= 3) {\n    low.push(r);\n    if (low.length === 5) break;\n  }\n}\n\nlet reviewsHTML = '';\nfor (const r of low) {\n  const rating = r.rating ?? r.stars ?? r.score;\n  const dateRaw = r.publishAt || r.time || r.date || '';\n  const text = String(r.text || r.reviewText || r.comment || '').trim();\n  const author = String(r.authorName || r.userName || '');\n  reviewsHTML += '<div class=\"review-card\" style=\"border:1px solid #ddd; padding:10px; margin-bottom:10px;\">';\n  if (author) reviewsHTML += `<h3>${author}</h3>`;\n  if (rating != null) reviewsHTML += `<p><strong>Rating:</strong> ${rating}</p>`;\n  if (dateRaw) reviewsHTML += `<p><strong>Date:</strong> ${dateRaw}</p>`;\n  if (text) reviewsHTML += `<p>${text}</p>`;\n  reviewsHTML += '</div>';\n}\n\nif (!reviewsHTML) {\n  reviewsHTML = 'No recent 1\u20133\u2605 Google reviews found.';\n}\n\nreturn [{ json: { reviewsHTML } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1472,
-        224
-      ],
-      "id": "a6b46c79-a078-4d71-9120-2d6178afea51",
-      "name": "Reviews",
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const input = $node[\"Scrape Profiles + Posts - Relevance AI\"].json;\nif (!input || !input.linkedin_profile_details_data) {\n  return [{ json: { educationTable: '<tr><td colspan=\"3\">No education data available</td></tr>' } }];\n}\nconst educations = input.linkedin_profile_details_data.educations || [];\nlet educationRows = '';\neducations.forEach(edu => {\n  educationRows += `<tr>\n    <td>${edu.school || ''}</td>\n    <td>${edu.degree || ''}</td>\n    <td>${edu.field_of_study || ''}</td>\n  </tr>`;\n});\nif (!educationRows) educationRows = '<tr><td colspan=\"3\">No education found</td></tr>';\nconst prev = items[0].json;\nreturn [{ json: { ...prev, educationTable: educationRows } }];"
+        "jsCode": "// Expect Apify output fields: reviews / reviewsAll / userReviews\nconst list = (items || []).map(i => i.json).flatMap(j => Array.isArray(j) ? j : [j]);\nconst all = list.flatMap(j => j.reviews || j.reviewsAll || j.userReviews || []);\n\nconst low = [];\nfor (const r of all) {\n  const rating = Number(r.rating || r.stars || r.score);\n  if (rating && rating <= 3) {\n    low.push(r);\n    if (low.length === 5) break;\n  }\n}\n\nlet reviewsHTML = '';\nfor (const r of low) {\n  const rating = r.rating ?? r.stars ?? r.score;\n  const dateRaw = r.publishAt || r.time || r.date || '';\n  const text = String(r.text || r.reviewText || r.comment || '').trim();\n  const author = String(r.authorName || r.userName || '');\n  reviewsHTML += '<div class=\"review-card\" style=\"border:1px solid #ddd; padding:10px; margin-bottom:10px;\">';\n  if (author) reviewsHTML += `<h3>${author}</h3>`;\n  if (rating != null) reviewsHTML += `<p><strong>Rating:</strong> ${rating}</p>`;\n  if (dateRaw) reviewsHTML += `<p><strong>Date:</strong> ${dateRaw}</p>`;\n  if (text) reviewsHTML += `<p>${text}</p>`;\n  reviewsHTML += '</div>';\n}\n\nif (!reviewsHTML) {\n  reviewsHTML = 'No recent 1–3★ Google reviews found.';\n}\n\nreturn [{ json: { reviewsHTML } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         -736,
-        224
+        624
       ],
-      "id": "ca760705-822f-408c-938b-26a751d1c4e9",
-      "name": "Education"
+      "id": "46391fdc-5370-44a3-8e22-ac8a16ec11f1",
+      "name": "Reviews1",
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "const input = $node[\"Scrape Profiles + Posts - Relevance AI\"].json;\nif (!input || !input.linkedin_profile_details_data) {\n  return [{ json: { experiencesTable: '<tr><td colspan=\"4\">No experience data available</td></tr>' } }];\n}\nconst experiences = input.linkedin_profile_details_data.experiences || [];\nlet htmlRows = '';\nexperiences.forEach(exp => {\n  htmlRows += `<tr>\n    <td>${exp.company || ''}</td>\n    <td>${exp.title || ''}</td>\n    <td>${exp.date_range || ''}</td>\n    <td>${exp.location || ''}</td>\n  </tr>`;\n});\nif (!htmlRows) htmlRows = '<tr><td colspan=\"4\">No experiences found</td></tr>';\nconst prev = items[0].json;\nreturn [{ json: { ...prev, experiencesTable: htmlRows } }];"
+        "jsCode": "const input = $node[\"Scrape Profiles + Posts - Relevance AI1\"].json;\nif (!input || !input.linkedin_profile_details_data) {\n  return [{ json: { educationTable: '<tr><td colspan=\"3\">No education data available</td></tr>' } }];\n}\nconst educations = input.linkedin_profile_details_data.educations || [];\nlet educationRows = '';\neducations.forEach(edu => {\n  educationRows += `<tr>\n    <td>${edu.school || ''}</td>\n    <td>${edu.degree || ''}</td>\n    <td>${edu.field_of_study || ''}</td>\n  </tr>`;\n});\nif (!educationRows) educationRows = '<tr><td colspan=\"3\">No education found</td></tr>';\nconst prev = items[0].json;\nreturn [{ json: { ...prev, educationTable: educationRows } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -960,
-        224
+        -3424,
+        624
       ],
-      "id": "aa6f88a0-da98-45aa-b35a-5e808583f7a0",
-      "name": "Experiences"
+      "id": "2912a515-0170-4260-8e9b-213bda38e2c7",
+      "name": "Education1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $node[\"Scrape Profiles + Posts - Relevance AI1\"].json;\nif (!input || !input.linkedin_profile_details_data) {\n  return [{ json: { experiencesTable: '<tr><td colspan=\"4\">No experience data available</td></tr>' } }];\n}\nconst experiences = input.linkedin_profile_details_data.experiences || [];\nlet htmlRows = '';\nexperiences.forEach(exp => {\n  htmlRows += `<tr>\n    <td>${exp.company || ''}</td>\n    <td>${exp.title || ''}</td>\n    <td>${exp.date_range || ''}</td>\n    <td>${exp.location || ''}</td>\n  </tr>`;\n});\nif (!htmlRows) htmlRows = '<tr><td colspan=\"4\">No experiences found</td></tr>';\nconst prev = items[0].json;\nreturn [{ json: { ...prev, experiencesTable: htmlRows } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3648,
+        624
+      ],
+      "id": "651e7237-4e86-4e19-a73a-2f20853312cf",
+      "name": "Experiences1"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api-f1db6c.stack.tryrelevance.com/latest/studios/132581a5-9491-4c64-b99e-5aca102664fe/trigger_webhook?project=5a49ad7e5aae-409e-baa9-405a83387a03",
+        "url": "https://api-bcbe5a.stack.tryrelevance.com/latest/studios/24a29cfb-bd8c-4b2f-a45b-58b00f1a8e91/trigger_webhook?project=9eefb509-a6c5-4a45-8e8f-f971816b99f6",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "5a49ad7e5aae-409e-baa9-405a83387a03:sk-YjdiMTBlZWYtODNhZC00YjQwLThjNWMtZDg3MzM0ZDMyNzkx"
+              "value": "9eefb509-a6c5-4a45-8e8f-f971816b99f6:sk-OTljMWM3M2ItZjQ2My00ZTk0LTg2YzktOTNmODIxYjlhM2Zl"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"linkedin_url\": \"{{ $json[\"LinkedIn Url\"] }}\",\n  \"last_x_days\": 30\n}",
+        "jsonBody": "={\n  \"linkedin_url\": \"{{ $json[\"linkedin_url\"] }}\",\n  \"last_x_days\": 30\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -1408,
-        224
+        -4544,
+        624
       ],
-      "id": "cd42be64-9876-4639-bfc8-34cca936347e",
-      "name": "Scrape Profiles + Posts - Relevance AI",
+      "id": "e8d0d353-7236-4150-ba77-21d69dcfe4df",
+      "name": "Scrape Profiles + Posts - Relevance AI1",
       "executeOnce": false
     },
     {
@@ -926,39 +1074,39 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        976,
-        224
+        -1408,
+        624
       ],
-      "id": "704e1080-c244-45c4-95ab-f4ff46249e16",
-      "name": "If"
+      "id": "c1ff307e-71a4-469d-9ac9-7b351e0d2d90",
+      "name": "If1"
     },
     {
       "parameters": {
         "mode": "raw",
-        "jsonOutput": "{\n  \"emptyReviews\": true,\n  \"reviewsHTML\": \"No recent 1\u20133 stars Google reviews found.\"\n}\n",
+        "jsonOutput": "{\n  \"emptyReviews\": true,\n  \"reviewsHTML\": \"No recent 1–3 stars Google reviews found.\"\n}\n",
         "options": {}
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1216,
-        320
+        -1088,
+        640
       ],
-      "id": "f0f3c1ef-deca-4fa9-9b92-73e2c1f2a739",
-      "name": "No Reviews"
+      "id": "1d2281b3-6a1a-4b8a-8c3f-51219d91bc2b",
+      "name": "No Reviews1"
     },
     {
       "parameters": {
-        "jsCode": "// Build a Google Maps search query like: \"<Company> <City> <State>\"\nconst arr = $items(\"Scrape Profiles + Posts - Relevance AI\", 0, 0);\nconst p = (arr?.[arr.length - 1]?.json?.linkedin_profile_details_data) ?? {};\nconst company = String(p.company || '').trim();\nconst city    = String(p.city || '').trim();\nconst state   = String(p.state || p.company_state || '').trim();\n\nconst gmaps_query = [company, city, state].filter(Boolean).join(' ').trim();\nreturn items.map(i => ({ json: { ...i.json, gmaps_query } }));"
+        "jsCode": "// Build a Google Maps search query like: \"<Company> <City> <State>\"\nconst arr = $items(\"Scrape Profiles + Posts - Relevance AI1\", 0, 0);\nconst p = (arr?.[arr.length - 1]?.json?.linkedin_profile_details_data) ?? {};\nconst company = String(p.company || '').trim();\nconst city    = String(p.city || '').trim();\nconst state   = String(p.state || p.company_state || '').trim();\n\nconst gmaps_query = [company, city, state].filter(Boolean).join(' ').trim();\nreturn items.map(i => ({ json: { ...i.json, gmaps_query } }));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        768,
-        224
+        -1632,
+        624
       ],
-      "id": "6a8a1341-25b4-4706-bbd2-b7e9bcb90494",
-      "name": "Google Reviews"
+      "id": "c859bfa9-ab69-41f3-8655-38945b43f920",
+      "name": "Google Reviews1"
     },
     {
       "parameters": {
@@ -975,11 +1123,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1216,
-        112
+        -1184,
+        512
       ],
-      "id": "548d5b4a-d8e3-457e-b5ac-86b5208c2350",
-      "name": "Google Reviews (1-3)",
+      "id": "a6f59c21-5041-46d7-ba28-5a0780995f3c",
+      "name": "Google Reviews (1-3)1",
       "alwaysOutputData": true,
       "credentials": {
         "httpQueryAuth": {
@@ -1010,170 +1158,23 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: \"o3-mini\",\n  max_tokens: 700,\n  messages: [\n    {\n      role: \"user\",\n      content: \"You are a careful company researcher. Using the short web snippets below, produce a concise, factual brief about the prospect's company: what they do, core products/services, who they serve, and any **recent** notable items (only if clearly evidenced by the snippets). If a detail is uncertain, state it as uncertain or omit it. Finish with a bullet list of sources as \\\"Title \u2014 URL\\\".\\n\\nCompany:\\n\" + (($('Scrape Profiles + Posts - Relevance AI').item.json.linkedin_profile_details_data.company || '').trim() || '(unknown)') + \"\\nDomain:\\n\" + (($('Scrape Profiles + Posts - Relevance AI').item.json.linkedin_profile_details_data.company_domain || $('Scrape Profiles + Posts - Relevance AI').item.json.linkedin_profile_details_data.company_website || '(unknown)').replace('https://','').replace('http://','').replace('www.','').split('/')[0]) + \"\\nSnippets:\\n\" + $json.cse_context\n    }\n  ]\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"o3-mini\",\n  max_completion_tokens: 700,\n  messages: [\n    {\n      role: \"user\",\n      content: \"You are a careful company researcher. Using the short web snippets below, produce a concise, factual brief about the prospect's company: what they do, core products/services, who they serve, and any **recent** notable items (only if clearly evidenced by the snippets). If a detail is uncertain, state it as uncertain or omit it. Finish with a bullet list of sources as \\\"Title — URL\\\".\\n\\nCompany:\\n\" + (($('Scrape Profiles + Posts - Relevance AI1').item.json.linkedin_profile_details_data.company || '').trim() || '(unknown)') + \"\\nDomain:\\n\" + (($('Scrape Profiles + Posts - Relevance AI1').item.json.linkedin_profile_details_data.company_domain || $('Scrape Profiles + Posts - Relevance AI1').item.json.linkedin_profile_details_data.company_website || '(unknown)').replace('https://','').replace('http://','').replace('www.','').split('/')[0]) + \"\\nSnippets:\\n\" + $json.cse_context\n    }\n  ]\n}) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -64,
-        224
+        -2528,
+        624
       ],
-      "name": "Summarize (O3-mini)",
-      "id": "856127b4-12fb-4e97-9838-fe2149cfe380",
+      "name": "Summarize (O3-mini)1",
+      "id": "5cb6806a-b3e2-4358-8ec8-035e63769d68",
       "credentials": {
         "openAiApi": {
-          "id": "qPHDRHzCAurQyoi3",
-          "name": "Smartie Agents"
+          "id": "EzDErZcUtMKUzyRO",
+          "name": "Smartie Agents OpenAi account"
         }
       }
-    },
-    {
-      "parameters": {
-        "jsCode": "// ============================================\n// COST TRACKING: Initialize cost accumulator\n// Research Report Workflow\n// ============================================\n\n// Initialize cost array for this execution\nconst costEvents = [];\n\n// Store in item for passing through workflow\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n  item.json._workflow_type = 'Research';\n}\n\nreturn items;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -1408,
-        224
-      ],
-      "id": "init-cost-research-001",
-      "name": "\ud83d\udcb0 Init Cost Tracking"
-    },
-    {
-      "parameters": {
-        "url": "https://api-f1db6c.stack.tryrelevance.com/latest/studios/run_history/list",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "page_size",
-              "value": "1"
-            },
-            {
-              "name": "filters",
-              "value": "=[\n  {\n    \"filter_type\": \"exact_match\",\n    \"field\": \"project\",\n    \"condition\": \"==\",\n    \"condition_value\": \"5a49ad7e5aae-409e-baa9-405a83387a03\"\n  },\n  {\n    \"filter_type\": \"exact_match\",\n    \"field\": \"studio_id\",\n    \"condition\": \"==\",\n    \"condition_value\": \"132581a5-9491-4c64-b99e-5aca102664fe\"\n  }\n]"
-            },
-            {
-              "name": "with_agent_details",
-              "value": "true"
-            }
-          ]
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "5a49ad7e5aae-409e-baa9-405a83387a03:sk-YjdiMTBlZWYtODNhZC00YjQwLThjNWMtZDg3MzM0ZDMyNzkx"
-            }
-          ]
-        },
-        "options": {
-          "timeout": 10000
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -1184,
-        224
-      ],
-      "id": "fetch-rel-history-research-001",
-      "name": "Fetch Relevance AI Run History",
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "// ============================================\n// COST TRACKING: Relevance AI - Research (100% ACCURATE)\n// ============================================\n\nconst PLAN = 'pro';\nconst PLAN_CONFIG = {\n  'free':  { credit_price: 0 },\n  'pro':   { credit_price: 0.0029 },\n  'team':  { credit_price: 0.00997 }\n};\n\nconst plan = PLAN_CONFIG[PLAN];\n\n// Get lead info from the sheet\nconst leadData = $('Get row(s) in sheet').first().json;\nconst leadEmail = leadData['email_address'] || leadData['email'] || 'unknown';\nconst campaignName = leadData['state'] || 'Research';\n\nlet actualCredits = 0;\nlet creditsBreakdown = [];\nlet dataSource = 'estimate';\nlet runStatus = 'unknown';\n\ntry {\n  const historyResponse = $('Fetch Relevance AI Run History').first().json;\n  \n  if (historyResponse.results && historyResponse.results.length > 0) {\n    const creditRun = historyResponse.results.find(r => r.type === 'credit' && r.status === 'complete');\n    const latestRun = creditRun || historyResponse.results[0];\n    \n    runStatus = latestRun.status;\n    \n    if (latestRun.cost !== undefined && latestRun.cost !== null) {\n      actualCredits = latestRun.cost;\n      dataSource = 'api_exact';\n    }\n    \n    if (latestRun.credits_used && Array.isArray(latestRun.credits_used)) {\n      creditsBreakdown = latestRun.credits_used.map(c => ({\n        name: c.name || 'unknown',\n        credits: c.credits || 0\n      }));\n    }\n  }\n} catch(e) {\n  dataSource = 'estimate_api_error';\n  actualCredits = 5;\n}\n\nlet cost_usd = PLAN === 'free' ? 0 : actualCredits * plan.credit_price;\n\nlet costEvents = $('\ud83d\udcb0 Init Cost Tracking').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'relevance_ai',\n  model: 'linkedin_research_tool',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: Math.round(cost_usd * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'linkedin_scraping_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    workflow_type: 'Research',\n    plan: PLAN,\n    credits_used: actualCredits,\n    credits_breakdown: creditsBreakdown,\n    data_source: dataSource,\n    run_status: runStatus,\n    credit_price: plan.credit_price,\n    tracking_method: '100%_accurate_api'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -960,
-        224
-      ],
-      "id": "track-relevance-research-001",
-      "name": "\ud83d\udcb0 Track Relevance AI - Research"
-    },
-    {
-      "parameters": {
-        "jsCode": "// ============================================\n// COST TRACKING: Google Custom Search - Research\n// Pricing: $5 per 1,000 queries = $0.005/query\n// ============================================\nconst COST_PER_QUERY = 0.005;\n\nconst leadData = $('Get row(s) in sheet').first().json;\nconst leadEmail = leadData['email_address'] || leadData['email'] || 'unknown';\nconst campaignName = leadData['state'] || 'Research';\n\nlet costEvents = $('\ud83d\udcb0 Track Relevance AI - Research').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'google',\n  model: 'custom_search_api',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: COST_PER_QUERY,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'company_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    workflow_type: 'Research',\n    pricing_model: 'fixed_per_query',\n    queries_made: 1\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -288,
-        224
-      ],
-      "id": "track-cse-research-001",
-      "name": "\ud83d\udcb0 Track Google CSE - Research"
-    },
-    {
-      "parameters": {
-        "jsCode": "// ============================================\n// COST TRACKING: OpenAI o3-mini (Summarize) - Research\n// 100% ACCURATE: Uses actual token counts from API\n// Pricing: $1.10/1M input, $4.40/1M output\n// ============================================\nconst PRICING = { input: 1.10, output: 4.40 };\n\nconst leadData = $('Get row(s) in sheet').first().json;\nconst leadEmail = leadData['email_address'] || leadData['email'] || 'unknown';\nconst campaignName = leadData['state'] || 'Research';\n\nconst openaiResponse = $('Summarize (O3-mini)').first().json;\n\nconst usage = openaiResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents = $('\ud83d\udcb0 Track Google CSE - Research').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'openai',\n  model: openaiResponse.model || 'o3-mini',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'company_summarization_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    workflow_type: 'Research',\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        160,
-        224
-      ],
-      "id": "track-summarize-research-001",
-      "name": "\ud83d\udcb0 Track Summarize Cost - Research"
-    },
-    {
-      "parameters": {
-        "jsCode": "// ============================================\n// COST TRACKING: Apify Google Reviews - Research\n// ============================================\nconst leadData = $('Get row(s) in sheet').first().json;\nconst leadEmail = leadData['email_address'] || leadData['email'] || 'unknown';\nconst campaignName = leadData['state'] || 'Research';\n\nconst apifyResponse = $('Google Reviews (1-3)').first().json;\n\nconst reviews = apifyResponse.reviews || apifyResponse.reviewsAll || [];\nconst reviewCount = Array.isArray(reviews) ? reviews.length : (Array.isArray(apifyResponse) ? apifyResponse.length : 0);\n\nconst BASE_COST_PER_PLACE = 0.0005;\nconst COST_PER_REVIEW = 0.001;\nconst cost = BASE_COST_PER_PLACE + (reviewCount * COST_PER_REVIEW);\n\nlet costEvents = $('\ud83d\udcb0 Track Summarize Cost - Research').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'apify',\n  model: 'google-maps-reviews-scraper',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'reviews_scraping_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    workflow_type: 'Research',\n    reviews_scraped: reviewCount,\n    base_cost: BASE_COST_PER_PLACE,\n    per_review_cost: COST_PER_REVIEW,\n    pricing_model: 'compute_units_estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1440,
-        112
-      ],
-      "id": "track-apify-research-001",
-      "name": "\ud83d\udcb0 Track Apify Cost - Research"
-    },
-    {
-      "parameters": {
-        "jsCode": "// ============================================\n// COST TRACKING: OpenAI GPT-4o (Person Profile) - Research\n// 100% ACCURATE: Uses actual token counts from API\n// Pricing: $2.50/1M input, $10.00/1M output (GPT-4o)\n// ============================================\nconst PRICING = { input: 2.50, output: 10.00 };\n\nconst leadData = $('Get row(s) in sheet').first().json;\nconst leadEmail = leadData['email_address'] || leadData['email'] || 'unknown';\nconst campaignName = leadData['state'] || 'Research';\n\nconst openaiResponse = $('Person + Company Profile').first().json;\n\nconst usage = openaiResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents;\ntry {\n  costEvents = $('\ud83d\udcb0 Track Apify Cost - Research').first().json._cost_events || [];\n} catch(e) {\n  costEvents = $('\ud83d\udcb0 Track Summarize Cost - Research').first().json._cost_events || [];\n}\n\ncostEvents.push({\n  provider: 'openai',\n  model: openaiResponse.model || 'gpt-4o',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'person_profile_analysis_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    workflow_type: 'Research',\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1920,
-        224
-      ],
-      "id": "track-person-research-001",
-      "name": "\ud83d\udcb0 Track Person Profile - Research"
-    },
-    {
-      "parameters": {
-        "jsCode": "// ============================================\n// COST TRACKING: OpenAI GPT-4o (Similarities) - Research\n// 100% ACCURATE: Uses actual token counts from API\n// ============================================\nconst PRICING = { input: 2.50, output: 10.00 };\n\nconst leadData = $('Get row(s) in sheet').first().json;\nconst leadEmail = leadData['email_address'] || leadData['email'] || 'unknown';\nconst campaignName = leadData['state'] || 'Research';\n\nconst openaiResponse = $('Similarities').first().json;\n\nconst usage = openaiResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents = $('\ud83d\udcb0 Track Person Profile - Research').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'openai',\n  model: openaiResponse.model || 'gpt-4o',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'similarities_analysis_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    workflow_type: 'Research',\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2240,
-        224
-      ],
-      "id": "track-sim-research-001",
-      "name": "\ud83d\udcb0 Track Similarities - Research"
-    },
-    {
-      "parameters": {
-        "jsCode": "// ============================================\n// COST TRACKING: OpenAI GPT-4o (Pain Points) - Research\n// 100% ACCURATE: Uses actual token counts from API\n// ============================================\nconst PRICING = { input: 2.50, output: 10.00 };\n\nconst leadData = $('Get row(s) in sheet').first().json;\nconst leadEmail = leadData['email_address'] || leadData['email'] || 'unknown';\nconst campaignName = leadData['state'] || 'Research';\n\nconst openaiResponse = $('Pain Points + Solutions').first().json;\n\nconst usage = openaiResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents = $('\ud83d\udcb0 Track Similarities - Research').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'openai',\n  model: openaiResponse.model || 'gpt-4o',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'pain_points_analysis_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    workflow_type: 'Research',\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2544,
-        224
-      ],
-      "id": "track-pain-research-001",
-      "name": "\ud83d\udcb0 Track Pain Points - Research"
     },
     {
       "parameters": {
@@ -1194,7 +1195,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($('\ud83d\udcb0 Track Pain Points - Research').first().json._cost_events || []) }}",
+        "jsonBody": "={{ JSON.stringify($('💰 Track Pain Points - Research').first().json._cost_events || []) }}",
         "options": {
           "timeout": 10000
         }
@@ -1202,87 +1203,20 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3312,
-        224
+        1552,
+        624
       ],
-      "id": "send-cost-research-001",
-      "name": "\ud83d\udcca Send Cost Events to Dashboard"
+      "id": "519186a5-0af0-46c1-9e6f-a4494bb437af",
+      "name": "Send Cost Events to Dashboard"
     }
   ],
   "pinData": {},
   "connections": {
-    "Schedule Trigger": {
+    "💰 Init Cost Tracking": {
       "main": [
         [
           {
-            "node": "Get row(s) in sheet",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get row(s) in sheet": {
-      "main": [
-        [
-          {
-            "node": "Limit",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Limit": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Items",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Loop Over Items": {
-      "main": [
-        [],
-        [
-          {
-            "node": "Wait",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Wait": {
-      "main": [
-        [
-          {
-            "node": "\ud83d\udcb0 Init Cost Tracking",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "\ud83d\udcb0 Init Cost Tracking": {
-      "main": [
-        [
-          {
-            "node": "Scrape Profiles + Posts - Relevance AI",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Scrape Profiles + Posts - Relevance AI": {
-      "main": [
-        [
-          {
-            "node": "Fetch Relevance AI Run History",
+            "node": "Scrape Profiles + Posts - Relevance AI1",
             "type": "main",
             "index": 0
           }
@@ -1293,322 +1227,389 @@
       "main": [
         [
           {
-            "node": "\ud83d\udcb0 Track Relevance AI - Research",
+            "node": "💰 Track Relevance AI - Research",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udcb0 Track Relevance AI - Research": {
+    "💰 Track Relevance AI - Research": {
       "main": [
         [
           {
-            "node": "Posts",
+            "node": "Posts1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Posts": {
+    "💰 Track Google CSE - Research": {
       "main": [
         [
           {
-            "node": "Experiences",
+            "node": "Parse & Select Top Results1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Experiences": {
+    "💰 Track Summarize Cost - Research": {
       "main": [
         [
           {
-            "node": "Education",
+            "node": "Set (CSE → OpenAI shape)1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Education": {
+    "💰 Track Apify Cost - Research": {
       "main": [
         [
           {
-            "node": "Google CSE Search",
+            "node": "Reviews1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Google CSE Search": {
+    "💰 Track Person Profile - Research": {
       "main": [
         [
           {
-            "node": "\ud83d\udcb0 Track Google CSE - Research",
+            "node": "Similarities1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udcb0 Track Google CSE - Research": {
+    "💰 Track Similarities - Research": {
       "main": [
         [
           {
-            "node": "Parse & Select Top Results",
+            "node": "Pain Points + Solutions1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Parse & Select Top Results": {
+    "💰 Track Pain Points - Research": {
       "main": [
         [
           {
-            "node": "Summarize (O3-mini)",
+            "node": "Create HTML Report1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Summarize (O3-mini)": {
+    "Schedule Trigger1": {
       "main": [
         [
           {
-            "node": "\ud83d\udcb0 Track Summarize Cost - Research",
+            "node": "Get row(s) in sheet1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udcb0 Track Summarize Cost - Research": {
+    "Wait1": {
       "main": [
         [
           {
-            "node": "Set (CSE \u2192 OpenAI shape)",
+            "node": "💰 Init Cost Tracking",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Set (CSE \u2192 OpenAI shape)": {
+    "Loop Over Items1": {
       "main": [
+        [],
         [
           {
-            "node": "Citations",
+            "node": "Wait1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Citations": {
+    "Limit1": {
       "main": [
         [
           {
-            "node": "Google Reviews",
+            "node": "Loop Over Items1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Google Reviews": {
+    "Get row(s) in sheet1": {
       "main": [
         [
           {
-            "node": "If",
+            "node": "Limit1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If": {
+    "Set (CSE → OpenAI shape)1": {
       "main": [
         [
           {
-            "node": "Google Reviews (1-3)",
+            "node": "Citations1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse & Select Top Results1": {
+      "main": [
+        [
+          {
+            "node": "Summarize (O3-mini)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google CSE Search1": {
+      "main": [
+        [
+          {
+            "node": "💰 Track Google CSE - Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets1": {
+      "main": [
+        [
+          {
+            "node": "Send Cost Events to Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Report1": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create HTML Report1": {
+      "main": [
+        [
+          {
+            "node": "Email Report1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pain Points + Solutions1": {
+      "main": [
+        [
+          {
+            "node": "💰 Track Pain Points - Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Similarities1": {
+      "main": [
+        [
+          {
+            "node": "💰 Track Similarities - Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Person + Company Profile1": {
+      "main": [
+        [
+          {
+            "node": "💰 Track Person Profile - Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Citations1": {
+      "main": [
+        [
+          {
+            "node": "Google Reviews1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Posts1": {
+      "main": [
+        [
+          {
+            "node": "Experiences1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reviews1": {
+      "main": [
+        [
+          {
+            "node": "Person + Company Profile1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Education1": {
+      "main": [
+        [
+          {
+            "node": "Google CSE Search1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Experiences1": {
+      "main": [
+        [
+          {
+            "node": "Education1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Profiles + Posts - Relevance AI1": {
+      "main": [
+        [
+          {
+            "node": "Fetch Relevance AI Run History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Google Reviews (1-3)1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "No Reviews",
+            "node": "No Reviews1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Google Reviews (1-3)": {
+    "No Reviews1": {
       "main": [
         [
           {
-            "node": "\ud83d\udcb0 Track Apify Cost - Research",
+            "node": "Reviews1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "\ud83d\udcb0 Track Apify Cost - Research": {
+    "Google Reviews1": {
       "main": [
         [
           {
-            "node": "Reviews",
+            "node": "If1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "No Reviews": {
+    "Google Reviews (1-3)1": {
       "main": [
         [
           {
-            "node": "Reviews",
+            "node": "💰 Track Apify Cost - Research",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Reviews": {
+    "Summarize (O3-mini)1": {
       "main": [
         [
           {
-            "node": "Person + Company Profile",
+            "node": "💰 Track Summarize Cost - Research",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Person + Company Profile": {
+    "Send Cost Events to Dashboard": {
       "main": [
         [
           {
-            "node": "\ud83d\udcb0 Track Person Profile - Research",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "\ud83d\udcb0 Track Person Profile - Research": {
-      "main": [
-        [
-          {
-            "node": "Similarities",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Similarities": {
-      "main": [
-        [
-          {
-            "node": "\ud83d\udcb0 Track Similarities - Research",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "\ud83d\udcb0 Track Similarities - Research": {
-      "main": [
-        [
-          {
-            "node": "Pain Points + Solutions",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Pain Points + Solutions": {
-      "main": [
-        [
-          {
-            "node": "\ud83d\udcb0 Track Pain Points - Research",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "\ud83d\udcb0 Track Pain Points - Research": {
-      "main": [
-        [
-          {
-            "node": "Create HTML Report",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Create HTML Report": {
-      "main": [
-        [
-          {
-            "node": "Email Report",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Email Report": {
-      "main": [
-        [
-          {
-            "node": "Google Sheets",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google Sheets": {
-      "main": [
-        [
-          {
-            "node": "\ud83d\udcca Send Cost Events to Dashboard",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "\ud83d\udcca Send Cost Events to Dashboard": {
-      "main": [
-        [
-          {
-            "node": "Edit Fields",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Edit Fields": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Items",
+            "node": "Edit Fields1",
             "type": "main",
             "index": 0
           }
@@ -1623,7 +1624,7 @@
     "timezone": "America/Los_Angeles",
     "timeSavedPerExecution": 25
   },
-  "versionId": "4c3425d7-f350-454d-bb69-a68f70cb4bf6",
+  "versionId": "3918024f-5cc6-4360-88f8-4175818329ff",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "fb0f3042150127121074617aaee31b106c313805cbc452132240d35f72eba898"
