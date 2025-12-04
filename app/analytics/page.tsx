@@ -1,15 +1,10 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { toISODate, daysAgo, formatCurrency, formatNumber } from '@/lib/utils';
-import { CHART_COLORS, getProviderColor } from '@/lib/constants';
-import {
-  useMetricsSummary,
-  useTimeSeries,
-  useCostBreakdown,
-  useCampaigns,
-} from '@/hooks/use-metrics';
+import { CHART_COLORS } from '@/lib/constants';
+import { useDashboardData } from '@/hooks/use-dashboard-data';
 
 // Components
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -31,6 +26,10 @@ import {
 } from 'lucide-react';
 
 export default function AnalyticsPage() {
+  // ============================================
+  // LOCAL UI STATE
+  // ============================================
+  
   // Date range state
   const [startDate, setStartDate] = useState(() => toISODate(daysAgo(30)));
   const [endDate, setEndDate] = useState(() => toISODate(new Date()));
@@ -51,49 +50,46 @@ export default function AnalyticsPage() {
     localStorage.setItem('dashboard_timezone', tz);
   }, []);
 
-  // Fetch data
-  const { summary, isLoading: summaryLoading } = useMetricsSummary(startDate, endDate, selectedCampaign);
-  const { campaigns: campaignList, isLoading: campaignsListLoading } = useCampaigns();
-  const { data: costData, isLoading: costLoading } = useCostBreakdown(startDate, endDate, selectedCampaign);
-  const { data: optOutData, isLoading: optOutLoading } = useTimeSeries('opt_out_rate', startDate, endDate, selectedCampaign);
-  const { data: replyData, isLoading: replyLoading } = useTimeSeries('reply_rate', startDate, endDate, selectedCampaign);
+  // ============================================
+  // FETCH ALL DASHBOARD DATA (CENTRALIZED)
+  // ============================================
+  
+  const dashboardData = useDashboardData({
+    startDate,
+    endDate,
+    selectedCampaign,
+  });
 
-  // Prepare charts data
-  const costByProvider = useMemo(() => {
-    if (!costData?.by_provider) return [];
-    return costData.by_provider.map(p => ({
-      name: p.provider.charAt(0).toUpperCase() + p.provider.slice(1),
-      value: p.cost_usd,
-      color: getProviderColor(p.provider),
-    }));
-  }, [costData]);
+  // Destructure for cleaner access
+  const {
+    summary,
+    summaryLoading,
+    replyRateSeries,
+    replyRateLoading,
+    optOutRateSeries,
+    optOutRateLoading,
+    costData,
+    costLoading,
+    costByProvider,
+    costByModel,
+    costPerReply,
+    costPerSend,
+    campaigns,
+    campaignsLoading,
+  } = dashboardData;
 
-  const costByModel = useMemo(() => {
-    if (!costData?.by_model) return [];
-    return costData.by_model.slice(0, 5).map(m => ({
-      name: m.model,
-      value: m.cost_usd,
-    }));
-  }, [costData]);
+  // ============================================
+  // EVENT HANDLERS
+  // ============================================
 
-  const handleDateChange = (start: string, end: string) => {
+  const handleDateChange = useCallback((start: string, end: string) => {
     setStartDate(start);
     setEndDate(end);
-  };
+  }, []);
 
-  // Calculate cost per reply
-  const costPerReply = useMemo(() => {
-    if (!summary || !costData) return 0;
-    if (summary.replies === 0) return 0;
-    return costData.total.cost_usd / summary.replies;
-  }, [summary, costData]);
-
-  // Calculate cost per send
-  const costPerSend = useMemo(() => {
-    if (!summary || !costData) return 0;
-    if (summary.sends === 0) return 0;
-    return costData.total.cost_usd / summary.sends;
-  }, [summary, costData]);
+  // ============================================
+  // RENDER
+  // ============================================
 
   return (
     <div className="space-y-8">
@@ -115,10 +111,10 @@ export default function AnalyticsPage() {
         
         <div className="flex items-center gap-3 flex-wrap">
           <CampaignSelector
-            campaigns={campaignList}
+            campaigns={campaigns}
             selectedCampaign={selectedCampaign}
             onCampaignChange={setSelectedCampaign}
-            loading={campaignsListLoading}
+            loading={campaignsLoading}
           />
           <DateRangePicker
             startDate={startDate}
@@ -249,18 +245,18 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TimeSeriesChart
           title="Reply Rate Trend"
-          data={replyData}
+          data={replyRateSeries}
           color={CHART_COLORS.replies}
-          loading={replyLoading}
+          loading={replyRateLoading}
           type="line"
           valueFormatter={(v) => `${v}%`}
           height={240}
         />
         <TimeSeriesChart
           title="Opt-Out Rate Trend"
-          data={optOutData}
+          data={optOutRateSeries}
           color={CHART_COLORS.optOuts}
-          loading={optOutLoading}
+          loading={optOutRateLoading}
           type="line"
           valueFormatter={(v) => `${v}%`}
           height={240}

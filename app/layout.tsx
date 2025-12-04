@@ -1,25 +1,38 @@
-'use client';
-
-import { useState } from 'react';
+import type { Metadata } from 'next';
 import './globals.css';
-import { Header } from '@/components/layout/header';
-import { CommandPalette } from '@/components/layout/command-palette';
+import { ClientShell } from '@/components/layout/client-shell';
 
+export const metadata: Metadata = {
+  title: 'Cold Email Analytics Dashboard',
+  description: 'Real-time analytics for your cold email campaigns',
+  icons: {
+    icon: '/favicon.ico',
+  },
+};
+
+/**
+ * RootLayout - Server component for the application root
+ * 
+ * This layout is a server component that:
+ * - Sets up HTML structure and metadata
+ * - Applies dark theme class
+ * - Loads Google Fonts
+ * - Wraps children in ClientShell for client-side functionality
+ * 
+ * Benefits of keeping this as a server component:
+ * - Faster initial page load (no client JS needed for layout)
+ * - Proper metadata handling for SEO
+ * - Ready for Clerk auth integration (providers go here)
+ */
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [commandOpen, setCommandOpen] = useState(false);
-
   return (
     <html lang="en" className="dark">
       <head>
-        <title>Cold Email Analytics Dashboard</title>
-        <meta name="description" content="Real-time analytics for your cold email campaigns" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-        {/* Google Fonts - Inter */}
+        {/* Google Fonts - Inter & JetBrains Mono */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link 
@@ -28,22 +41,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-background antialiased">
-        {/* Background pattern */}
-        <div className="fixed inset-0 -z-10">
-          <div className="absolute inset-0 bg-gradient-to-br from-accent-primary/5 via-transparent to-accent-purple/5" />
-          <div className="absolute inset-0 dot-pattern opacity-30" />
-        </div>
-
-        {/* Header */}
-        <Header onCommandOpen={() => setCommandOpen(true)} />
-
-        {/* Main content */}
-        <main className="max-w-[1600px] mx-auto px-6 py-8">
+        <ClientShell>
           {children}
-        </main>
-
-        {/* Command palette */}
-        <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+        </ClientShell>
       </body>
     </html>
   );

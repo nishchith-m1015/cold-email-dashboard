@@ -20,6 +20,7 @@ export { TimezoneSelector } from './dashboard/timezone-selector';
 // Layout Components
 export { Header } from './layout/header';
 export { CommandPalette } from './layout/command-palette';
+export { ClientShell } from './layout/client-shell';
 
 // UI Components
 export { Badge } from './ui/badge';

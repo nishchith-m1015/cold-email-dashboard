@@ -2,6 +2,40 @@
 
 import useSWR, { SWRConfiguration } from 'swr';
 
+// Re-export types from shared types file for backwards compatibility
+export type {
+  MetricsSummary,
+  TimeSeriesPoint,
+  TimeSeriesData,
+  TimeSeriesMetric,
+  Campaign,
+  CampaignList,
+  CampaignStats,
+  CampaignData,
+  ProviderCost,
+  ModelCost,
+  CostBreakdown,
+  StepBreakdown,
+  DailySend,
+  StepBreakdownData,
+  GoogleSheetsStats,
+  ChartDataPoint,
+  DashboardParams,
+  DashboardData,
+} from '@/lib/dashboard-types';
+
+import type {
+  MetricsSummary,
+  TimeSeriesData,
+  TimeSeriesPoint,
+  TimeSeriesMetric,
+  CampaignData,
+  CostBreakdown,
+  CampaignList,
+  StepBreakdownData,
+  GoogleSheetsStats,
+} from '@/lib/dashboard-types';
+
 // Optimized fetcher with abort controller support
 const fetcher = async (url: string) => {
   const response = await fetch(url);
@@ -20,94 +54,6 @@ const defaultConfig: SWRConfiguration = {
   errorRetryInterval: 3000,
   keepPreviousData: true, // Keep showing old data while revalidating
 };
-
-export interface MetricsSummary {
-  sends: number;
-  replies: number;
-  opt_outs: number;
-  bounces: number;
-  reply_rate_pct: number;
-  opt_out_rate_pct: number;
-  bounce_rate_pct: number;
-  cost_usd: number;
-  sends_change_pct: number;
-  reply_rate_change_pp: number;
-  opt_out_rate_change_pp: number;
-  prev_sends: number;
-  prev_reply_rate_pct: number;
-  start_date: string;
-  end_date: string;
-}
-
-export interface TimeSeriesPoint {
-  day: string;
-  value: number;
-}
-
-export interface TimeSeriesData {
-  metric: string;
-  points: TimeSeriesPoint[];
-  start_date: string;
-  end_date: string;
-}
-
-export interface CampaignStats {
-  campaign: string;
-  sends: number;
-  replies: number;
-  opt_outs: number;
-  bounces: number;
-  reply_rate_pct: number;
-  opt_out_rate_pct: number;
-  bounce_rate_pct: number;
-  cost_usd: number;
-  cost_per_reply: number;
-}
-
-export interface CampaignData {
-  campaigns: CampaignStats[];
-  start_date: string;
-  end_date: string;
-}
-
-export interface ProviderCost {
-  provider: string;
-  cost_usd: number;
-  tokens_in: number;
-  tokens_out: number;
-  calls: number;
-}
-
-export interface ModelCost {
-  model: string;
-  provider: string;
-  cost_usd: number;
-  tokens_in: number;
-  tokens_out: number;
-  calls: number;
-}
-
-export interface CostBreakdown {
-  total: {
-    cost_usd: number;
-    tokens_in: number;
-    tokens_out: number;
-    calls: number;
-  };
-  by_provider: ProviderCost[];
-  by_model: ModelCost[];
-  daily: TimeSeriesPoint[];
-  start_date: string;
-  end_date: string;
-}
-
-export interface Campaign {
-  name: string;
-}
-
-export interface CampaignList {
-  campaigns: Campaign[];
-}
 
 // Hook to fetch summary metrics
 // Uses Google Sheets as primary source (source=sheets)
@@ -134,7 +80,7 @@ export function useMetricsSummary(start: string, end: string, campaign?: string)
 
 // Hook to fetch time series data
 export function useTimeSeries(
-  metric: 'sends' | 'replies' | 'opt_outs' | 'reply_rate' | 'opt_out_rate',
+  metric: TimeSeriesMetric,
   start: string,
   end: string,
   campaign?: string
@@ -219,25 +165,6 @@ export function useCampaigns() {
   };
 }
 
-// Google Sheets specific stats
-export interface GoogleSheetsStats {
-  success: boolean;
-  stats: {
-    totalContacts: number;
-    email1Sends: number;
-    email2Sends: number;
-    email3Sends: number;
-    totalSends: number;
-    uniqueContactsSent: number;
-    replies: number;
-    optOuts: number;
-    replyRate: number;
-    optOutRate: number;
-    campaignName: string;
-  };
-  headers: string[];
-}
-
 // Hook to fetch Google Sheets data directly
 export function useGoogleSheetsStats() {
   const { data, error, isLoading, mutate } = useSWR<GoogleSheetsStats>(
@@ -256,30 +183,6 @@ export function useGoogleSheetsStats() {
     isError: error,
     mutate,
   };
-}
-
-// Step breakdown types
-export interface StepBreakdown {
-  step: number;
-  name: string;
-  sends: number;
-  lastSentAt?: string;
-}
-
-export interface DailySend {
-  date: string;
-  count: number;
-}
-
-export interface StepBreakdownData {
-  steps: StepBreakdown[];
-  dailySends: DailySend[];
-  totalSends: number;
-  dateRange: {
-    start: string;
-    end: string;
-  };
-  source: string;
 }
 
 // Hook to fetch step-level breakdown
@@ -307,4 +210,3 @@ export function useStepBreakdown(start: string, end: string, campaign?: string) 
     mutate,
   };
 }
-

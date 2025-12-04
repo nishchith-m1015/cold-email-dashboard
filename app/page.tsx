@@ -4,15 +4,8 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { toISODate, daysAgo } from '@/lib/utils';
-import { CHART_COLORS, getProviderColor } from '@/lib/constants';
-import {
-  useMetricsSummary,
-  useTimeSeries,
-  useCampaignStats,
-  useCostBreakdown,
-  useCampaigns,
-  useStepBreakdown,
-} from '@/hooks/use-metrics';
+import { CHART_COLORS } from '@/lib/constants';
+import { useDashboardData } from '@/hooks/use-dashboard-data';
 
 // Components
 import { MetricCard } from '@/components/dashboard/metric-card';
@@ -28,6 +21,10 @@ import { EfficiencyMetrics } from '@/components/dashboard/efficiency-metrics';
 import { TimezoneSelector } from '@/components/dashboard/timezone-selector';
 
 export default function DashboardPage() {
+  // ============================================
+  // LOCAL UI STATE
+  // ============================================
+  
   // Date range state
   const [startDate, setStartDate] = useState(() => toISODate(daysAgo(30)));
   const [endDate, setEndDate] = useState(() => toISODate(new Date()));
@@ -49,27 +46,42 @@ export default function DashboardPage() {
     localStorage.setItem('dashboard_timezone', tz);
   }, []);
 
-  // Fetch data with memoized parameters to prevent unnecessary re-fetches
-  const { summary, isLoading: summaryLoading } = useMetricsSummary(startDate, endDate, selectedCampaign);
-  const { data: sendsData, isLoading: sendsLoading } = useTimeSeries('sends', startDate, endDate, selectedCampaign);
-  const { data: replyRateData, isLoading: replyRateLoading } = useTimeSeries('reply_rate', startDate, endDate, selectedCampaign);
-  const { data: clickRateData, isLoading: clickRateLoading } = useTimeSeries('click_rate', startDate, endDate, selectedCampaign);
-  const { campaigns: campaignList, isLoading: campaignsListLoading } = useCampaigns();
-  const { campaigns: campaignStats, isLoading: campaignStatsLoading } = useCampaignStats(startDate, endDate);
-  const { data: costData, isLoading: costLoading } = useCostBreakdown(startDate, endDate, selectedCampaign);
-  const { steps, dailySends, totalSends, isLoading: stepLoading } = useStepBreakdown(startDate, endDate, selectedCampaign);
+  // ============================================
+  // FETCH ALL DASHBOARD DATA (CENTRALIZED)
+  // ============================================
+  
+  const dashboardData = useDashboardData({
+    startDate,
+    endDate,
+    selectedCampaign,
+  });
 
-  // Prepare donut chart data - memoized to prevent recalculations
-  const costByProvider = useMemo(() => {
-    if (!costData?.by_provider) return [];
-    return costData.by_provider.map(p => ({
-      name: p.provider.charAt(0).toUpperCase() + p.provider.slice(1),
-      value: p.cost_usd,
-      color: getProviderColor(p.provider),
-    }));
-  }, [costData]);
+  // Destructure for cleaner access
+  const {
+    summary,
+    summaryLoading,
+    sendsSeries,
+    sendsLoading,
+    replyRateSeries,
+    replyRateLoading,
+    clickRateSeries,
+    clickRateLoading,
+    costByProvider,
+    costLoading,
+    steps,
+    dailySends,
+    totalSends,
+    stepLoading,
+    campaigns,
+    campaignsLoading,
+    campaignStats,
+    campaignStatsLoading,
+  } = dashboardData;
 
-  // Memoized handlers to prevent unnecessary re-renders
+  // ============================================
+  // EVENT HANDLERS
+  // ============================================
+
   const handleDateChange = useCallback((start: string, end: string) => {
     setStartDate(start);
     setEndDate(end);
@@ -79,6 +91,10 @@ export default function DashboardPage() {
   const handleDateClick = useCallback((date: string) => {
     setSelectedDate(prev => prev === date ? undefined : date);
   }, []);
+
+  // ============================================
+  // DERIVED UI VALUES
+  // ============================================
 
   // Format date range for display
   const dateRangeDisplay = useMemo(() => {
@@ -91,6 +107,22 @@ export default function DashboardPage() {
     
     return `${format(start, 'MMM d')} - ${format(end, 'MMM d, yyyy')}`;
   }, [startDate, endDate]);
+
+  // Calculate monthly projection for efficiency metrics
+  const monthlyProjection = useMemo(() => {
+    const daysInRange = Math.max(1, Math.ceil(
+      (new Date(endDate).getTime() - new Date(startDate).getTime()) / (24 * 60 * 60 * 1000)
+    ) + 1);
+    const dailyRate = totalSends / daysInRange;
+    const costPerSend = summary?.cost_usd && totalSends > 0 
+      ? summary.cost_usd / totalSends 
+      : 0;
+    return dailyRate * 30 * costPerSend;
+  }, [startDate, endDate, totalSends, summary]);
+
+  // ============================================
+  // RENDER
+  // ============================================
 
   return (
     <div className="space-y-8">
@@ -109,10 +141,10 @@ export default function DashboardPage() {
         
         <div className="flex items-center gap-3 flex-wrap">
           <CampaignSelector
-            campaigns={campaignList}
+            campaigns={campaigns}
             selectedCampaign={selectedCampaign}
             onCampaignChange={setSelectedCampaign}
-            loading={campaignsListLoading}
+            loading={campaignsLoading}
           />
           <DateRangePicker
             startDate={startDate}
@@ -199,12 +231,7 @@ export default function DashboardPage() {
           />
           <EfficiencyMetrics
             costPerReply={summary?.replies ? summary.cost_usd / summary.replies : 0}
-            monthlyProjection={(() => {
-              // Calculate monthly projection based on current sending pace
-              const daysInRange = Math.max(1, Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (24 * 60 * 60 * 1000)) + 1);
-              const dailyRate = totalSends / daysInRange;
-              return dailyRate * 30 * (summary?.cost_usd && totalSends > 0 ? summary.cost_usd / totalSends : 0);
-            })()}
+            monthlyProjection={monthlyProjection}
             totalContacts={totalSends}
             loading={summaryLoading}
           />
@@ -217,7 +244,7 @@ export default function DashboardPage() {
           <TimeSeriesChart
             title="Email Sends Over Time"
             subtitle={dateRangeDisplay}
-            data={sendsData}
+            data={sendsSeries}
             color={CHART_COLORS.sends}
             loading={sendsLoading}
             type="area"
@@ -235,7 +262,7 @@ export default function DashboardPage() {
         <TimeSeriesChart
           title="Click Rate Over Time"
           subtitle={dateRangeDisplay}
-          data={clickRateData}
+          data={clickRateSeries}
           color="#10b981"
           loading={clickRateLoading}
           type="line"
@@ -245,7 +272,7 @@ export default function DashboardPage() {
         <TimeSeriesChart
           title="Reply Rate Over Time"
           subtitle={dateRangeDisplay}
-          data={replyRateData}
+          data={replyRateSeries}
           color={CHART_COLORS.replies}
           loading={replyRateLoading}
           type="line"
