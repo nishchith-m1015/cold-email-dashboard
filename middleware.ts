@@ -1,33 +1,22 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 /**
- * Clerk Middleware - Route Protection
+ * Middleware - Route Protection (Clerk disabled)
  * 
- * Public routes (no auth required):
- * - Home page (for now, can be made protected later)
- * - Sign-in/up pages
- * - API webhooks (use token auth instead)
- * - Tracking endpoints (open/click)
+ * Currently a passthrough middleware.
+ * To enable Clerk authentication:
+ * 1. Add Clerk environment variables
+ * 2. Uncomment the Clerk imports and code below
+ * 3. Set AUTH_CONFIG.enabled = true in lib/auth.ts
+ * 
+ * See docs/CLERK_INTEGRATION.md for full setup instructions.
  */
 
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/api/events',
-  '/api/cost-events',
-  '/api/llm-usage',
-  '/api/track/(.*)',
-  '/api/webhook/(.*)',
-  '/api/cache',
-  '/api/sheets',
-]);
-
-export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
-  }
-});
+// CLERK DISABLED - Passthrough middleware
+export function middleware(request: NextRequest) {
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [
@@ -38,3 +27,27 @@ export const config = {
   ],
 };
 
+/* 
+ * CLERK ENABLED VERSION - Uncomment when ready:
+ * 
+ * import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+ * 
+ * const isPublicRoute = createRouteMatcher([
+ *   '/',
+ *   '/sign-in(.*)',
+ *   '/sign-up(.*)',
+ *   '/api/events',
+ *   '/api/cost-events',
+ *   '/api/llm-usage',
+ *   '/api/track/(.*)',
+ *   '/api/webhook/(.*)',
+ *   '/api/cache',
+ *   '/api/sheets',
+ * ]);
+ * 
+ * export default clerkMiddleware(async (auth, request) => {
+ *   if (!isPublicRoute(request)) {
+ *     await auth.protect();
+ *   }
+ * });
+ */
