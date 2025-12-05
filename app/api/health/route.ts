@@ -62,7 +62,7 @@ export async function GET() {
   // Check cache
   try {
     const cacheStats = cacheManager.stats();
-    checks.cache.entries = cacheStats.entries;
+    checks.cache.entries = cacheStats.totalEntries;
   } catch {
     // Cache error is not critical
   }

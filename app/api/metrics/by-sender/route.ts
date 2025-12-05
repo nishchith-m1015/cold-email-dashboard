@@ -1,135 +1,155 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin, getWorkspaceId } from '@/lib/supabase';
-import { API_HEADERS } from '@/lib/utils';
+import { 
+  jsonResponse, 
+  errorResponse, 
+  serverError, 
+  requireSupabase, 
+  getSearchParams,
+  parseDateRange,
+  getWorkspaceFromParams,
+} from '@/lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
-interface SenderStats {
-  sender_email: string;
-  sends: number;
-  replies: number;
-  opt_outs: number;
-  opens: number;
-  clicks: number;
-  reply_rate: number;
-  opt_out_rate: number;
-}
-
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const start = searchParams.get('start');
-  const end = searchParams.get('end');
-  const campaign = searchParams.get('campaign');
-  const workspaceId = getWorkspaceId(searchParams.get('workspace_id'));
-
-  const startDate = start || new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-  const endDate = end || new Date().toISOString().slice(0, 10);
-
-  if (!supabaseAdmin) {
-    return NextResponse.json({
-      senders: [],
-      start_date: startDate,
-      end_date: endDate,
-      source: 'no_supabase',
-    }, { headers: API_HEADERS });
+  // Rate limiting
+  const clientId = getClientId(req);
+  const rateLimit = checkRateLimit(`by-sender:${clientId}`, RATE_LIMIT_READ);
+  
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded' },
+      { status: 429, headers: rateLimitHeaders(rateLimit) }
+    );
   }
 
   try {
-    // Query email events grouped by sender
-    let query = supabaseAdmin
+    const supabase = requireSupabase();
+    if (!supabase.available) return supabase.response;
+
+    const params = getSearchParams(req);
+    const workspaceId = getWorkspaceFromParams(params);
+    const { startDate, endDate } = parseDateRange(
+      params.get('start'),
+      params.get('end')
+    );
+    const senderFilter = params.get('sender');
+    const campaign = params.get('campaign');
+
+    // Build query for sender stats
+    let query = supabase.client
       .from('email_events')
-      .select('metadata, event_type')
+      .select('*')
       .eq('workspace_id', workspaceId)
-      .gte('created_at', `${startDate}T00:00:00Z`)
-      .lte('created_at', `${endDate}T23:59:59Z`);
+      .gte('event_ts', `${startDate}T00:00:00Z`)
+      .lte('event_ts', `${endDate}T23:59:59Z`);
 
     if (campaign) {
       query = query.eq('campaign_name', campaign);
     }
 
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Sender stats query error:', error);
-      return NextResponse.json({
-        senders: [],
-        start_date: startDate,
-        end_date: endDate,
-        source: 'error',
-      }, { headers: API_HEADERS });
+    if (senderFilter) {
+      query = query.ilike('metadata->>sender_email', `%${senderFilter}%`);
     }
 
-    // Aggregate by sender email from metadata
+    const { data: events, error } = await query;
+
+    if (error) {
+      console.error('Supabase error:', error);
+      return errorResponse('Database query failed', 500);
+    }
+
+    // Aggregate by sender
     const senderMap = new Map<string, {
+      sender_email: string;
       sends: number;
       replies: number;
       opt_outs: number;
+      bounces: number;
       opens: number;
       clicks: number;
+      campaigns: Set<string>;
     }>();
 
-    for (const row of data || []) {
-      // Try to get sender from metadata
-      const metadata = row.metadata as Record<string, unknown> || {};
-      const senderEmail = (metadata.sender_email || metadata.from_email || 'unknown') as string;
-      
-      const existing = senderMap.get(senderEmail) || {
-        sends: 0,
-        replies: 0,
-        opt_outs: 0,
-        opens: 0,
-        clicks: 0,
-      };
+    for (const event of events || []) {
+      // Extract sender from metadata or use 'unknown'
+      const senderEmail = 
+        (event.metadata as Record<string, unknown>)?.sender_email as string || 
+        'unknown';
 
-      switch (row.event_type) {
-        case 'sent':
-          existing.sends++;
-          break;
-        case 'replied':
-          existing.replies++;
-          break;
-        case 'opt_out':
-          existing.opt_outs++;
-          break;
-        case 'opened':
-          existing.opens++;
-          break;
-        case 'clicked':
-          existing.clicks++;
-          break;
+      if (!senderMap.has(senderEmail)) {
+        senderMap.set(senderEmail, {
+          sender_email: senderEmail,
+          sends: 0,
+          replies: 0,
+          opt_outs: 0,
+          bounces: 0,
+          opens: 0,
+          clicks: 0,
+          campaigns: new Set(),
+        });
       }
 
-      senderMap.set(senderEmail, existing);
+      const stats = senderMap.get(senderEmail)!;
+      
+      if (event.campaign_name) {
+        stats.campaigns.add(event.campaign_name);
+      }
+
+      switch (event.event_type) {
+        case 'sent':
+        case 'delivered':
+          stats.sends++;
+          break;
+        case 'replied':
+          stats.replies++;
+          break;
+        case 'opt_out':
+          stats.opt_outs++;
+          break;
+        case 'bounced':
+          stats.bounces++;
+          break;
+        case 'opened':
+          stats.opens++;
+          break;
+        case 'clicked':
+          stats.clicks++;
+          break;
+      }
     }
 
-    // Transform to array with calculated rates
-    const senders: SenderStats[] = Array.from(senderMap.entries())
-      .map(([sender_email, stats]) => ({
-        sender_email,
-        sends: stats.sends,
-        replies: stats.replies,
-        opt_outs: stats.opt_outs,
-        opens: stats.opens,
-        clicks: stats.clicks,
-        reply_rate: stats.sends > 0 ? Number(((stats.replies / stats.sends) * 100).toFixed(2)) : 0,
-        opt_out_rate: stats.sends > 0 ? Number(((stats.opt_outs / stats.sends) * 100).toFixed(2)) : 0,
-      }))
-      .sort((a, b) => b.sends - a.sends); // Sort by sends descending
+    // Convert to array with calculated rates
+    const senders = Array.from(senderMap.values()).map(s => ({
+      sender_email: s.sender_email,
+      sends: s.sends,
+      replies: s.replies,
+      opt_outs: s.opt_outs,
+      bounces: s.bounces,
+      opens: s.opens,
+      clicks: s.clicks,
+      reply_rate: s.sends > 0 ? (s.replies / s.sends) * 100 : 0,
+      opt_out_rate: s.sends > 0 ? (s.opt_outs / s.sends) * 100 : 0,
+      open_rate: s.sends > 0 ? (s.opens / s.sends) * 100 : 0,
+      click_rate: s.sends > 0 ? (s.clicks / s.sends) * 100 : 0,
+      campaigns: Array.from(s.campaigns),
+      campaign_count: s.campaigns.size,
+    }));
 
-    return NextResponse.json({
+    // Sort by sends descending
+    senders.sort((a, b) => b.sends - a.sends);
+
+    return jsonResponse({
       senders,
-      total_senders: senders.length,
-      start_date: startDate,
-      end_date: endDate,
-    }, { headers: API_HEADERS });
+      summary: {
+        total_senders: senders.length,
+        total_sends: senders.reduce((acc, s) => acc + s.sends, 0),
+        total_replies: senders.reduce((acc, s) => acc + s.replies, 0),
+        date_range: { start: startDate, end: endDate },
+      },
+    });
   } catch (error) {
-    console.error('Sender stats API error:', error);
-    return NextResponse.json({
-      senders: [],
-      start_date: startDate,
-      end_date: endDate,
-      source: 'error',
-    }, { headers: API_HEADERS });
+    return serverError(error);
   }
 }
-

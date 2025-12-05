@@ -6,126 +6,106 @@ import { z } from 'zod';
 
 export const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)');
 
-export const workspaceIdSchema = z.string().min(1).max(100);
+export const uuidSchema = z.string().uuid('Invalid UUID');
 
-export const campaignNameSchema = z.string().min(1).max(200).optional();
+export const workspaceIdSchema = z.string().min(1, 'Workspace ID required');
 
-export const paginationSchema = z.object({
-  limit: z.coerce.number().int().min(1).max(1000).default(100),
-  offset: z.coerce.number().int().min(0).default(0),
-});
+export const emailSchema = z.string().email('Invalid email');
 
 // ============================================
-// METRICS QUERY SCHEMAS
+// API REQUEST SCHEMAS
 // ============================================
 
-export const metricsQuerySchema = z.object({
+export const dateRangeSchema = z.object({
   start: dateSchema.optional(),
   end: dateSchema.optional(),
-  campaign: campaignNameSchema,
+  campaign: z.string().optional(),
   workspace_id: workspaceIdSchema.optional(),
+});
+
+export const metricsQuerySchema = dateRangeSchema.extend({
   source: z.enum(['sheets', 'supabase']).optional(),
 });
 
-export const timeseriesQuerySchema = metricsQuerySchema.extend({
+export const timeseriesQuerySchema = dateRangeSchema.extend({
   metric: z.enum([
-    'sends',
-    'replies',
-    'reply_rate',
-    'opt_outs',
-    'opt_out_rate',
-    'clicks',
-    'click_rate',
-    'opens',
-    'open_rate',
-    'bounces',
-    'bounce_rate',
+    'sends', 'replies', 'opt_outs', 'bounces', 'clicks',
+    'reply_rate', 'opt_out_rate', 'bounce_rate', 'click_rate'
   ]).default('sends'),
 });
 
-export const costBreakdownQuerySchema = metricsQuerySchema.extend({
+export const costBreakdownQuerySchema = dateRangeSchema.extend({
   provider: z.string().optional(),
 });
 
+export const senderQuerySchema = dateRangeSchema.extend({
+  sender: z.string().optional(),
+  limit: z.coerce.number().min(1).max(100).optional().default(50),
+});
+
 // ============================================
-// EVENT INGESTION SCHEMAS
+// EVENT SCHEMAS
 // ============================================
 
 export const emailEventSchema = z.object({
-  contact_email: z.string().email(),
-  campaign_name: z.string().min(1).max(200),
+  contact_email: emailSchema,
+  campaign_name: z.string().min(1),
   event_type: z.enum(['sent', 'delivered', 'bounced', 'replied', 'opt_out', 'opened', 'clicked']),
   email_number: z.number().int().min(1).max(10).optional(),
-  provider: z.string().max(50).optional(),
-  provider_message_id: z.string().max(200).optional(),
-  subject: z.string().max(500).optional(),
+  provider: z.string().optional(),
+  provider_message_id: z.string().optional(),
+  subject: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
-  workspace_id: workspaceIdSchema.optional(),
 });
 
 export const costEventSchema = z.object({
-  provider: z.string().min(1).max(50),
-  model: z.string().min(1).max(100),
-  tokens_in: z.number().int().min(0).default(0),
-  tokens_out: z.number().int().min(0).default(0),
-  cost_usd: z.number().min(0).optional(),
-  campaign_name: z.string().max(200).optional(),
-  contact_email: z.string().email().optional(),
-  purpose: z.string().max(200).optional(),
-  workflow_id: z.string().max(100).optional(),
-  run_id: z.string().max(100).optional(),
+  provider: z.string().min(1),
+  model: z.string().min(1),
+  tokens_in: z.number().int().min(0).optional().default(0),
+  tokens_out: z.number().int().min(0).optional().default(0),
+  cost_usd: z.number().min(0),
+  campaign_name: z.string().optional(),
+  contact_email: z.string().optional(),
+  purpose: z.string().optional(),
+  workflow_id: z.string().optional(),
+  run_id: z.string().optional(),
   metadata: z.record(z.unknown()).optional(),
-  workspace_id: workspaceIdSchema.optional(),
 });
 
-export const batchCostEventsSchema = z.array(costEventSchema).min(1).max(100);
-
 // ============================================
-// HELPER FUNCTIONS
+// RESPONSE TYPES
 // ============================================
 
-/**
- * Parse and validate query parameters from a URL
- */
-export function parseQueryParams<T extends z.ZodSchema>(
-  url: URL,
+export type DateRangeQuery = z.infer<typeof dateRangeSchema>;
+export type MetricsQuery = z.infer<typeof metricsQuerySchema>;
+export type TimeseriesQuery = z.infer<typeof timeseriesQuerySchema>;
+export type CostBreakdownQuery = z.infer<typeof costBreakdownQuerySchema>;
+export type SenderQuery = z.infer<typeof senderQuerySchema>;
+export type EmailEvent = z.infer<typeof emailEventSchema>;
+export type CostEvent = z.infer<typeof costEventSchema>;
+
+// ============================================
+// VALIDATION HELPERS
+// ============================================
+
+export function parseSearchParams<T extends z.ZodSchema>(
+  searchParams: URLSearchParams,
   schema: T
-): z.infer<T> | { error: string } {
-  const params: Record<string, string> = {};
-  url.searchParams.forEach((value, key) => {
-    params[key] = value;
+): z.infer<T> {
+  const obj: Record<string, string> = {};
+  searchParams.forEach((value, key) => {
+    obj[key] = value;
   });
-
-  const result = schema.safeParse(params);
-  if (!result.success) {
-    return { error: result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ') };
-  }
-  return result.data;
+  return schema.parse(obj);
 }
 
-/**
- * Parse and validate JSON body
- */
-export async function parseBody<T extends z.ZodSchema>(
-  request: Request,
+export function safeParseSearchParams<T extends z.ZodSchema>(
+  searchParams: URLSearchParams,
   schema: T
-): Promise<z.infer<T> | { error: string }> {
-  try {
-    const body = await request.json();
-    const result = schema.safeParse(body);
-    if (!result.success) {
-      return { error: result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ') };
-    }
-    return result.data;
-  } catch {
-    return { error: 'Invalid JSON body' };
-  }
+): { success: true; data: z.infer<T> } | { success: false; error: z.ZodError } {
+  const obj: Record<string, string> = {};
+  searchParams.forEach((value, key) => {
+    obj[key] = value;
+  });
+  return schema.safeParse(obj);
 }
-
-/**
- * Check if result is an error
- */
-export function isValidationError(result: unknown): result is { error: string } {
-  return typeof result === 'object' && result !== null && 'error' in result;
-}
-

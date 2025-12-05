@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, getWorkspaceId } from '@/lib/supabase';
 import { API_HEADERS } from '@/lib/utils';
+import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  // Rate limiting
+  const clientId = getClientId(req);
+  const rateLimit = checkRateLimit(`timeseries:${clientId}`, RATE_LIMIT_READ);
+  
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded' },
+      { status: 429, headers: rateLimitHeaders(rateLimit) }
+    );
+  }
+
   const { searchParams } = new URL(req.url);
   const metric = searchParams.get('metric') || 'sends';
   const start = searchParams.get('start');

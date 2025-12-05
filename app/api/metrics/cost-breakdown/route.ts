@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, DEFAULT_WORKSPACE_ID } from '@/lib/supabase';
 import { API_HEADERS } from '@/lib/utils';
+import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  // Rate limiting
+  const clientId = getClientId(req);
+  const rateLimit = checkRateLimit(`cost-breakdown:${clientId}`, RATE_LIMIT_READ);
+  
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: 'Rate limit exceeded' },
+      { status: 429, headers: rateLimitHeaders(rateLimit) }
+    );
+  }
+
   // Check if Supabase is configured
   if (!supabaseAdmin) {
     return NextResponse.json({
