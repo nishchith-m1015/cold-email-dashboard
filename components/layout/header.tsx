@@ -41,6 +41,7 @@ function useTheme() {
 
   useEffect(() => {
     setMounted(true);
+    // Check localStorage or system preference
     const stored = localStorage.getItem('theme');
     if (stored === 'light' || stored === 'dark') {
       setTheme(stored);
@@ -123,6 +124,7 @@ const notificationColors = {
   error: 'text-accent-danger',
 };
 
+// Cache stats type
 interface CacheStats {
   validEntries: number;
   entries: Array<{ key: string; expiresIn: number }>;
@@ -132,19 +134,25 @@ export function Header({ onCommandOpen }: HeaderProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics'>('overview');
   const { theme, toggleTheme, mounted } = useTheme();
   
+  // Dropdown states
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  
   const [notifications, setNotifications] = useState(sampleNotifications);
 
+  // Cache states
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
   const [isClearing, setIsClearing] = useState(false);
   const [clearStatus, setClearStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
+  // Refs for click outside
   const notificationsRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
+  
 
   useClickOutside(notificationsRef, () => setShowNotifications(false));
   useClickOutside(settingsRef, () => setShowSettings(false));
+  
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -156,6 +164,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
+  // Fetch cache stats when settings opens
   const fetchCacheStats = useCallback(async () => {
     try {
       const response = await fetch('/api/cache');
@@ -168,6 +177,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
     }
   }, []);
 
+  // Clear cache and refresh data
   const clearCache = useCallback(async () => {
     setIsClearing(true);
     setClearStatus('idle');
@@ -177,6 +187,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
       if (response.ok) {
         setClearStatus('success');
         await fetchCacheStats();
+        // Trigger page refresh to get fresh data
         window.location.reload();
       } else {
         setClearStatus('error');
@@ -191,6 +202,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
     }
   }, [fetchCacheStats]);
 
+  // Fetch stats when settings dropdown opens
   useEffect(() => {
     if (showSettings) {
       fetchCacheStats();
@@ -206,7 +218,9 @@ export function Header({ onCommandOpen }: HeaderProps) {
     >
       <div className="max-w-[1600px] mx-auto px-6">
         <div className="flex items-center justify-between h-16">
+          {/* Logo & Nav */}
           <div className="flex items-center gap-8">
+            {/* Logo */}
             <Link href="/" className="flex items-center gap-3 group">
               <div className="relative">
                 <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-gradient-to-br from-accent-primary to-accent-purple shadow-lg shadow-accent-primary/20">
@@ -224,10 +238,12 @@ export function Header({ onCommandOpen }: HeaderProps) {
               </div>
             </Link>
 
+            {/* Workspace Switcher */}
             <div className="hidden lg:block border-l border-border pl-6 ml-2">
               <WorkspaceSwitcher />
             </div>
 
+            {/* Navigation Tabs */}
             <nav className="hidden md:flex items-center gap-1 bg-surface-elevated rounded-lg p-1">
               <Link href="/">
                 <button
@@ -259,7 +275,9 @@ export function Header({ onCommandOpen }: HeaderProps) {
             </nav>
           </div>
 
+          {/* Right side */}
           <div className="flex items-center gap-2">
+            {/* Search / Command */}
             <Button
               variant="outline"
               size="sm"
@@ -273,12 +291,13 @@ export function Header({ onCommandOpen }: HeaderProps) {
               </kbd>
             </Button>
 
+            {/* Theme Toggle */}
             <Button 
               variant="ghost" 
               size="icon"
               onClick={toggleTheme}
               className="relative"
-              title={\`Switch to \${theme === 'dark' ? 'light' : 'dark'} mode\`}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
               {mounted && (
                 theme === 'dark' ? (
@@ -289,6 +308,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
               )}
             </Button>
 
+            {/* Notifications Dropdown */}
             <div className="relative" ref={notificationsRef}>
               <Button 
                 variant="ghost" 
@@ -297,13 +317,14 @@ export function Header({ onCommandOpen }: HeaderProps) {
                 onClick={() => {
                   setShowNotifications(!showNotifications);
                   setShowSettings(false);
+                  
                 }}
               >
-                <Bell className="h-5 w-5 text-text-secondary" />
+              <Bell className="h-5 w-5 text-text-secondary" />
                 {unreadCount > 0 && (
                   <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-accent-danger rounded-full animate-pulse" />
                 )}
-              </Button>
+            </Button>
 
               <AnimatePresence>
                 {showNotifications && (
@@ -381,6 +402,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
               </AnimatePresence>
             </div>
 
+            {/* Settings Dropdown */}
             <div className="relative" ref={settingsRef}>
               <Button 
                 variant="ghost" 
@@ -388,13 +410,14 @@ export function Header({ onCommandOpen }: HeaderProps) {
                 onClick={() => {
                   setShowSettings(!showSettings);
                   setShowNotifications(false);
+                  
                 }}
               >
                 <Settings className={cn(
                   'h-5 w-5 text-text-secondary transition-transform',
                   showSettings && 'rotate-90'
                 )} />
-              </Button>
+            </Button>
 
               <AnimatePresence>
                 {showSettings && (
@@ -410,6 +433,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
                     </div>
                     
                     <div className="p-2">
+                      {/* Theme setting */}
                       <button
                         onClick={toggleTheme}
                         className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-surface-elevated transition-colors"
@@ -421,6 +445,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
                         <span className="text-xs text-text-secondary capitalize">{theme}</span>
                       </button>
 
+                      {/* Timezone setting */}
                       <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-surface-elevated transition-colors">
                         <div className="flex items-center gap-3">
                           <Globe className="h-4 w-4 text-text-secondary" />
@@ -429,6 +454,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
                         <span className="text-xs text-text-secondary">UTC-8</span>
                       </button>
 
+                      {/* Refresh interval */}
                       <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-surface-elevated transition-colors">
                         <div className="flex items-center gap-3">
                           <Clock className="h-4 w-4 text-text-secondary" />
@@ -439,6 +465,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
 
                       <div className="my-2 border-t border-border" />
 
+                      {/* Cache Status */}
                       <div className="px-3 py-2">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
@@ -451,7 +478,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
                               ? "bg-accent-success/10 text-accent-success"
                               : "bg-surface-elevated text-text-secondary"
                           )}>
-                            {cacheStats ? \`\${cacheStats.validEntries} cached\` : '...'}
+                            {cacheStats ? `${cacheStats.validEntries} cached` : '...'}
                           </span>
                         </div>
                         {cacheStats && cacheStats.entries.length > 0 && (
@@ -466,6 +493,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
                         )}
                       </div>
 
+                      {/* Clear Cache Button */}
                       <button
                         onClick={clearCache}
                         disabled={isClearing}

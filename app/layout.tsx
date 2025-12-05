@@ -1,8 +1,5 @@
 import type { Metadata } from 'next';
-import {
-  ClerkProvider,
-} from '@clerk/nextjs';
-import { dark } from '@clerk/themes';
+import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 import { ClientShell } from '@/components/layout/client-shell';
 
@@ -32,21 +29,24 @@ export default function RootLayout({
   return (
     <ClerkProvider
       appearance={{
-        baseTheme: dark,
         variables: {
           colorPrimary: '#3b82f6',
           colorBackground: '#0a0a0f',
           colorInputBackground: '#13131a',
           colorInputText: '#f5f5f7',
+          colorText: '#f5f5f7',
         },
         elements: {
-          formButtonPrimary: 'bg-accent-primary hover:bg-accent-primary/90',
-          card: 'bg-surface border border-border',
-          headerTitle: 'text-text-primary',
-          headerSubtitle: 'text-text-secondary',
-          socialButtonsBlockButton: 'bg-surface-elevated border border-border',
-          formFieldInput: 'bg-surface-elevated border border-border text-text-primary',
-          footerActionLink: 'text-accent-primary hover:text-accent-primary/80',
+          formButtonPrimary: 'bg-blue-500 hover:bg-blue-600',
+          card: 'bg-[#13131a] border border-[#2a2a3c]',
+          headerTitle: 'text-white',
+          headerSubtitle: 'text-gray-400',
+          socialButtonsBlockButton: 'bg-[#1a1a2e] border border-[#2a2a3c] text-white',
+          formFieldInput: 'bg-[#1a1a2e] border border-[#2a2a3c] text-white',
+          footerActionLink: 'text-blue-400 hover:text-blue-300',
+          userButtonPopoverCard: 'bg-[#13131a] border border-[#2a2a3c]',
+          userButtonPopoverActionButton: 'hover:bg-[#1a1a2e]',
+          userButtonPopoverActionButtonText: 'text-white',
         },
       }}
     >
