@@ -1,6 +1,7 @@
 'use client';
 
 import useSWR, { SWRConfiguration } from 'swr';
+import { fetcher } from '@/lib/fetcher';
 
 // Re-export types from shared types file for backwards compatibility
 export type {
@@ -35,20 +36,6 @@ import type {
   StepBreakdownData,
   GoogleSheetsStats,
 } from '@/lib/dashboard-types';
-
-// Optimized fetcher that bypasses browser cache
-const fetcher = async (url: string) => {
-  const response = await fetch(url, {
-    cache: 'no-store', // Bypass browser cache - ensures fresh data
-    headers: {
-      'Cache-Control': 'no-cache',
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-  return response.json();
-};
 
 // Shared SWR config for consistent caching behavior
 const defaultConfig: SWRConfiguration = {
