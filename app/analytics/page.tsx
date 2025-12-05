@@ -15,6 +15,7 @@ import { DonutChart } from '@/components/dashboard/donut-chart';
 import { DateRangePicker } from '@/components/dashboard/date-range-picker';
 import { CampaignSelector } from '@/components/dashboard/campaign-selector';
 import { TimezoneSelector } from '@/components/dashboard/timezone-selector';
+import { ProviderSelector } from '@/components/dashboard/provider-selector';
 import { DailyCostChart } from '@/components/dashboard/daily-cost-chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
@@ -34,6 +35,7 @@ export default function AnalyticsPage() {
   const [startDate, setStartDate] = useState(() => toISODate(daysAgo(30)));
   const [endDate, setEndDate] = useState(() => toISODate(new Date()));
   const [selectedCampaign, setSelectedCampaign] = useState<string | undefined>();
+  const [selectedProvider, setSelectedProvider] = useState<string | undefined>();
   
   // Timezone state - default to Los Angeles, persist in localStorage
   const [timezone, setTimezone] = useState('America/Los_Angeles');
@@ -58,6 +60,7 @@ export default function AnalyticsPage() {
     startDate,
     endDate,
     selectedCampaign,
+    selectedProvider,
   });
 
   // Destructure for cleaner access
@@ -115,6 +118,10 @@ export default function AnalyticsPage() {
             selectedCampaign={selectedCampaign}
             onCampaignChange={setSelectedCampaign}
             loading={campaignsLoading}
+          />
+          <ProviderSelector
+            selectedProvider={selectedProvider || 'all'}
+            onProviderChange={(p) => setSelectedProvider(p === 'all' ? undefined : p)}
           />
           <DateRangePicker
             startDate={startDate}

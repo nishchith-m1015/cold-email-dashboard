@@ -10,6 +10,7 @@ export { DonutChart } from './dashboard/donut-chart';
 export { CampaignTable } from './dashboard/campaign-table';
 export { DateRangePicker } from './dashboard/date-range-picker';
 export { CampaignSelector } from './dashboard/campaign-selector';
+export { ProviderSelector } from './dashboard/provider-selector';
 export { AskAI } from './dashboard/ask-ai';
 export { StepBreakdown } from './dashboard/step-breakdown';
 export { DailySendsChart } from './dashboard/daily-sends-chart';

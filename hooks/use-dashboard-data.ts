@@ -31,8 +31,9 @@ import type {
  * @returns DashboardData object with all metrics and derived data
  */
 export function useDashboardData(params: DashboardParams): DashboardData {
-  const { startDate, endDate, selectedCampaign } = params;
+  const { startDate, endDate, selectedCampaign, selectedProvider } = params;
   const campaign = selectedCampaign ?? undefined;
+  const provider = selectedProvider ?? undefined;
 
   // ============================================
   // FETCH ALL DATA
@@ -62,9 +63,9 @@ export function useDashboardData(params: DashboardParams): DashboardData {
   const { data: optOutRateSeries, isLoading: optOutRateLoading } = 
     useTimeSeries('opt_out_rate', startDate, endDate, campaign);
 
-  // Cost breakdown
-  const { data: costData, isLoading: costLoading } = 
-    useCostBreakdown(startDate, endDate, campaign);
+  // Cost breakdown (with provider filter)
+  const { data: costData, isLoading: costLoading, mutate: mutateCost } = 
+    useCostBreakdown(startDate, endDate, campaign, provider);
 
   // Step breakdown
   const { 
@@ -136,7 +137,8 @@ export function useDashboardData(params: DashboardParams): DashboardData {
   const refresh = useCallback(() => {
     mutateSummary();
     mutateSteps();
-  }, [mutateSummary, mutateSteps]);
+    mutateCost();
+  }, [mutateSummary, mutateSteps, mutateCost]);
 
   // ============================================
   // RETURN CONSOLIDATED DATA

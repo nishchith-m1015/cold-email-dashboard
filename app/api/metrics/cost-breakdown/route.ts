@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
   const start = searchParams.get('start');
   const end = searchParams.get('end');
   const campaign = searchParams.get('campaign');
+  const provider = searchParams.get('provider'); // NEW: Provider filter
   const workspaceId = searchParams.get('workspace_id') || DEFAULT_WORKSPACE_ID;
 
   // Default to last 30 days
@@ -38,6 +39,11 @@ export async function GET(req: NextRequest) {
 
     if (campaign) {
       query = query.eq('campaign_name', campaign);
+    }
+
+    // NEW: Filter by provider if specified
+    if (provider && provider !== 'all') {
+      query = query.eq('provider', provider);
     }
 
     const { data, error } = await query;

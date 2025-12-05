@@ -189,6 +189,7 @@ export interface DashboardParams {
   startDate: string;
   endDate: string;
   selectedCampaign?: string | null;
+  selectedProvider?: string | null; // Provider filter for cost analytics
 }
 
 export interface DashboardData {

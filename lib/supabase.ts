@@ -22,7 +22,8 @@ function createSupabaseAdmin(): SupabaseClient | null {
 export const supabaseAdmin = createSupabaseAdmin();
 
 // Default workspace ID for single-tenant mode
-export const DEFAULT_WORKSPACE_ID = '00000000-0000-0000-0000-000000000001';
+// IMPORTANT: This must match the schema default in schema.sql
+export const DEFAULT_WORKSPACE_ID = 'default';
 
 // Type definitions for database tables
 export interface Workspace {

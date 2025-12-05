@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin, DEFAULT_WORKSPACE_ID } from '@/lib/supabase';
 
 // 1x1 transparent GIF (43 bytes)
 const TRACKING_PIXEL = Buffer.from(
   'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
   'base64'
 );
-
-const DEFAULT_WORKSPACE_ID = 'default';
 
 export const dynamic = 'force-dynamic';
 

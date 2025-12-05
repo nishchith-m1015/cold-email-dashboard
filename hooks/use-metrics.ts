@@ -131,11 +131,12 @@ export function useCampaignStats(start: string, end: string) {
 }
 
 // Hook to fetch cost breakdown
-export function useCostBreakdown(start: string, end: string, campaign?: string) {
+export function useCostBreakdown(start: string, end: string, campaign?: string, provider?: string) {
   const params = new URLSearchParams({ start, end });
   if (campaign) params.set('campaign', campaign);
+  if (provider && provider !== 'all') params.set('provider', provider);
 
-  const { data, error, isLoading } = useSWR<CostBreakdown>(
+  const { data, error, isLoading, mutate } = useSWR<CostBreakdown>(
     `/api/metrics/cost-breakdown?${params.toString()}`,
     fetcher,
     { 
@@ -148,6 +149,7 @@ export function useCostBreakdown(start: string, end: string, campaign?: string) 
     data,
     isLoading,
     isError: error,
+    mutate,
   };
 }
 

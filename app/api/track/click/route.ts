@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
-
-const DEFAULT_WORKSPACE_ID = 'default';
+import { supabaseAdmin, DEFAULT_WORKSPACE_ID } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
