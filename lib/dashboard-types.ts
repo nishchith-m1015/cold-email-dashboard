@@ -190,6 +190,7 @@ export interface DashboardParams {
   endDate: string;
   selectedCampaign?: string | null;
   selectedProvider?: string | null; // Provider filter for cost analytics
+  workspaceId?: string; // Workspace filter (multi-tenant)
 }
 
 export interface DashboardData {

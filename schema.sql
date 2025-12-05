@@ -6,6 +6,41 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================
+-- WORKSPACES TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS workspaces (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  name TEXT NOT NULL DEFAULT 'Default Workspace',
+  slug TEXT NOT NULL DEFAULT 'default',
+  plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'starter', 'pro', 'enterprise')),
+  settings JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX idx_workspaces_slug ON workspaces(slug);
+
+-- Insert default workspace
+INSERT INTO workspaces (id, name, slug, plan)
+VALUES ('default', 'Default Workspace', 'default', 'free')
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================
+-- USER WORKSPACES TABLE (User ↔ Workspace mapping)
+-- ============================================
+CREATE TABLE IF NOT EXISTS user_workspaces (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id TEXT NOT NULL, -- Clerk user ID
+  workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(user_id, workspace_id)
+);
+
+CREATE INDEX idx_user_workspaces_user ON user_workspaces(user_id);
+CREATE INDEX idx_user_workspaces_workspace ON user_workspaces(workspace_id);
+
+-- ============================================
 -- CONTACTS TABLE
 -- ============================================
 CREATE TABLE IF NOT EXISTS contacts (

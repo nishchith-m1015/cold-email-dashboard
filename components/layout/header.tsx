@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { WorkspaceSwitcher } from '@/components/dashboard/workspace-switcher';
 
 interface HeaderProps {
   onCommandOpen?: () => void;
@@ -238,6 +239,11 @@ export function Header({ onCommandOpen }: HeaderProps) {
                 </p>
               </div>
             </Link>
+
+            {/* Workspace Switcher */}
+            <div className="hidden lg:block border-l border-border pl-6 ml-2">
+              <WorkspaceSwitcher />
+            </div>
 
             {/* Navigation Tabs */}
             <nav className="hidden md:flex items-center gap-1 bg-surface-elevated rounded-lg p-1">

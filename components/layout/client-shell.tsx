@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Header } from './header';
 import { CommandPalette } from './command-palette';
+import { WorkspaceProvider } from '@/lib/workspace-context';
 
 interface ClientShellProps {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ interface ClientShellProps {
  * ClientShell - Client-side wrapper for the application
  * 
  * This component handles all client-side layout logic:
+ * - Workspace context for multi-tenant support
  * - Command palette state management
  * - Header with navigation
  * - Background patterns
@@ -27,7 +29,7 @@ export function ClientShell({ children }: ClientShellProps) {
   const [commandOpen, setCommandOpen] = useState(false);
 
   return (
-    <>
+    <WorkspaceProvider>
       {/* Background pattern */}
       <div className="fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-gradient-to-br from-accent-primary/5 via-transparent to-accent-purple/5" />
@@ -44,7 +46,7 @@ export function ClientShell({ children }: ClientShellProps) {
 
       {/* Command palette */}
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
-    </>
+    </WorkspaceProvider>
   );
 }
 
