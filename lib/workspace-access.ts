@@ -50,10 +50,8 @@ const ROLE_PERMISSIONS: Record<WorkspaceRole, {
 };
 
 // Super admin user IDs (can access all workspaces)
-// Add your Clerk user ID here
 const SUPER_ADMIN_IDS: string[] = [
-  // Add your admin user IDs here after you login once and check Clerk dashboard
-  // Example: 'user_2abc123...'
+  'user_36QtXCPqQu6k0CXcYM0Sn2OQsgT', // Nishchith - Owner
 ];
 
 // ============================================
