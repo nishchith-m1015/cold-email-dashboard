@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, getWorkspaceId } from '@/lib/supabase';
-import { fetchSheetData, calculateSheetStats } from '@/lib/google-sheets';
 import { API_HEADERS } from '@/lib/utils';
 import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
 // Empty response helper
-function emptyResponse(startDate: string, endDate: string, source = 'fallback') {
+function emptyResponse(startDate: string, endDate: string, source = 'supabase') {
   return NextResponse.json({
     sends: 0,
     replies: 0,
@@ -45,57 +44,20 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const source = searchParams.get('source'); // 'sheets' to force Google Sheets
   const start = searchParams.get('start');
   const end = searchParams.get('end');
+  const campaign = searchParams.get('campaign');
+  const workspaceId = getWorkspaceId(searchParams.get('workspace_id'));
   
   // Default to last 7 days
   const startDate = start || new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().slice(0, 10);
   const endDate = end || new Date().toISOString().slice(0, 10);
 
-  // If source=sheets or Supabase not configured, use Google Sheets
-  if (source === 'sheets' || !supabaseAdmin) {
-    try {
-      const sheetData = await fetchSheetData('Ohio');
-      if (sheetData) {
-        const stats = calculateSheetStats(sheetData);
-        return NextResponse.json({
-          sends: stats.totalSends,
-          replies: stats.replies,
-          opt_outs: stats.optOuts,
-          bounces: 0,
-          opens: 0,
-          clicks: 0,
-          reply_rate_pct: Number(stats.replyRate.toFixed(2)),
-          opt_out_rate_pct: Number(stats.optOutRate.toFixed(2)),
-          bounce_rate_pct: 0,
-          open_rate_pct: 0,
-          click_rate_pct: 0,
-          cost_usd: 0,
-          sends_change_pct: 0,
-          reply_rate_change_pp: 0,
-          opt_out_rate_change_pp: 0,
-          prev_sends: 0,
-          prev_reply_rate_pct: 0,
-          start_date: startDate,
-          end_date: endDate,
-          source: 'google_sheets',
-          campaign: stats.campaignName,
-          total_contacts: stats.totalContacts,
-        }, { headers: API_HEADERS });
-      }
-    } catch (error) {
-      console.error('Google Sheets fetch error:', error);
-    }
-
-    // Fallback to empty if Sheets also fails
-    if (!supabaseAdmin) {
-      return emptyResponse(startDate, endDate, 'no_supabase');
-    }
+  // Require Supabase - no Google Sheets fallback
+  if (!supabaseAdmin) {
+    console.error('Supabase not configured');
+    return emptyResponse(startDate, endDate, 'no_database');
   }
-
-  const campaign = searchParams.get('campaign');
-  const workspaceId = getWorkspaceId(searchParams.get('workspace_id'));
 
   try {
     // Query daily_stats for the period

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, DEFAULT_WORKSPACE_ID } from '@/lib/supabase';
-import { fetchSheetData, calculateSheetStats } from '@/lib/google-sheets';
 import { API_HEADERS } from '@/lib/utils';
 import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '@/lib/rate-limit';
 
@@ -19,59 +18,6 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const source = searchParams.get('source');
-
-  // If source=sheets or Supabase not configured, use Google Sheets
-  if (source === 'sheets' || !supabaseAdmin) {
-    try {
-      const sheetData = await fetchSheetData('Ohio');
-      if (sheetData) {
-        const stats = calculateSheetStats(sheetData);
-        const replyRatePct = stats.uniqueContactsSent > 0 
-          ? Number(((stats.replies / stats.uniqueContactsSent) * 100).toFixed(2)) 
-          : 0;
-        const optOutRatePct = stats.uniqueContactsSent > 0 
-          ? Number(((stats.optOuts / stats.uniqueContactsSent) * 100).toFixed(2)) 
-          : 0;
-
-        return NextResponse.json({
-          campaigns: [{
-            campaign: stats.campaignName,
-            sends: stats.totalSends,
-            replies: stats.replies,
-            opt_outs: stats.optOuts,
-            bounces: 0,
-            reply_rate_pct: replyRatePct,
-            opt_out_rate_pct: optOutRatePct,
-            bounce_rate_pct: 0,
-            cost_usd: 0, // No cost data in Google Sheets
-            cost_per_reply: 0,
-            // Additional Google Sheets specific data
-            email_1_sends: stats.email1Sends,
-            email_2_sends: stats.email2Sends,
-            email_3_sends: stats.email3Sends,
-            total_contacts: stats.totalContacts,
-          }],
-          start_date: new Date().toISOString().slice(0, 10),
-          end_date: new Date().toISOString().slice(0, 10),
-          source: 'google_sheets',
-        }, { headers: API_HEADERS });
-      }
-    } catch (error) {
-      console.error('Google Sheets fetch error:', error);
-    }
-
-    // Fallback to empty if both fail
-    if (!supabaseAdmin) {
-      return NextResponse.json({
-        campaigns: [],
-        start_date: new Date().toISOString().slice(0, 10),
-        end_date: new Date().toISOString().slice(0, 10),
-      }, { headers: API_HEADERS });
-    }
-  }
-
-  // Use already extracted searchParams
   const start = searchParams.get('start');
   const end = searchParams.get('end');
   const workspaceId = searchParams.get('workspace_id') || DEFAULT_WORKSPACE_ID;
@@ -79,6 +25,17 @@ export async function GET(req: NextRequest) {
   // Default to last 30 days
   const startDate = start || new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
   const endDate = end || new Date().toISOString().slice(0, 10);
+
+  // Require Supabase - no Google Sheets fallback
+  if (!supabaseAdmin) {
+    console.error('Supabase not configured');
+    return NextResponse.json({
+      campaigns: [],
+      start_date: startDate,
+      end_date: endDate,
+      source: 'no_database',
+    }, { headers: API_HEADERS });
+  }
 
   try {
     // Query daily_stats grouped by campaign
@@ -175,10 +132,10 @@ export async function GET(req: NextRequest) {
       campaigns,
       start_date: startDate,
       end_date: endDate,
+      source: 'supabase',
     }, { headers: API_HEADERS });
   } catch (error) {
     console.error('By-campaign API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
-

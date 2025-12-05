@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, DEFAULT_WORKSPACE_ID } from '@/lib/supabase';
-import { fetchSheetData, calculateSheetStats } from '@/lib/google-sheets';
 import { API_HEADERS } from '@/lib/utils';
 import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '@/lib/rate-limit';
 
@@ -42,95 +41,26 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const source = searchParams.get('source');
   const start = searchParams.get('start');
   const end = searchParams.get('end');
   const campaign = searchParams.get('campaign');
+  const workspaceId = searchParams.get('workspace_id') || DEFAULT_WORKSPACE_ID;
 
   // Default to last 30 days
   const startDate = start || new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
   const endDate = end || new Date().toISOString().slice(0, 10);
 
-  // If source=sheets or Supabase not configured, use Google Sheets
-  if (source === 'sheets' || !supabaseAdmin) {
-    try {
-      const sheetName = campaign || 'Ohio';
-      const sheetData = await fetchSheetData(sheetName);
-      
-      if (sheetData) {
-        const stats = calculateSheetStats(sheetData);
-        
-        // Build step breakdown from sheet data
-        const steps: StepBreakdown[] = [
-          {
-            step: 1,
-            name: 'Email 1 (Initial Outreach)',
-            sends: stats.email1Sends,
-            lastSentAt: new Date().toISOString(),
-          },
-          {
-            step: 2,
-            name: 'Email 2 (Follow-up)',
-            sends: stats.email2Sends,
-            lastSentAt: stats.email2Sends > 0 ? new Date().toISOString() : undefined,
-          },
-          {
-            step: 3,
-            name: 'Email 3 (Final Follow-up)',
-            sends: stats.email3Sends,
-            lastSentAt: stats.email3Sends > 0 ? new Date().toISOString() : undefined,
-          },
-        ];
-
-        // Simulate daily sends distribution based on total sends
-        // This is a placeholder - in production, you'd track actual send dates
-        const dailySends: DailySend[] = [];
-        const totalDays = Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (24 * 3600 * 1000)) + 1;
-        const avgSendsPerDay = Math.floor(stats.totalSends / totalDays);
-        
-        for (let i = 0; i < totalDays; i++) {
-          const date = new Date(startDate);
-          date.setDate(date.getDate() + i);
-          const dateStr = date.toISOString().slice(0, 10);
-          
-          // Distribute sends somewhat randomly but approximately evenly
-          let count = avgSendsPerDay;
-          if (i === totalDays - 1) {
-            // Last day gets the remainder
-            count = stats.totalSends - avgSendsPerDay * (totalDays - 1);
-          }
-          
-          dailySends.push({ date: dateStr, count: Math.max(0, count) });
-        }
-
-        return NextResponse.json({
-          steps,
-          dailySends,
-          totalSends: stats.totalSends,
-          dateRange: {
-            start: startDate,
-            end: endDate,
-          },
-          source: 'google_sheets',
-        } as StepBreakdownResponse, { headers: API_HEADERS });
-      }
-    } catch (error) {
-      console.error('Google Sheets fetch error:', error);
-    }
-
-    // Fallback to empty if both fail
-    if (!supabaseAdmin) {
-      return NextResponse.json({
-        steps: [],
-        dailySends: [],
-        totalSends: 0,
-        dateRange: { start: startDate, end: endDate },
-        source: 'none',
-      } as StepBreakdownResponse, { headers: API_HEADERS });
-    }
+  // Require Supabase - no Google Sheets fallback
+  if (!supabaseAdmin) {
+    console.error('Supabase not configured');
+    return NextResponse.json({
+      steps: [],
+      dailySends: [],
+      totalSends: 0,
+      dateRange: { start: startDate, end: endDate },
+      source: 'no_database',
+    } as StepBreakdownResponse, { headers: API_HEADERS });
   }
-
-  const workspaceId = searchParams.get('workspace_id') || DEFAULT_WORKSPACE_ID;
 
   try {
     // Query email_events for step-level breakdown
@@ -214,4 +144,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: API_HEADERS });
   }
 }
-

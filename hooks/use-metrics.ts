@@ -47,10 +47,9 @@ const defaultConfig: SWRConfiguration = {
   keepPreviousData: true, // Keep showing old data while revalidating
 };
 
-// Hook to fetch summary metrics
-// Uses Google Sheets as primary source (source=sheets)
+// Hook to fetch summary metrics (from Supabase)
 export function useMetricsSummary(start: string, end: string, campaign?: string) {
-  const params = new URLSearchParams({ start, end, source: 'sheets' });
+  const params = new URLSearchParams({ start, end });
   if (campaign) params.set('campaign', campaign);
   
   const { data, error, isLoading, mutate } = useSWR<MetricsSummary>(
@@ -70,7 +69,7 @@ export function useMetricsSummary(start: string, end: string, campaign?: string)
   };
 }
 
-// Hook to fetch time series data
+// Hook to fetch time series data (from Supabase)
 export function useTimeSeries(
   metric: TimeSeriesMetric,
   start: string,
@@ -96,10 +95,9 @@ export function useTimeSeries(
   };
 }
 
-// Hook to fetch campaign breakdown
-// Uses Google Sheets as primary source (source=sheets)
+// Hook to fetch campaign breakdown (from Supabase)
 export function useCampaignStats(start: string, end: string) {
-  const params = new URLSearchParams({ start, end, source: 'sheets' });
+  const params = new URLSearchParams({ start, end });
 
   const { data, error, isLoading } = useSWR<CampaignData>(
     `/api/metrics/by-campaign?${params.toString()}`,
@@ -117,7 +115,7 @@ export function useCampaignStats(start: string, end: string) {
   };
 }
 
-// Hook to fetch cost breakdown
+// Hook to fetch cost breakdown (from Supabase)
 export function useCostBreakdown(start: string, end: string, campaign?: string, provider?: string) {
   const params = new URLSearchParams({ start, end });
   if (campaign) params.set('campaign', campaign);
@@ -140,7 +138,7 @@ export function useCostBreakdown(start: string, end: string, campaign?: string, 
   };
 }
 
-// Hook to fetch campaigns list
+// Hook to fetch campaigns list (from Supabase)
 export function useCampaigns() {
   const { data, error, isLoading } = useSWR<CampaignList>(
     '/api/campaigns',
@@ -159,7 +157,8 @@ export function useCampaigns() {
   };
 }
 
-// Hook to fetch Google Sheets data directly
+// Hook to fetch Google Sheets data directly (DEPRECATED - kept for compatibility)
+// This will still work if you need to access Sheets data directly
 export function useGoogleSheetsStats() {
   const { data, error, isLoading, mutate } = useSWR<GoogleSheetsStats>(
     '/api/sheets?format=stats',
@@ -179,18 +178,17 @@ export function useGoogleSheetsStats() {
   };
 }
 
-// Hook to fetch step-level breakdown
+// Hook to fetch step-level breakdown (from Supabase)
 export function useStepBreakdown(start: string, end: string, campaign?: string) {
-  const params = new URLSearchParams({ start, end, source: 'sheets' });
+  const params = new URLSearchParams({ start, end });
   if (campaign) params.set('campaign', campaign);
 
   const { data, error, isLoading, mutate } = useSWR<StepBreakdownData>(
     `/api/metrics/step-breakdown?${params.toString()}`,
     fetcher,
     { 
+      ...defaultConfig,
       refreshInterval: 60000,
-      revalidateOnFocus: false,
-      dedupingInterval: 10000,
     }
   );
 
@@ -224,7 +222,7 @@ export interface SenderStatsData {
   end_date: string;
 }
 
-// Hook to fetch per-sender statistics
+// Hook to fetch per-sender statistics (from Supabase)
 export function useSenderStats(start: string, end: string, campaign?: string) {
   const params = new URLSearchParams({ start, end });
   if (campaign) params.set('campaign', campaign);
