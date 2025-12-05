@@ -858,8 +858,8 @@
       ],
       "id": "34ea7b04-9106-4b38-ad19-2403cd9930dd",
       "name": "💰 Track Google CSE1"
-    },
-    {
+            },
+            {
       "parameters": {
         "jsCode": "// ============================================\n// COST TRACKING: OpenAI o3-mini (Summarize)\n// 100% ACCURATE: Uses actual token counts from API\n// Pricing: $1.10/1M input, $4.40/1M output\n// ============================================\nconst PRICING = { input: 1.10, output: 4.40 }; // per 1M tokens\n\nconst leadData = $('Real Estate - California1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Get the actual response from OpenAI\nconst openaiResponse = $('Summarize (O3-mini)1').first().json;\n\n// Get ACTUAL token usage from OpenAI response\nconst usage = openaiResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\n// Determine data source accuracy\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\n\n// Calculate cost using actual tokens\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents = $('💰 Track Google CSE1').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'openai',\n  model: openaiResponse.model || 'o3-mini',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'company_summarization',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
       },
@@ -1055,7 +1055,7 @@
             {
               "name": "with_agent_details",
               "value": "true"
-            }
+              }
           ]
         },
         "sendHeaders": true,
@@ -1064,7 +1064,7 @@
             {
               "name": "Authorization",
               "value": "9eefb509-a6c5-4a45-8e8f-f971816b99f6:sk-OTljMWM3M2ItZjQ2My00ZTk0LTg2YzktOTNmODIxYjlhM2Zl"
-            }
+      }
           ]
         },
         "options": {
@@ -1080,8 +1080,8 @@
       "id": "e5207558-b72e-4ce3-a24b-40076664a3ce",
       "name": "Fetch Relevance AI Run History",
       "onError": "continueRegularOutput"
-    }
-  ],
+                }
+              ],
   "pinData": {},
   "connections": {
     "💰 Track Relevance AI1": {

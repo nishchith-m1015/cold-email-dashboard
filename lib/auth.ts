@@ -20,8 +20,8 @@ import type { Workspace } from './workspace-context';
 // ============================================
 
 export const AUTH_CONFIG = {
-  // Enable/disable auth (set to false for development without Clerk)
-  enabled: false, // Change to true after installing Clerk
+  // Enable/disable auth (Clerk is now installed)
+  enabled: true, // Clerk authentication is active
   
   // Routes that should be public (no auth required)
   publicRoutes: [

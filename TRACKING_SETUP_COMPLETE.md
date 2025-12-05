@@ -137,7 +137,7 @@ n8n Workflow → HTTP Request → /api/cost-events → Supabase (llm_usage table
 ## 🔧 Configuration Files
 
 ### Environment Variables
-```bash
+   ```bash
 # .env.local
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key

@@ -1,0 +1,22 @@
+import { SignUp } from '@clerk/nextjs';
+
+export default function SignUpPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="w-full max-w-md p-4">
+        <SignUp 
+          appearance={{
+            elements: {
+              rootBox: 'mx-auto w-full',
+              card: 'bg-surface border border-border shadow-2xl',
+            }
+          }}
+          routing="path"
+          path="/sign-up"
+          signInUrl="/sign-in"
+        />
+      </div>
+    </div>
+  );
+}
+

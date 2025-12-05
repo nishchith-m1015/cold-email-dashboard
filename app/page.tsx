@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const [endDate, setEndDate] = useState(() => toISODate(new Date()));
   const [selectedCampaign, setSelectedCampaign] = useState<string | undefined>();
   const [selectedDate, setSelectedDate] = useState<string | undefined>();
-  
+
   // Timezone state - default to Los Angeles, persist in localStorage
   const [timezone, setTimezone] = useState('America/Los_Angeles');
   
@@ -269,16 +269,16 @@ export default function DashboardPage() {
           valueFormatter={(v) => `${v}%`}
           height={240}
         />
-        <TimeSeriesChart
-          title="Reply Rate Over Time"
-          subtitle={dateRangeDisplay}
+      <TimeSeriesChart
+        title="Reply Rate Over Time"
+        subtitle={dateRangeDisplay}
           data={replyRateSeries}
-          color={CHART_COLORS.replies}
-          loading={replyRateLoading}
-          type="line"
-          valueFormatter={(v) => `${v}%`}
-          height={240}
-        />
+        color={CHART_COLORS.replies}
+        loading={replyRateLoading}
+        type="line"
+        valueFormatter={(v) => `${v}%`}
+        height={240}
+      />
       </div>
 
       {/* Campaign Table */}
