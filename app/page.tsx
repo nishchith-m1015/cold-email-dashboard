@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { toISODate, daysAgo } from '@/lib/utils';
@@ -10,7 +11,6 @@ import { useDashboardData } from '@/hooks/use-dashboard-data';
 // Components
 import { MetricCard } from '@/components/dashboard/metric-card';
 import { TimeSeriesChart } from '@/components/dashboard/time-series-chart';
-import { DonutChart } from '@/components/dashboard/donut-chart';
 import { CampaignTable } from '@/components/dashboard/campaign-table';
 import { DateRangePicker } from '@/components/dashboard/date-range-picker';
 import { CampaignSelector } from '@/components/dashboard/campaign-selector';
@@ -22,13 +22,18 @@ import { TimezoneSelector } from '@/components/dashboard/timezone-selector';
 
 export default function DashboardPage() {
   // ============================================
-  // LOCAL UI STATE
+  // URL-BASED STATE (persists across navigation)
   // ============================================
   
-  // Date range state
-  const [startDate, setStartDate] = useState(() => toISODate(daysAgo(30)));
-  const [endDate, setEndDate] = useState(() => toISODate(new Date()));
-  const [selectedCampaign, setSelectedCampaign] = useState<string | undefined>();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  // Read dates from URL params with fallbacks
+  const startDate = searchParams.get('start') ?? toISODate(daysAgo(30));
+  const endDate = searchParams.get('end') ?? toISODate(new Date());
+  const selectedCampaign = searchParams.get('campaign') ?? undefined;
+  
+  // Local UI state (doesn't need URL persistence)
   const [selectedDate, setSelectedDate] = useState<string | undefined>();
 
   // Timezone state - default to Los Angeles, persist in localStorage
@@ -66,8 +71,8 @@ export default function DashboardPage() {
     replyRateLoading,
     clickRateSeries,
     clickRateLoading,
-    costByProvider,
-    costLoading,
+    costPerReply,
+    monthlyProjection,
     steps,
     dailySends,
     totalSends,
@@ -83,10 +88,22 @@ export default function DashboardPage() {
   // ============================================
 
   const handleDateChange = useCallback((start: string, end: string) => {
-    setStartDate(start);
-    setEndDate(end);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('start', start);
+    params.set('end', end);
+    router.replace(`?${params.toString()}`, { scroll: false });
     setSelectedDate(undefined); // Clear selected date on range change
-  }, []);
+  }, [searchParams, router]);
+
+  const handleCampaignChange = useCallback((campaign: string | undefined) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (campaign) {
+      params.set('campaign', campaign);
+    } else {
+      params.delete('campaign');
+    }
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
 
   const handleDateClick = useCallback((date: string) => {
     setSelectedDate(prev => prev === date ? undefined : date);
@@ -107,18 +124,6 @@ export default function DashboardPage() {
     
     return `${format(start, 'MMM d')} - ${format(end, 'MMM d, yyyy')}`;
   }, [startDate, endDate]);
-
-  // Calculate monthly projection for efficiency metrics
-  const monthlyProjection = useMemo(() => {
-    const daysInRange = Math.max(1, Math.ceil(
-      (new Date(endDate).getTime() - new Date(startDate).getTime()) / (24 * 60 * 60 * 1000)
-    ) + 1);
-    const dailyRate = totalSends / daysInRange;
-    const costPerSend = summary?.cost_usd && totalSends > 0 
-      ? summary.cost_usd / totalSends 
-      : 0;
-    return dailyRate * 30 * costPerSend;
-  }, [startDate, endDate, totalSends, summary]);
 
   // ============================================
   // RENDER
@@ -143,7 +148,7 @@ export default function DashboardPage() {
           <CampaignSelector
             campaigns={campaigns}
             selectedCampaign={selectedCampaign}
-            onCampaignChange={setSelectedCampaign}
+            onCampaignChange={handleCampaignChange}
             loading={campaignsLoading}
           />
           <DateRangePicker
@@ -198,7 +203,7 @@ export default function DashboardPage() {
           delay={3}
         />
         <MetricCard
-          title="LLM Cost"
+          title="Total Cost"
           value={summary?.cost_usd ?? 0}
           format="currency"
           icon="cost"
@@ -207,9 +212,8 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Sequence Breakdown & Daily Sends + Efficiency Metrics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: Sequence Breakdown (full height) */}
+      {/* Row 1: Sequence Breakdown & Daily Sends (Equal Height) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         <StepBreakdown
           steps={steps}
           dailySends={dailySends}
@@ -217,48 +221,41 @@ export default function DashboardPage() {
           startDate={startDate}
           endDate={endDate}
           loading={stepLoading}
+          className="h-full"
         />
-        
-        {/* Right: Daily Sends (top) + Efficiency Metrics (bottom) */}
-        <div className="flex flex-col gap-6">
-          <DailySendsChart
-            data={dailySends}
-            startDate={startDate}
-            endDate={endDate}
-            loading={stepLoading}
-            selectedDate={selectedDate}
-            onDateClick={handleDateClick}
-          />
-          <EfficiencyMetrics
-            costPerReply={summary?.replies ? summary.cost_usd / summary.replies : 0}
-            monthlyProjection={monthlyProjection}
-            totalContacts={totalSends}
-            loading={summaryLoading}
-          />
-        </div>
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <TimeSeriesChart
-            title="Email Sends Over Time"
-            subtitle={dateRangeDisplay}
-            data={sendsSeries}
-            color={CHART_COLORS.sends}
-            loading={sendsLoading}
-            type="area"
-          />
-        </div>
-        <DonutChart
-          title="Cost by Provider"
-          data={costByProvider}
-          loading={costLoading}
+        <DailySendsChart
+          data={dailySends}
+          startDate={startDate}
+          endDate={endDate}
+          loading={stepLoading}
+          selectedDate={selectedDate}
+          onDateClick={handleDateClick}
+          className="h-full"
         />
       </div>
 
-      {/* Engagement Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Row 2: Sends Trend & Efficiency (Equal Height) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        <TimeSeriesChart
+          title="Email Sends Over Time"
+          subtitle={dateRangeDisplay}
+          data={sendsSeries}
+          color={CHART_COLORS.sends}
+          loading={sendsLoading}
+          type="area"
+          className="h-full"
+        />
+        <EfficiencyMetrics
+          costPerReply={costPerReply}
+          monthlyProjection={monthlyProjection}
+          totalContacts={totalSends}
+          loading={summaryLoading}
+          className="h-full"
+        />
+      </div>
+
+      {/* Row 3: Engagement Trends (Equal Height) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         <TimeSeriesChart
           title="Click Rate Over Time"
           subtitle={dateRangeDisplay}
@@ -267,18 +264,20 @@ export default function DashboardPage() {
           loading={clickRateLoading}
           type="line"
           valueFormatter={(v) => `${v}%`}
-          height={240}
+          height={300}
+          className="h-full"
         />
-      <TimeSeriesChart
-        title="Reply Rate Over Time"
-        subtitle={dateRangeDisplay}
+        <TimeSeriesChart
+          title="Reply Rate Over Time"
+          subtitle={dateRangeDisplay}
           data={replyRateSeries}
-        color={CHART_COLORS.replies}
-        loading={replyRateLoading}
-        type="line"
-        valueFormatter={(v) => `${v}%`}
-        height={240}
-      />
+          color={CHART_COLORS.replies}
+          loading={replyRateLoading}
+          type="line"
+          valueFormatter={(v) => `${v}%`}
+          height={300}
+          className="h-full"
+        />
       </div>
 
       {/* Campaign Table */}

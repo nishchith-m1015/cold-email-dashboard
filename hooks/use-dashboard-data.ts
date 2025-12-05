@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useCallback } from 'react';
-import { getProviderColor } from '@/lib/constants';
+import { getProviderColor, getModelDisplayName } from '@/lib/constants';
 import {
   useMetricsSummary,
   useTimeSeries,
@@ -99,7 +99,7 @@ export function useDashboardData(params: DashboardParams): DashboardData {
   const costByModel = useMemo<ChartDataPoint[]>(() => {
     if (!costData?.by_model) return [];
     return costData.by_model.slice(0, 5).map(m => ({
-      name: m.model,
+      name: getModelDisplayName(m.model),
       value: m.cost_usd,
     }));
   }, [costData]);
@@ -117,6 +117,38 @@ export function useDashboardData(params: DashboardParams): DashboardData {
     if (summary.sends === 0) return 0;
     return costData.total.cost_usd / summary.sends;
   }, [summary, costData]);
+
+  // Calculate monthly projection
+  // Logic: (Total Cost So Far / Days Passed in Month) * Total Days in Current Month
+  // Returns null if selected range is NOT the current month
+  const monthlyProjection = useMemo(() => {
+    const today = new Date();
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    
+    // Parse selected date range
+    const rangeStart = new Date(startDate);
+    const rangeEnd = new Date(endDate);
+    
+    // Check if selected range overlaps with current month
+    const isCurrentMonth = 
+      rangeStart.getFullYear() === today.getFullYear() &&
+      rangeStart.getMonth() === today.getMonth();
+    
+    if (!isCurrentMonth) {
+      return null; // Will display "N/A" in UI
+    }
+    
+    // Calculate days passed in month (at least 1)
+    const daysPassed = Math.max(1, Math.ceil(
+      (today.getTime() - startOfMonth.getTime()) / (1000 * 60 * 60 * 24)
+    ));
+    
+    const daysInMonth = endOfMonth.getDate();
+    const totalCost = costData?.total.cost_usd ?? 0;
+    
+    return (totalCost / daysPassed) * daysInMonth;
+  }, [startDate, endDate, costData]);
 
   // ============================================
   // CONVENIENCE FLAGS
@@ -169,6 +201,7 @@ export function useDashboardData(params: DashboardParams): DashboardData {
     costByModel,
     costPerReply,
     costPerSend,
+    monthlyProjection,
 
     // Steps
     steps,

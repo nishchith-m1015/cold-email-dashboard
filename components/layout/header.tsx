@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   BarChart3, 
@@ -131,8 +132,13 @@ interface CacheStats {
 }
 
 export function Header({ onCommandOpen }: HeaderProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'analytics'>('overview');
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { theme, toggleTheme, mounted } = useTheme();
+  
+  // Preserve URL params when navigating
+  const currentParams = searchParams.toString();
+  const query = currentParams ? `?${currentParams}` : '';
   
   // Dropdown states
   const [showNotifications, setShowNotifications] = useState(false);
@@ -247,12 +253,11 @@ export function Header({ onCommandOpen }: HeaderProps) {
 
               {/* Navigation Tabs */}
               <nav className="hidden md:flex items-center gap-1 bg-surface-elevated rounded-lg p-1">
-                <Link href="/">
+                <Link href={`/${query}`}>
                   <button
-                    onClick={() => setActiveTab('overview')}
                     className={cn(
                       'px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200',
-                      activeTab === 'overview'
+                      pathname === '/'
                         ? 'bg-surface text-text-primary shadow-sm'
                         : 'text-text-secondary hover:text-text-primary'
                     )}
@@ -260,12 +265,11 @@ export function Header({ onCommandOpen }: HeaderProps) {
                     Overview
                   </button>
                 </Link>
-                <Link href="/analytics">
+                <Link href={`/analytics${query}`}>
                   <button
-                    onClick={() => setActiveTab('analytics')}
                     className={cn(
                       'px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2',
-                      activeTab === 'analytics'
+                      pathname === '/analytics'
                         ? 'bg-surface text-text-primary shadow-sm'
                         : 'text-text-secondary hover:text-text-primary'
                     )}

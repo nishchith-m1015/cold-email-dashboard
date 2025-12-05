@@ -14,8 +14,18 @@ export function formatNumber(num: number, decimals = 0): string {
   });
 }
 
-// Format currency
+// Format currency (4 decimal places for micro-costs < $1)
 export function formatCurrency(amount: number): string {
+  if (amount === 0) {
+    return '$0.00';
+  }
+  
+  // For micro-costs under $1, show 4 decimal places
+  if (Math.abs(amount) < 1) {
+    return `$${amount.toFixed(4)}`;
+  }
+  
+  // For regular amounts, show 2 decimal places
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',

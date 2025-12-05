@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { toISODate, daysAgo, formatCurrency, formatNumber } from '@/lib/utils';
-import { CHART_COLORS } from '@/lib/constants';
+import { CHART_COLORS, getModelDisplayName } from '@/lib/constants';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
 
 // Components
@@ -29,13 +30,18 @@ import {
 
 export default function AnalyticsPage() {
   // ============================================
-  // LOCAL UI STATE
+  // URL-BASED STATE (persists across navigation)
   // ============================================
   
-  // Date range state
-  const [startDate, setStartDate] = useState(() => toISODate(daysAgo(30)));
-  const [endDate, setEndDate] = useState(() => toISODate(new Date()));
-  const [selectedCampaign, setSelectedCampaign] = useState<string | undefined>();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  // Read dates from URL params with fallbacks
+  const startDate = searchParams.get('start') ?? toISODate(daysAgo(30));
+  const endDate = searchParams.get('end') ?? toISODate(new Date());
+  const selectedCampaign = searchParams.get('campaign') ?? undefined;
+  
+  // Local UI state
   const [selectedProvider, setSelectedProvider] = useState<ProviderId | undefined>();
   
   // Timezone state - default to Los Angeles, persist in localStorage
@@ -87,9 +93,21 @@ export default function AnalyticsPage() {
   // ============================================
 
   const handleDateChange = useCallback((start: string, end: string) => {
-    setStartDate(start);
-    setEndDate(end);
-  }, []);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('start', start);
+    params.set('end', end);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
+
+  const handleCampaignChange = useCallback((campaign: string | undefined) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (campaign) {
+      params.set('campaign', campaign);
+    } else {
+      params.delete('campaign');
+    }
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
 
   // ============================================
   // RENDER
@@ -117,7 +135,7 @@ export default function AnalyticsPage() {
           <CampaignSelector
             campaigns={campaigns}
             selectedCampaign={selectedCampaign}
-            onCampaignChange={setSelectedCampaign}
+            onCampaignChange={handleCampaignChange}
             loading={campaignsLoading}
           />
           <ProviderSelector
@@ -139,7 +157,7 @@ export default function AnalyticsPage() {
       {/* Cost Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          title="Total LLM Cost"
+          title="Total Cost"
           value={costData?.total.cost_usd ?? 0}
           format="currency"
           icon="cost"
@@ -313,7 +331,7 @@ export default function AnalyticsPage() {
                         transition={{ duration: 0.2, delay: index * 0.05 }}
                         className="hover:bg-surface-elevated/50 transition-colors"
                       >
-                        <td className="px-4 py-3 text-sm font-medium text-text-primary">{model.model}</td>
+                        <td className="px-4 py-3 text-sm font-medium text-text-primary">{getModelDisplayName(model.model)}</td>
                         <td className="px-4 py-3">
                           <Badge variant={model.provider === 'openai' ? 'success' : 'warning'}>
                             {model.provider}

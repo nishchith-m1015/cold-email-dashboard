@@ -218,6 +218,7 @@ export interface DashboardData {
   costByModel: ChartDataPoint[];
   costPerReply: number;
   costPerSend: number;
+  monthlyProjection: number | null; // null if not current month
 
   // Step breakdown
   steps: StepBreakdown[];

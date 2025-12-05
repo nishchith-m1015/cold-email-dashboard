@@ -8,7 +8,7 @@ import { DollarSign, Users, Target } from 'lucide-react';
 
 interface EfficiencyMetricsProps {
   costPerReply: number;
-  monthlyProjection: number;
+  monthlyProjection: number | null;
   totalContacts: number;
   loading?: boolean;
   className?: string;
@@ -49,8 +49,8 @@ export function EfficiencyMetrics({
     {
       icon: Target,
       label: 'Monthly Projection',
-      value: formatCurrency(monthlyProjection),
-      sublabel: 'Based on current pace',
+      value: monthlyProjection !== null ? formatCurrency(monthlyProjection) : 'N/A',
+      sublabel: monthlyProjection !== null ? 'Based on current pace' : 'Select current month',
       valueColor: 'text-accent-primary',
     },
     {

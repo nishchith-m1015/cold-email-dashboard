@@ -81,3 +81,40 @@ export const DATE_RANGES = {
   '90d': { label: 'Last 90 days', days: 90 },
 } as const;
 
+// Model display names mapping (raw API names -> user-friendly names)
+export const MODEL_DISPLAY_NAMES: Record<string, string> = {
+  'o3-mini-2025-01-31': 'o3 Mini',
+  'o3-mini': 'o3 Mini',
+  'claude-sonnet-4-5-20250929': 'Sonnet 4.5',
+  'claude-sonnet-4-5': 'Sonnet 4.5',
+  'linkedin_research_tool': 'LinkedIn Research Tool',
+  'custom_search_api': 'Custom Search API',
+  'chatgpt-4o-latest': 'GPT 4o',
+  'gpt-4o': 'GPT 4o',
+  'gpt-4o-mini': 'GPT 4o Mini',
+  'google-maps-reviews-scraper': 'Reviews Scraper',
+  'google_maps_reviews_scraper': 'Reviews Scraper',
+};
+
+// Get user-friendly model name (with fallback to original)
+export function getModelDisplayName(rawName: string): string {
+  // Check exact match first
+  if (MODEL_DISPLAY_NAMES[rawName]) {
+    return MODEL_DISPLAY_NAMES[rawName];
+  }
+  
+  // Try partial match (e.g., 'o3-mini-2025-01-31' contains 'o3-mini')
+  const matchingKey = Object.keys(MODEL_DISPLAY_NAMES).find(
+    key => rawName.toLowerCase().includes(key.toLowerCase())
+  );
+  
+  if (matchingKey) {
+    return MODEL_DISPLAY_NAMES[matchingKey];
+  }
+  
+  // Fallback: capitalize and format the raw name
+  return rawName
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
