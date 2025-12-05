@@ -1,0 +1,236 @@
+{
+  "name": "Backfill Sheets to Supabase",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-400, 300],
+      "id": "manual-trigger",
+      "name": "Run Once Manually"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8",
+          "mode": "list",
+          "cachedResultName": "3547 Leads - Ohio",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Ohio",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [-200, 300],
+      "id": "sheets-read",
+      "name": "Read All Rows from Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "p8ESE0UMGdJsRvZv",
+          "name": "Smartie Agents"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 50,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [0, 300],
+      "id": "batch-split",
+      "name": "Process in Batches"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "leads_ohio",
+          "mode": "list",
+          "cachedResultName": "leads_ohio"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "first_name": "={{ $json.first_name || $json['First Name'] || '' }}",
+            "last_name": "={{ $json.last_name || $json['Last Name'] || '' }}",
+            "email_address": "={{ $json.email_address || $json['Email Adress '] || $json['Email Address'] || '' }}",
+            "linkedin_url": "={{ $json.linkedin_url || $json['LinkedIn URL'] || '' }}",
+            "state": "={{ $json.state || $json['State'] || '' }}",
+            "industry": "={{ $json.industry || $json['Industry'] || '' }}",
+            "position": "={{ $json.position || $json['Position'] || '' }}",
+            "city": "={{ $json.city || $json['City'] || '' }}",
+            "country": "={{ $json.country || $json['Country'] || '' }}",
+            "full_name": "={{ $json.full_name || $json['Full Name'] || '' }}",
+            "organization_name": "={{ $json.organization_name || $json['Organization Name'] || '' }}",
+            "organization_website": "={{ $json.organization_website || $json['Organization Website'] || '' }}",
+            "organization_description": "={{ $json.organization_description || $json['Organization Description'] || '' }}",
+            "organization_size": "={{ $json.organization_size || $json['Organization Size'] || '' }}",
+            "seniority": "={{ $json.seniority || $json['Seniority'] || '' }}",
+            "research_report": "={{ $json.research_report || $json['Research Report'] || '' }}",
+            "email_1_subject": "={{ $json.email_1_subject || $json['Email #1 Subject'] || '' }}",
+            "email_1_body": "={{ $json.email_1_body || $json['Email #1 Body '] || '' }}",
+            "email_2_body": "={{ $json.email_2_body || $json['Email #2 Body '] || '' }}",
+            "email_3_subject": "={{ $json.email_3_subject || $json['Email #3 Subject'] || '' }}",
+            "email_3_body": "={{ $json.email_3_body || $json['Email #3 Body'] || '' }}",
+            "sender_email": "={{ $json.sender_email || $json['Sender Email'] || '' }}",
+            "email_1_sent": "={{ $json.email_1_sent === 'Yes' || $json['Email #1 Sent'] === 'Yes' || $json.email_1_sent === true }}",
+            "email_2_sent": "={{ $json.email_2_sent === 'Yes' || $json['Email #2 Sent'] === 'Yes' || $json.email_2_sent === true }}",
+            "email_3_sent": "={{ $json.email_3_sent === 'Yes' || $json['Email #3 Sent'] === 'Yes' || $json.email_3_sent === true }}",
+            "replied": "={{ $json.replied === 'Yes' || $json['Replied'] === 'Yes' || $json.replied === true }}",
+            "opted_out": "={{ $json.opted_out === 'Yes' || $json['Opted Out'] === 'Yes' || $json.opted_out === true }}",
+            "email_prep": "={{ $json.email_prep === 'Yes' || $json['Email Prep'] === 'Yes' || $json.email_prep === true }}",
+            "analyze": "={{ $json.analyze === 'Yes' || $json['Analyze'] === 'Yes' || $json.analyze === true }}",
+            "message_id": "={{ $json.message_id || $json['Message ID'] || '' }}"
+          },
+          "matchingColumns": ["email_address"],
+          "schema": [
+            {"id": "email_address", "displayName": "email_address", "required": true, "defaultMatch": true, "canBeUsedToMatch": true, "type": "string"}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [200, 300],
+      "id": "postgres-upsert",
+      "name": "Upsert to Supabase",
+      "credentials": {
+        "postgres": {
+          "id": "Mc3aUJrqtDTplpRV",
+          "name": "Smartie Agents Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "unit": "seconds",
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [400, 300],
+      "id": "rate-limit",
+      "name": "Rate Limit (1s)",
+      "webhookId": "backfill-rate-limit"
+    },
+    {
+      "parameters": {
+        "content": "## Backfill Google Sheets → Supabase\n\nThis workflow migrates all your lead data from Google Sheets to Supabase PostgreSQL.\n\n### Instructions:\n1. **Update the Google Sheets document ID** in the \"Read All Rows\" node to match your sheet\n2. **Update column mappings** if your column names differ\n3. **Run once manually** to migrate all data\n4. **Disable after running** - this is a one-time migration\n\n### What it does:\n- Reads all rows from your Google Sheets\n- Processes in batches of 50 (rate limited)\n- Upserts each row to `leads_ohio` table in Supabase\n- Uses email_address as unique key for deduplication\n\n### Notes:\n- Existing rows with same email will be updated\n- New rows will be inserted\n- Safe to run multiple times (idempotent)",
+        "height": 450,
+        "width": 380,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-600, 100],
+      "typeVersion": 1,
+      "id": "instructions",
+      "name": "Instructions"
+    },
+    {
+      "parameters": {
+        "content": "## After Migration Complete\n\nOnce this runs successfully:\n\n1. Your dashboard will now read from Supabase\n2. Set up dual-write in your email workflows:\n   - Path 1: Google Sheets (client access)\n   - Path 2: PostgreSQL (dashboard)\n\n3. Your client sees Google Sheets\n4. Dashboard reads fast PostgreSQL data",
+        "height": 260,
+        "width": 300,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [500, 100],
+      "typeVersion": 1,
+      "id": "next-steps",
+      "name": "Next Steps"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Once Manually": {
+      "main": [
+        [
+          {
+            "node": "Read All Rows from Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read All Rows from Sheets": {
+      "main": [
+        [
+          {
+            "node": "Process in Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process in Batches": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Upsert to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit (1s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit (1s)": {
+      "main": [
+        [
+          {
+            "node": "Process in Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Los_Angeles",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "sheets-to-supabase-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "backfill-sheets-to-supabase",
+  "tags": [
+    {
+      "id": "r8CZ5Y6mZ7dctfjE",
+      "name": "Cold Email"
+    }
+  ]
+}
+
