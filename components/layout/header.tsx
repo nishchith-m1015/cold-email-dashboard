@@ -13,14 +13,11 @@ import {
   Sun,
   Moon,
   User,
-  LogOut,
-  RefreshCw,
   Globe,
   Palette,
   Clock,
   Check,
   X,
-  MessageSquare,
   AlertCircle,
   CheckCircle2,
   Info,
@@ -31,6 +28,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { WorkspaceSwitcher } from '@/components/dashboard/workspace-switcher';
+import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
 
 interface HeaderProps {
   onCommandOpen?: () => void;
@@ -43,7 +41,6 @@ function useTheme() {
 
   useEffect(() => {
     setMounted(true);
-    // Check localStorage or system preference
     const stored = localStorage.getItem('theme');
     if (stored === 'light' || stored === 'dark') {
       setTheme(stored);
@@ -126,7 +123,6 @@ const notificationColors = {
   error: 'text-accent-danger',
 };
 
-// Cache stats type
 interface CacheStats {
   validEntries: number;
   entries: Array<{ key: string; expiresIn: number }>;
@@ -136,25 +132,19 @@ export function Header({ onCommandOpen }: HeaderProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics'>('overview');
   const { theme, toggleTheme, mounted } = useTheme();
   
-  // Dropdown states
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
   const [notifications, setNotifications] = useState(sampleNotifications);
 
-  // Cache states
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
   const [isClearing, setIsClearing] = useState(false);
   const [clearStatus, setClearStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  // Refs for click outside
   const notificationsRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
-  const profileRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(notificationsRef, () => setShowNotifications(false));
   useClickOutside(settingsRef, () => setShowSettings(false));
-  useClickOutside(profileRef, () => setShowProfile(false));
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -166,7 +156,6 @@ export function Header({ onCommandOpen }: HeaderProps) {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  // Fetch cache stats when settings opens
   const fetchCacheStats = useCallback(async () => {
     try {
       const response = await fetch('/api/cache');
@@ -179,7 +168,6 @@ export function Header({ onCommandOpen }: HeaderProps) {
     }
   }, []);
 
-  // Clear cache and refresh data
   const clearCache = useCallback(async () => {
     setIsClearing(true);
     setClearStatus('idle');
@@ -189,7 +177,6 @@ export function Header({ onCommandOpen }: HeaderProps) {
       if (response.ok) {
         setClearStatus('success');
         await fetchCacheStats();
-        // Trigger page refresh to get fresh data
         window.location.reload();
       } else {
         setClearStatus('error');
@@ -204,7 +191,6 @@ export function Header({ onCommandOpen }: HeaderProps) {
     }
   }, [fetchCacheStats]);
 
-  // Fetch stats when settings dropdown opens
   useEffect(() => {
     if (showSettings) {
       fetchCacheStats();
@@ -220,9 +206,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
     >
       <div className="max-w-[1600px] mx-auto px-6">
         <div className="flex items-center justify-between h-16">
-          {/* Logo & Nav */}
           <div className="flex items-center gap-8">
-            {/* Logo */}
             <Link href="/" className="flex items-center gap-3 group">
               <div className="relative">
                 <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-gradient-to-br from-accent-primary to-accent-purple shadow-lg shadow-accent-primary/20">
@@ -240,12 +224,10 @@ export function Header({ onCommandOpen }: HeaderProps) {
               </div>
             </Link>
 
-            {/* Workspace Switcher */}
             <div className="hidden lg:block border-l border-border pl-6 ml-2">
               <WorkspaceSwitcher />
             </div>
 
-            {/* Navigation Tabs */}
             <nav className="hidden md:flex items-center gap-1 bg-surface-elevated rounded-lg p-1">
               <Link href="/">
                 <button
@@ -277,9 +259,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
             </nav>
           </div>
 
-          {/* Right side */}
           <div className="flex items-center gap-2">
-            {/* Search / Command */}
             <Button
               variant="outline"
               size="sm"
@@ -293,13 +273,12 @@ export function Header({ onCommandOpen }: HeaderProps) {
               </kbd>
             </Button>
 
-            {/* Theme Toggle */}
             <Button 
               variant="ghost" 
               size="icon"
               onClick={toggleTheme}
               className="relative"
-              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              title={\`Switch to \${theme === 'dark' ? 'light' : 'dark'} mode\`}
             >
               {mounted && (
                 theme === 'dark' ? (
@@ -310,7 +289,6 @@ export function Header({ onCommandOpen }: HeaderProps) {
               )}
             </Button>
 
-            {/* Notifications Dropdown */}
             <div className="relative" ref={notificationsRef}>
               <Button 
                 variant="ghost" 
@@ -319,14 +297,13 @@ export function Header({ onCommandOpen }: HeaderProps) {
                 onClick={() => {
                   setShowNotifications(!showNotifications);
                   setShowSettings(false);
-                  setShowProfile(false);
                 }}
               >
-              <Bell className="h-5 w-5 text-text-secondary" />
+                <Bell className="h-5 w-5 text-text-secondary" />
                 {unreadCount > 0 && (
                   <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-accent-danger rounded-full animate-pulse" />
                 )}
-            </Button>
+              </Button>
 
               <AnimatePresence>
                 {showNotifications && (
@@ -404,7 +381,6 @@ export function Header({ onCommandOpen }: HeaderProps) {
               </AnimatePresence>
             </div>
 
-            {/* Settings Dropdown */}
             <div className="relative" ref={settingsRef}>
               <Button 
                 variant="ghost" 
@@ -412,14 +388,13 @@ export function Header({ onCommandOpen }: HeaderProps) {
                 onClick={() => {
                   setShowSettings(!showSettings);
                   setShowNotifications(false);
-                  setShowProfile(false);
                 }}
               >
                 <Settings className={cn(
                   'h-5 w-5 text-text-secondary transition-transform',
                   showSettings && 'rotate-90'
                 )} />
-            </Button>
+              </Button>
 
               <AnimatePresence>
                 {showSettings && (
@@ -435,7 +410,6 @@ export function Header({ onCommandOpen }: HeaderProps) {
                     </div>
                     
                     <div className="p-2">
-                      {/* Theme setting */}
                       <button
                         onClick={toggleTheme}
                         className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-surface-elevated transition-colors"
@@ -447,7 +421,6 @@ export function Header({ onCommandOpen }: HeaderProps) {
                         <span className="text-xs text-text-secondary capitalize">{theme}</span>
                       </button>
 
-                      {/* Timezone setting */}
                       <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-surface-elevated transition-colors">
                         <div className="flex items-center gap-3">
                           <Globe className="h-4 w-4 text-text-secondary" />
@@ -456,7 +429,6 @@ export function Header({ onCommandOpen }: HeaderProps) {
                         <span className="text-xs text-text-secondary">UTC-8</span>
                       </button>
 
-                      {/* Refresh interval */}
                       <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-surface-elevated transition-colors">
                         <div className="flex items-center gap-3">
                           <Clock className="h-4 w-4 text-text-secondary" />
@@ -467,7 +439,6 @@ export function Header({ onCommandOpen }: HeaderProps) {
 
                       <div className="my-2 border-t border-border" />
 
-                      {/* Cache Status */}
                       <div className="px-3 py-2">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
@@ -480,7 +451,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
                               ? "bg-accent-success/10 text-accent-success"
                               : "bg-surface-elevated text-text-secondary"
                           )}>
-                            {cacheStats ? `${cacheStats.validEntries} cached` : '...'}
+                            {cacheStats ? \`\${cacheStats.validEntries} cached\` : '...'}
                           </span>
                         </div>
                         {cacheStats && cacheStats.entries.length > 0 && (
@@ -495,7 +466,6 @@ export function Header({ onCommandOpen }: HeaderProps) {
                         )}
                       </div>
 
-                      {/* Clear Cache Button */}
                       <button
                         onClick={clearCache}
                         disabled={isClearing}
@@ -531,59 +501,29 @@ export function Header({ onCommandOpen }: HeaderProps) {
               </AnimatePresence>
             </div>
 
-            {/* Profile Dropdown */}
-            <div className="relative" ref={profileRef}>
-              <button
-                onClick={() => {
-                  setShowProfile(!showProfile);
-                  setShowNotifications(false);
-                  setShowSettings(false);
+            {/* User Profile - Clerk Authentication */}
+            <SignedOut>
+              <SignInButton mode="modal">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <User className="h-4 w-4" />
+                  Sign In
+                </Button>
+              </SignInButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton 
+                afterSignOutUrl="/"
+                appearance={{
+                  elements: {
+                    avatarBox: 'h-8 w-8 ring-2 ring-transparent hover:ring-accent-primary/50 transition-all',
+                    userButtonPopoverCard: 'bg-surface border border-border shadow-2xl',
+                    userButtonPopoverActionButton: 'hover:bg-surface-elevated',
+                    userButtonPopoverActionButtonText: 'text-text-primary',
+                    userButtonPopoverFooter: 'hidden',
+                  },
                 }}
-                className="h-8 w-8 rounded-full bg-gradient-to-br from-accent-primary to-accent-purple flex items-center justify-center text-white text-sm font-semibold hover:ring-2 hover:ring-accent-primary/50 hover:ring-offset-2 hover:ring-offset-background transition-all"
-              >
-              S
-              </button>
-
-              <AnimatePresence>
-                {showProfile && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-surface shadow-2xl overflow-hidden z-50"
-                  >
-                    {/* User info */}
-                    <div className="px-4 py-3 border-b border-border bg-surface-elevated">
-                      <p className="text-sm font-semibold text-text-primary">Smartie Agents</p>
-                      <p className="text-xs text-text-secondary mt-0.5">admin@smartieagents.com</p>
-                    </div>
-                    
-                    <div className="p-2">
-                      {/* Account */}
-                      <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-elevated transition-colors">
-                        <User className="h-4 w-4 text-text-secondary" />
-                        <span className="text-sm text-text-primary">Account</span>
-                      </button>
-
-                      {/* Switch account */}
-                      <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-elevated transition-colors">
-                        <RefreshCw className="h-4 w-4 text-text-secondary" />
-                        <span className="text-sm text-text-primary">Switch account</span>
-                      </button>
-
-                      <div className="my-2 border-t border-border" />
-
-                      {/* Logout */}
-                      <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-accent-danger/10 text-accent-danger transition-colors">
-                        <LogOut className="h-4 w-4" />
-                        <span className="text-sm">Log out</span>
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+              />
+            </SignedIn>
           </div>
         </div>
       </div>
