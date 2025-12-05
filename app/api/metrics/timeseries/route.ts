@@ -2,14 +2,160 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, getWorkspaceId } from '@/lib/supabase';
 import { API_HEADERS } from '@/lib/utils';
 import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '@/lib/rate-limit';
+import { cacheManager, apiCacheKey, CACHE_TTL } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
+
+// Types
+interface TimeseriesResponse {
+  metric: string;
+  points: Array<{ day: string; value: number }>;
+  start_date: string;
+  end_date: string;
+  source?: string;
+}
+
+// Core data fetching (used by cache)
+async function fetchTimeseriesData(
+  metric: string,
+  startDate: string,
+  endDate: string,
+  workspaceId: string,
+  campaign?: string | null
+): Promise<TimeseriesResponse> {
+  if (!supabaseAdmin) {
+    return {
+      metric,
+      points: fillMissingDays([], startDate, endDate),
+      start_date: startDate,
+      end_date: endDate,
+      source: 'fallback',
+    };
+  }
+
+  // Build stats query
+  let statsQuery = supabaseAdmin
+    .from('daily_stats')
+    .select('day, sends, replies, opt_outs, bounces')
+    .eq('workspace_id', workspaceId)
+    .gte('day', startDate)
+    .lte('day', endDate)
+    .order('day', { ascending: true });
+
+  if (campaign) {
+    statsQuery = statsQuery.eq('campaign_name', campaign);
+  }
+
+  // Build click query if needed (parallel execution)
+  const needsClickData = metric === 'click_rate' || metric === 'clicks';
+  let clickQueryPromise: Promise<{ data: Array<{ created_at: string }> | null; error: Error | null }> | null = null;
+
+  if (needsClickData && supabaseAdmin) {
+    let clickQuery = supabaseAdmin
+      .from('email_events')
+      .select('created_at')
+      .eq('workspace_id', workspaceId)
+      .eq('event_type', 'clicked')
+      .gte('created_at', `${startDate}T00:00:00Z`)
+      .lte('created_at', `${endDate}T23:59:59Z`);
+
+    if (campaign) {
+      clickQuery = clickQuery.eq('campaign_name', campaign);
+    }
+    clickQueryPromise = clickQuery;
+  }
+
+  // Execute queries in parallel
+  const [statsResult, clickResult] = await Promise.all([
+    statsQuery,
+    clickQueryPromise || Promise.resolve({ data: null, error: null }),
+  ]);
+
+  if (statsResult.error) {
+    console.error('Timeseries query error:', statsResult.error);
+    return {
+      metric,
+      points: fillMissingDays([], startDate, endDate),
+      start_date: startDate,
+      end_date: endDate,
+      source: 'fallback',
+    };
+  }
+
+  // Aggregate by day
+  const dayMap = new Map<string, { sends: number; replies: number; opt_outs: number; bounces: number }>();
+
+  for (const row of statsResult.data || []) {
+    const existing = dayMap.get(row.day) || { sends: 0, replies: 0, opt_outs: 0, bounces: 0 };
+    dayMap.set(row.day, {
+      sends: existing.sends + (row.sends || 0),
+      replies: existing.replies + (row.replies || 0),
+      opt_outs: existing.opt_outs + (row.opt_outs || 0),
+      bounces: existing.bounces + (row.bounces || 0),
+    });
+  }
+
+  // Process click data
+  const clicksByDay = new Map<string, number>();
+  if (clickResult.data && !clickResult.error) {
+    for (const row of clickResult.data) {
+      const day = row.created_at.slice(0, 10);
+      clicksByDay.set(day, (clicksByDay.get(day) || 0) + 1);
+    }
+  }
+
+  // Transform based on requested metric
+  const points = Array.from(dayMap.entries()).map(([day, stats]) => {
+    let value: number;
+
+    switch (metric) {
+      case 'click_rate':
+        const clicks = clicksByDay.get(day) || 0;
+        value = stats.sends > 0 ? Number(((clicks / stats.sends) * 100).toFixed(2)) : 0;
+        break;
+      case 'clicks':
+        value = clicksByDay.get(day) || 0;
+        break;
+      case 'reply_rate':
+        value = stats.sends > 0 ? Number(((stats.replies / stats.sends) * 100).toFixed(2)) : 0;
+        break;
+      case 'opt_out_rate':
+        value = stats.sends > 0 ? Number(((stats.opt_outs / stats.sends) * 100).toFixed(2)) : 0;
+        break;
+      case 'bounce_rate':
+        value = stats.sends > 0 ? Number(((stats.bounces / stats.sends) * 100).toFixed(2)) : 0;
+        break;
+      case 'replies':
+        value = stats.replies;
+        break;
+      case 'opt_outs':
+        value = stats.opt_outs;
+        break;
+      case 'bounces':
+        value = stats.bounces;
+        break;
+      case 'sends':
+      default:
+        value = stats.sends;
+        break;
+    }
+
+    return { day, value };
+  });
+
+  return {
+    metric,
+    points: fillMissingDays(points, startDate, endDate),
+    start_date: startDate,
+    end_date: endDate,
+  };
+}
 
 export async function GET(req: NextRequest) {
   // Rate limiting
   const clientId = getClientId(req);
   const rateLimit = checkRateLimit(`timeseries:${clientId}`, RATE_LIMIT_READ);
-  
+
   if (!rateLimit.success) {
     return NextResponse.json(
       { error: 'Rate limit exceeded' },
@@ -40,125 +186,25 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Query daily_stats for the period
-    let query = supabaseAdmin
-      .from('daily_stats')
-      .select('day, sends, replies, opt_outs, bounces')
-      .eq('workspace_id', workspaceId)
-      .gte('day', startDate)
-      .lte('day', endDate)
-      .order('day', { ascending: true });
-
-    if (campaign) {
-      query = query.eq('campaign_name', campaign);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Timeseries query error:', error);
-      // Return empty data instead of error to avoid breaking the UI
-      return NextResponse.json({
-        metric,
-        points: fillMissingDays([], startDate, endDate),
-        start_date: startDate,
-        end_date: endDate,
-        source: 'fallback',
-        debug: process.env.NODE_ENV === 'development' ? error.message : undefined,
-      }, { headers: API_HEADERS });
-    }
-
-    // Aggregate by day if there are multiple campaigns
-    const dayMap = new Map<string, { sends: number; replies: number; opt_outs: number; bounces: number }>();
-    
-    for (const row of data || []) {
-      const existing = dayMap.get(row.day) || { sends: 0, replies: 0, opt_outs: 0, bounces: 0 };
-      dayMap.set(row.day, {
-        sends: existing.sends + (row.sends || 0),
-        replies: existing.replies + (row.replies || 0),
-        opt_outs: existing.opt_outs + (row.opt_outs || 0),
-        bounces: existing.bounces + (row.bounces || 0),
-      });
-    }
-
-    // For click_rate, we need to query email_events
-    let clicksByDay = new Map<string, number>();
-    if (metric === 'click_rate' || metric === 'clicks') {
-      let clickQuery = supabaseAdmin
-        .from('email_events')
-        .select('created_at')
-        .eq('workspace_id', workspaceId)
-        .eq('event_type', 'clicked')
-        .gte('created_at', `${startDate}T00:00:00Z`)
-        .lte('created_at', `${endDate}T23:59:59Z`);
-
-      if (campaign) {
-        clickQuery = clickQuery.eq('campaign_name', campaign);
-      }
-
-      const { data: clickData, error: clickError } = await clickQuery;
-      
-      if (clickError) {
-        console.error('Click query error:', clickError);
-      } else {
-        for (const row of clickData || []) {
-          const day = row.created_at.slice(0, 10);
-          clicksByDay.set(day, (clicksByDay.get(day) || 0) + 1);
-        }
-      }
-    }
-
-    // Transform based on requested metric
-    const points = Array.from(dayMap.entries()).map(([day, stats]) => {
-      let value: number;
-
-      switch (metric) {
-        case 'click_rate':
-          const clicks = clicksByDay.get(day) || 0;
-          value = stats.sends > 0 ? Number(((clicks / stats.sends) * 100).toFixed(2)) : 0;
-          break;
-        case 'clicks':
-          value = clicksByDay.get(day) || 0;
-          break;
-        case 'reply_rate':
-          value = stats.sends > 0 ? Number(((stats.replies / stats.sends) * 100).toFixed(2)) : 0;
-          break;
-        case 'opt_out_rate':
-          value = stats.sends > 0 ? Number(((stats.opt_outs / stats.sends) * 100).toFixed(2)) : 0;
-          break;
-        case 'bounce_rate':
-          value = stats.sends > 0 ? Number(((stats.bounces / stats.sends) * 100).toFixed(2)) : 0;
-          break;
-        case 'replies':
-          value = stats.replies;
-          break;
-        case 'opt_outs':
-          value = stats.opt_outs;
-          break;
-        case 'bounces':
-          value = stats.bounces;
-          break;
-        case 'sends':
-        default:
-          value = stats.sends;
-          break;
-      }
-
-      return { day, value };
+    // Generate cache key
+    const cacheKey = apiCacheKey('timeseries', {
+      metric,
+      start: startDate,
+      end: endDate,
+      campaign: campaign || undefined,
+      workspace: workspaceId,
     });
 
-    // Fill in missing days with zeros
-    const filledPoints = fillMissingDays(points, startDate, endDate);
+    // Use cache with 30 second TTL
+    const data = await cacheManager.getOrSet(
+      cacheKey,
+      () => fetchTimeseriesData(metric, startDate, endDate, workspaceId, campaign),
+      CACHE_TTL.SHORT
+    );
 
-    return NextResponse.json({
-      metric,
-      points: filledPoints,
-      start_date: startDate,
-      end_date: endDate,
-    }, { headers: API_HEADERS });
+    return NextResponse.json(data, { headers: API_HEADERS });
   } catch (error) {
     console.error('Timeseries API error:', error);
-    // Return empty data instead of error
     return NextResponse.json({
       metric,
       points: fillMissingDays([], startDate, endDate),

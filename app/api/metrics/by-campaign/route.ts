@@ -2,14 +2,147 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, DEFAULT_WORKSPACE_ID } from '@/lib/supabase';
 import { API_HEADERS } from '@/lib/utils';
 import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '@/lib/rate-limit';
+import { cacheManager, apiCacheKey, CACHE_TTL } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
+
+// Types
+interface CampaignStats {
+  campaign: string;
+  sends: number;
+  replies: number;
+  opt_outs: number;
+  bounces: number;
+  reply_rate_pct: number;
+  opt_out_rate_pct: number;
+  bounce_rate_pct: number;
+  cost_usd: number;
+  cost_per_reply: number;
+}
+
+interface ByCampaignResponse {
+  campaigns: CampaignStats[];
+  start_date: string;
+  end_date: string;
+  source: string;
+}
+
+// Core data fetching (used by cache)
+async function fetchByCampaignData(
+  startDate: string,
+  endDate: string,
+  workspaceId: string
+): Promise<ByCampaignResponse> {
+  if (!supabaseAdmin) {
+    return {
+      campaigns: [],
+      start_date: startDate,
+      end_date: endDate,
+      source: 'no_database',
+    };
+  }
+
+  // Execute BOTH queries in parallel (2 queries → 1 round trip latency)
+  const [statsResult, costResult] = await Promise.all([
+    supabaseAdmin
+      .from('daily_stats')
+      .select('campaign_name, sends, replies, opt_outs, bounces')
+      .eq('workspace_id', workspaceId)
+      .gte('day', startDate)
+      .lte('day', endDate),
+    supabaseAdmin
+      .from('llm_usage')
+      .select('campaign_name, cost_usd')
+      .eq('workspace_id', workspaceId)
+      .gte('created_at', `${startDate}T00:00:00Z`)
+      .lte('created_at', `${endDate}T23:59:59Z`),
+  ]);
+
+  if (statsResult.error) {
+    console.error('By-campaign query error:', statsResult.error);
+    throw statsResult.error;
+  }
+
+  // Aggregate by campaign
+  const campaignMap = new Map<string, {
+    sends: number;
+    replies: number;
+    opt_outs: number;
+    bounces: number;
+  }>();
+
+  for (const row of statsResult.data || []) {
+    const campaignName = row.campaign_name || 'Unknown';
+    const existing = campaignMap.get(campaignName) || {
+      sends: 0,
+      replies: 0,
+      opt_outs: 0,
+      bounces: 0,
+    };
+    campaignMap.set(campaignName, {
+      sends: existing.sends + (row.sends || 0),
+      replies: existing.replies + (row.replies || 0),
+      opt_outs: existing.opt_outs + (row.opt_outs || 0),
+      bounces: existing.bounces + (row.bounces || 0),
+    });
+  }
+
+  // Aggregate costs by campaign
+  const costMap = new Map<string, number>();
+  if (!costResult.error) {
+    for (const row of costResult.data || []) {
+      const campaignName = row.campaign_name || 'Unknown';
+      const existing = costMap.get(campaignName) || 0;
+      costMap.set(campaignName, existing + (Number(row.cost_usd) || 0));
+    }
+  }
+
+  // Build response
+  const campaigns = Array.from(campaignMap.entries()).map(([name, stats]) => {
+    const replyRatePct = stats.sends > 0
+      ? Number(((stats.replies / stats.sends) * 100).toFixed(2))
+      : 0;
+    const optOutRatePct = stats.sends > 0
+      ? Number(((stats.opt_outs / stats.sends) * 100).toFixed(2))
+      : 0;
+    const bounceRatePct = stats.sends > 0
+      ? Number(((stats.bounces / stats.sends) * 100).toFixed(2))
+      : 0;
+    const costUsd = Number((costMap.get(name) || 0).toFixed(2));
+    const costPerReply = stats.replies > 0
+      ? Number((costUsd / stats.replies).toFixed(2))
+      : 0;
+
+    return {
+      campaign: name,
+      sends: stats.sends,
+      replies: stats.replies,
+      opt_outs: stats.opt_outs,
+      bounces: stats.bounces,
+      reply_rate_pct: replyRatePct,
+      opt_out_rate_pct: optOutRatePct,
+      bounce_rate_pct: bounceRatePct,
+      cost_usd: costUsd,
+      cost_per_reply: costPerReply,
+    };
+  });
+
+  // Sort by sends descending
+  campaigns.sort((a, b) => b.sends - a.sends);
+
+  return {
+    campaigns,
+    start_date: startDate,
+    end_date: endDate,
+    source: 'supabase',
+  };
+}
 
 export async function GET(req: NextRequest) {
   // Rate limiting
   const clientId = getClientId(req);
   const rateLimit = checkRateLimit(`by-campaign:${clientId}`, RATE_LIMIT_READ);
-  
+
   if (!rateLimit.success) {
     return NextResponse.json(
       { error: 'Rate limit exceeded' },
@@ -26,7 +159,7 @@ export async function GET(req: NextRequest) {
   const startDate = start || new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
   const endDate = end || new Date().toISOString().slice(0, 10);
 
-  // Require Supabase - no Google Sheets fallback
+  // Require Supabase
   if (!supabaseAdmin) {
     console.error('Supabase not configured');
     return NextResponse.json({
@@ -38,102 +171,21 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Query daily_stats grouped by campaign
-    const { data: statsData, error: statsError } = await supabaseAdmin
-      .from('daily_stats')
-      .select('campaign_name, sends, replies, opt_outs, bounces')
-      .eq('workspace_id', workspaceId)
-      .gte('day', startDate)
-      .lte('day', endDate);
-
-    if (statsError) {
-      console.error('By-campaign query error:', statsError);
-      return NextResponse.json({ error: statsError.message }, { status: 500 });
-    }
-
-    // Aggregate by campaign
-    const campaignMap = new Map<string, { 
-      sends: number; 
-      replies: number; 
-      opt_outs: number; 
-      bounces: number;
-    }>();
-
-    for (const row of statsData || []) {
-      const campaignName = row.campaign_name || 'Unknown';
-      const existing = campaignMap.get(campaignName) || { 
-        sends: 0, 
-        replies: 0, 
-        opt_outs: 0, 
-        bounces: 0,
-      };
-      campaignMap.set(campaignName, {
-        sends: existing.sends + (row.sends || 0),
-        replies: existing.replies + (row.replies || 0),
-        opt_outs: existing.opt_outs + (row.opt_outs || 0),
-        bounces: existing.bounces + (row.bounces || 0),
-      });
-    }
-
-    // Query LLM costs by campaign
-    const { data: costData, error: costError } = await supabaseAdmin
-      .from('llm_usage')
-      .select('campaign_name, cost_usd')
-      .eq('workspace_id', workspaceId)
-      .gte('created_at', `${startDate}T00:00:00Z`)
-      .lte('created_at', `${endDate}T23:59:59Z`);
-
-    if (costError) {
-      console.error('Cost query error:', costError);
-    }
-
-    // Aggregate costs by campaign
-    const costMap = new Map<string, number>();
-    for (const row of costData || []) {
-      const campaignName = row.campaign_name || 'Unknown';
-      const existing = costMap.get(campaignName) || 0;
-      costMap.set(campaignName, existing + (Number(row.cost_usd) || 0));
-    }
-
-    // Build response
-    const campaigns = Array.from(campaignMap.entries()).map(([name, stats]) => {
-      const replyRatePct = stats.sends > 0 
-        ? Number(((stats.replies / stats.sends) * 100).toFixed(2)) 
-        : 0;
-      const optOutRatePct = stats.sends > 0 
-        ? Number(((stats.opt_outs / stats.sends) * 100).toFixed(2)) 
-        : 0;
-      const bounceRatePct = stats.sends > 0 
-        ? Number(((stats.bounces / stats.sends) * 100).toFixed(2)) 
-        : 0;
-      const costUsd = Number((costMap.get(name) || 0).toFixed(2));
-      const costPerReply = stats.replies > 0 
-        ? Number((costUsd / stats.replies).toFixed(2)) 
-        : 0;
-
-      return {
-        campaign: name,
-        sends: stats.sends,
-        replies: stats.replies,
-        opt_outs: stats.opt_outs,
-        bounces: stats.bounces,
-        reply_rate_pct: replyRatePct,
-        opt_out_rate_pct: optOutRatePct,
-        bounce_rate_pct: bounceRatePct,
-        cost_usd: costUsd,
-        cost_per_reply: costPerReply,
-      };
+    // Generate cache key
+    const cacheKey = apiCacheKey('by-campaign', {
+      start: startDate,
+      end: endDate,
+      workspace: workspaceId,
     });
 
-    // Sort by sends descending
-    campaigns.sort((a, b) => b.sends - a.sends);
+    // Use cache with 30 second TTL
+    const data = await cacheManager.getOrSet(
+      cacheKey,
+      () => fetchByCampaignData(startDate, endDate, workspaceId),
+      CACHE_TTL.SHORT
+    );
 
-    return NextResponse.json({
-      campaigns,
-      start_date: startDate,
-      end_date: endDate,
-      source: 'supabase',
-    }, { headers: API_HEADERS });
+    return NextResponse.json(data, { headers: API_HEADERS });
   } catch (error) {
     console.error('By-campaign API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, DEFAULT_WORKSPACE_ID } from '@/lib/supabase';
 import { API_HEADERS } from '@/lib/utils';
 import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '@/lib/rate-limit';
+import { cacheManager, apiCacheKey, CACHE_TTL } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,11 +29,106 @@ export interface StepBreakdownResponse {
   source: string;
 }
 
+// Core data fetching (used by cache)
+async function fetchStepBreakdownData(
+  startDate: string,
+  endDate: string,
+  workspaceId: string,
+  campaign?: string | null
+): Promise<StepBreakdownResponse> {
+  if (!supabaseAdmin) {
+    return {
+      steps: [],
+      dailySends: [],
+      totalSends: 0,
+      dateRange: { start: startDate, end: endDate },
+      source: 'no_database',
+    };
+  }
+
+  // Query email_events for step-level breakdown
+  let stepQuery = supabaseAdmin
+    .from('email_events')
+    .select('step, event_ts')
+    .eq('workspace_id', workspaceId)
+    .eq('event_type', 'sent')
+    .gte('event_ts', `${startDate}T00:00:00Z`)
+    .lte('event_ts', `${endDate}T23:59:59Z`);
+
+  if (campaign) {
+    stepQuery = stepQuery.eq('campaign_name', campaign);
+  }
+
+  const { data: eventsData, error: eventsError } = await stepQuery;
+
+  if (eventsError) {
+    console.error('Step breakdown query error:', eventsError);
+    throw eventsError;
+  }
+
+  // Aggregate by step
+  const stepMap = new Map<number, { count: number; lastSent: string | null }>();
+  const dailyMap = new Map<string, number>();
+
+  for (const event of eventsData || []) {
+    const step = event.step || 1;
+    const current = stepMap.get(step) || { count: 0, lastSent: null };
+    current.count++;
+    if (!current.lastSent || event.event_ts > current.lastSent) {
+      current.lastSent = event.event_ts;
+    }
+    stepMap.set(step, current);
+
+    // Aggregate daily
+    const day = event.event_ts.slice(0, 10);
+    dailyMap.set(day, (dailyMap.get(day) || 0) + 1);
+  }
+
+  const stepNames = {
+    1: 'Email 1 (Initial Outreach)',
+    2: 'Email 2 (Follow-up)',
+    3: 'Email 3 (Final Follow-up)',
+  };
+
+  const steps: StepBreakdown[] = [1, 2, 3].map(step => ({
+    step,
+    name: stepNames[step as 1 | 2 | 3],
+    sends: stepMap.get(step)?.count || 0,
+    lastSentAt: stepMap.get(step)?.lastSent || undefined,
+  }));
+
+  // Build daily sends with all days in range
+  const dailySends: DailySend[] = [];
+  const startD = new Date(startDate);
+  const endD = new Date(endDate);
+
+  for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().slice(0, 10);
+    dailySends.push({
+      date: dateStr,
+      count: dailyMap.get(dateStr) || 0,
+    });
+  }
+
+  const totalSends = steps.reduce((sum, s) => sum + s.sends, 0);
+
+  return {
+    steps,
+    dailySends,
+    totalSends,
+    dateRange: {
+      start: startDate,
+      end: endDate,
+    },
+    source: 'supabase',
+  };
+}
+
 export async function GET(req: NextRequest) {
   // Rate limiting
   const clientId = getClientId(req);
   const rateLimit = checkRateLimit(`step-breakdown:${clientId}`, RATE_LIMIT_READ);
-  
+
   if (!rateLimit.success) {
     return NextResponse.json(
       { error: 'Rate limit exceeded' },
@@ -50,7 +146,7 @@ export async function GET(req: NextRequest) {
   const startDate = start || new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
   const endDate = end || new Date().toISOString().slice(0, 10);
 
-  // Require Supabase - no Google Sheets fallback
+  // Require Supabase
   if (!supabaseAdmin) {
     console.error('Supabase not configured');
     return NextResponse.json({
@@ -63,82 +159,22 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Query email_events for step-level breakdown
-    let stepQuery = supabaseAdmin
-      .from('email_events')
-      .select('step, event_ts')
-      .eq('workspace_id', workspaceId)
-      .eq('event_type', 'sent')
-      .gte('event_ts', `${startDate}T00:00:00Z`)
-      .lte('event_ts', `${endDate}T23:59:59Z`);
+    // Generate cache key
+    const cacheKey = apiCacheKey('step-breakdown', {
+      start: startDate,
+      end: endDate,
+      campaign: campaign || undefined,
+      workspace: workspaceId,
+    });
 
-    if (campaign) {
-      stepQuery = stepQuery.eq('campaign_name', campaign);
-    }
+    // Use cache with 30 second TTL
+    const data = await cacheManager.getOrSet(
+      cacheKey,
+      () => fetchStepBreakdownData(startDate, endDate, workspaceId, campaign),
+      CACHE_TTL.SHORT
+    );
 
-    const { data: eventsData, error: eventsError } = await stepQuery;
-
-    if (eventsError) {
-      console.error('Step breakdown query error:', eventsError);
-      return NextResponse.json({ error: eventsError.message }, { status: 500, headers: API_HEADERS });
-    }
-
-    // Aggregate by step
-    const stepMap = new Map<number, { count: number; lastSent: string | null }>();
-    const dailyMap = new Map<string, number>();
-
-    for (const event of eventsData || []) {
-      const step = event.step || 1;
-      const current = stepMap.get(step) || { count: 0, lastSent: null };
-      current.count++;
-      if (!current.lastSent || event.event_ts > current.lastSent) {
-        current.lastSent = event.event_ts;
-      }
-      stepMap.set(step, current);
-
-      // Aggregate daily
-      const day = event.event_ts.slice(0, 10);
-      dailyMap.set(day, (dailyMap.get(day) || 0) + 1);
-    }
-
-    const stepNames = {
-      1: 'Email 1 (Initial Outreach)',
-      2: 'Email 2 (Follow-up)',
-      3: 'Email 3 (Final Follow-up)',
-    };
-
-    const steps: StepBreakdown[] = [1, 2, 3].map(step => ({
-      step,
-      name: stepNames[step as 1 | 2 | 3],
-      sends: stepMap.get(step)?.count || 0,
-      lastSentAt: stepMap.get(step)?.lastSent || undefined,
-    }));
-
-    // Build daily sends with all days in range
-    const dailySends: DailySend[] = [];
-    const startD = new Date(startDate);
-    const endD = new Date(endDate);
-    
-    for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().slice(0, 10);
-      dailySends.push({
-        date: dateStr,
-        count: dailyMap.get(dateStr) || 0,
-      });
-    }
-
-    const totalSends = steps.reduce((sum, s) => sum + s.sends, 0);
-
-    return NextResponse.json({
-      steps,
-      dailySends,
-      totalSends,
-      dateRange: {
-        start: startDate,
-        end: endDate,
-      },
-      source: 'supabase',
-    } as StepBreakdownResponse, { headers: API_HEADERS });
+    return NextResponse.json(data, { headers: API_HEADERS });
   } catch (error) {
     console.error('Step breakdown API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500, headers: API_HEADERS });

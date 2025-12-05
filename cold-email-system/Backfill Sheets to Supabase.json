@@ -2,14 +2,6 @@
   "name": "Backfill Sheets to Supabase",
   "nodes": [
     {
-      "parameters": {},
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [-400, 300],
-      "id": "manual-trigger",
-      "name": "Run Once Manually"
-    },
-    {
       "parameters": {
         "documentId": {
           "__rl": true,
@@ -29,13 +21,16 @@
       },
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [-200, 300],
-      "id": "sheets-read",
-      "name": "Read All Rows from Sheets",
+      "position": [
+        1552,
+        1376
+      ],
+      "id": "fdecf68f-bb18-46b8-ba02-616e8cd586ed",
+      "name": "Read All Rows from Sheets1",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "p8ESE0UMGdJsRvZv",
-          "name": "Smartie Agents"
+          "id": "2EUpgH0WFkM3Lr6E",
+          "name": "Nishchith Sheets account"
         }
       }
     },
@@ -46,9 +41,12 @@
       },
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [0, 300],
-      "id": "batch-split",
-      "name": "Process in Batches"
+      "position": [
+        1776,
+        1376
+      ],
+      "id": "3a15d9a2-ae81-4ba0-ac4c-8572adda98ad",
+      "name": "Process in Batches1"
     },
     {
       "parameters": {
@@ -67,147 +65,557 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "first_name": "={{ $json.first_name || $json['First Name'] || '' }}",
-            "last_name": "={{ $json.last_name || $json['Last Name'] || '' }}",
-            "email_address": "={{ $json.email_address || $json['Email Adress '] || $json['Email Address'] || '' }}",
-            "linkedin_url": "={{ $json.linkedin_url || $json['LinkedIn URL'] || '' }}",
-            "state": "={{ $json.state || $json['State'] || '' }}",
-            "industry": "={{ $json.industry || $json['Industry'] || '' }}",
-            "position": "={{ $json.position || $json['Position'] || '' }}",
-            "city": "={{ $json.city || $json['City'] || '' }}",
-            "country": "={{ $json.country || $json['Country'] || '' }}",
-            "full_name": "={{ $json.full_name || $json['Full Name'] || '' }}",
-            "organization_name": "={{ $json.organization_name || $json['Organization Name'] || '' }}",
-            "organization_website": "={{ $json.organization_website || $json['Organization Website'] || '' }}",
-            "organization_description": "={{ $json.organization_description || $json['Organization Description'] || '' }}",
-            "organization_size": "={{ $json.organization_size || $json['Organization Size'] || '' }}",
-            "seniority": "={{ $json.seniority || $json['Seniority'] || '' }}",
-            "research_report": "={{ $json.research_report || $json['Research Report'] || '' }}",
-            "email_1_subject": "={{ $json.email_1_subject || $json['Email #1 Subject'] || '' }}",
-            "email_1_body": "={{ $json.email_1_body || $json['Email #1 Body '] || '' }}",
-            "email_2_body": "={{ $json.email_2_body || $json['Email #2 Body '] || '' }}",
-            "email_3_subject": "={{ $json.email_3_subject || $json['Email #3 Subject'] || '' }}",
-            "email_3_body": "={{ $json.email_3_body || $json['Email #3 Body'] || '' }}",
-            "sender_email": "={{ $json.sender_email || $json['Sender Email'] || '' }}",
-            "email_1_sent": "={{ $json.email_1_sent === 'Yes' || $json['Email #1 Sent'] === 'Yes' || $json.email_1_sent === true }}",
-            "email_2_sent": "={{ $json.email_2_sent === 'Yes' || $json['Email #2 Sent'] === 'Yes' || $json.email_2_sent === true }}",
-            "email_3_sent": "={{ $json.email_3_sent === 'Yes' || $json['Email #3 Sent'] === 'Yes' || $json.email_3_sent === true }}",
-            "replied": "={{ $json.replied === 'Yes' || $json['Replied'] === 'Yes' || $json.replied === true }}",
-            "opted_out": "={{ $json.opted_out === 'Yes' || $json['Opted Out'] === 'Yes' || $json.opted_out === true }}",
-            "email_prep": "={{ $json.email_prep === 'Yes' || $json['Email Prep'] === 'Yes' || $json.email_prep === true }}",
-            "analyze": "={{ $json.analyze === 'Yes' || $json['Analyze'] === 'Yes' || $json.analyze === true }}",
-            "message_id": "={{ $json.message_id || $json['Message ID'] || '' }}"
+            "email_address": "={{ $json.email_address }}",
+            "research_report": "={{ $json.research_report }}",
+            "email_1_subject": "={{ $json.email_1_subject }}",
+            "email_1_body": "={{ $json.email_1_body }}",
+            "email_2_body": "={{ $json.email_2_body }}",
+            "email_3_subject": "={{ $json.email_3_subject }}",
+            "email_3_body": "={{ $json.email_3_body }}",
+            "sender_email": "={{ $json.sender_email }}",
+            "message_id": "={{ $json.message_id }}",
+            "token": "={{ $json.token }}",
+            "email_prep": "={{ $json.email_prep ? ($json.email_prep === 'Yes') : null }}",
+            "email_1_sent": "={{ $json.email_1_sent ? ($json.email_1_sent === 'Yes') : null }}",
+            "email_2_sent": "={{ $json.email_2_sent ? ($json.email_2_sent === 'Yes') : null }}",
+            "email_3_sent": "={{ $json.email_3_sent ? ($json.email_3_sent === 'Yes') : null }}",
+            "replied": "={{ $json.replied ? ($json.replied === 'Yes') : null }}",
+            "opted_out": "={{ $json.opted_out ? ($json.opted_out === 'Yes') : null }}",
+            "report_sent": "={{ $json.report_sent ? ($json.report_sent === 'Yes') : null }}",
+            "analyze": "={{ $json.analyze ? ($json.analyze === 'Yes') : null }}",
+            "first_name": "={{ $json.first_name }}",
+            "last_name": "={{ $json.last_name }}",
+            "linkedin_url": "={{ $json.linkedin_url }}",
+            "full_name": "={{ $json.full_name }}",
+            "position": "={{ $json.position }}",
+            "city": "={{ $json.city }}",
+            "founded_year": "={{ $json.founded_year }}",
+            "state": "={{ $json.state }}",
+            "country": "={{ $json.country }}",
+            "industry": "={{ $json.industry }}",
+            "organization_name": "={{ $json.organization_name }}",
+            "organization_website": "={{ $json.organization_website }}",
+            "organization_description": "={{ $json.organization_description }}",
+            "organization_size": "={{ $json.organization_size }}",
+            "organization_city": "={{ $json.organization_city }}",
+            "organization_state": "={{ $json.organization_state }}",
+            "organization_country": "={{ $json.organization_country }}",
+            "organization_linkedin_url": "={{ $json.organization_linkedin_url }}",
+            "organization_specialities": "={{ $json.organization_specialities }}"
           },
-          "matchingColumns": ["email_address"],
+          "matchingColumns": [
+            "email_address"
+          ],
           "schema": [
-            {"id": "email_address", "displayName": "email_address", "required": true, "defaultMatch": true, "canBeUsedToMatch": true, "type": "string"}
-          ]
+            {
+              "id": "first_name",
+              "displayName": "first_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "last_name",
+              "displayName": "last_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "email_address",
+              "displayName": "email_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "linkedin_url",
+              "displayName": "linkedin_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "state",
+              "displayName": "state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "industry",
+              "displayName": "industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "position",
+              "displayName": "position",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "city",
+              "displayName": "city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "country",
+              "displayName": "country",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "full_name",
+              "displayName": "full_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "organization_city",
+              "displayName": "organization_city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "organization_country",
+              "displayName": "organization_country",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "organization_description",
+              "displayName": "organization_description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "founded_year",
+              "displayName": "founded_year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "organization_linkedin_url",
+              "displayName": "organization_linkedin_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "organization_name",
+              "displayName": "organization_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "organization_size",
+              "displayName": "organization_size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "organization_specialities",
+              "displayName": "organization_specialities",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "organization_state",
+              "displayName": "organization_state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "organization_website",
+              "displayName": "organization_website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "analyze",
+              "displayName": "analyze",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "research_report",
+              "displayName": "research_report",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_1_subject",
+              "displayName": "email_1_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_1_body",
+              "displayName": "email_1_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_2_body",
+              "displayName": "email_2_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_3_subject",
+              "displayName": "email_3_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_3_body",
+              "displayName": "email_3_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "sender_email",
+              "displayName": "sender_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_1_sent",
+              "displayName": "email_1_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_2_sent",
+              "displayName": "email_2_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_3_sent",
+              "displayName": "email_3_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "replied",
+              "displayName": "replied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "opted_out",
+              "displayName": "opted_out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "token",
+              "displayName": "token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_prep",
+              "displayName": "email_prep",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "report_sent",
+              "displayName": "report_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "email_norm",
+              "displayName": "email_norm",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
         },
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
-      "position": [200, 300],
-      "id": "postgres-upsert",
-      "name": "Upsert to Supabase",
+      "position": [
+        1984,
+        1392
+      ],
+      "id": "02afbc97-8aa3-4e3c-8507-5961a30f6bc7",
+      "name": "Upsert to Supabase1",
       "credentials": {
         "postgres": {
-          "id": "Mc3aUJrqtDTplpRV",
-          "name": "Smartie Agents Postgres"
+          "id": "QKb5WqKXZ29v15Qk",
+          "name": "Leads Ohio"
         }
       }
     },
     {
       "parameters": {
-        "unit": "seconds",
-        "amount": 1
+        "amount": 0.5
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [400, 300],
-      "id": "rate-limit",
-      "name": "Rate Limit (1s)",
+      "position": [
+        2192,
+        1392
+      ],
+      "id": "82058941-421b-48fa-a13a-5e52b82bcd44",
+      "name": "Rate Limit (0.5s)1",
       "webhookId": "backfill-rate-limit"
     },
     {
       "parameters": {
-        "content": "## Backfill Google Sheets → Supabase\n\nThis workflow migrates all your lead data from Google Sheets to Supabase PostgreSQL.\n\n### Instructions:\n1. **Update the Google Sheets document ID** in the \"Read All Rows\" node to match your sheet\n2. **Update column mappings** if your column names differ\n3. **Run once manually** to migrate all data\n4. **Disable after running** - this is a one-time migration\n\n### What it does:\n- Reads all rows from your Google Sheets\n- Processes in batches of 50 (rate limited)\n- Upserts each row to `leads_ohio` table in Supabase\n- Uses email_address as unique key for deduplication\n\n### Notes:\n- Existing rows with same email will be updated\n- New rows will be inserted\n- Safe to run multiple times (idempotent)",
-        "height": 450,
+        "content": "## Backfill Google Sheets → Supabase\n\nThis workflow migrates all lead data from Google Sheets to Supabase PostgreSQL.\n\n### How it works:\n1. Reads ALL rows from your Google Sheet\n2. Processes one row at a time\n3. Upserts to `leads_ohio` table using email as unique key\n4. Converts \"Yes\"/\"No\" text to boolean automatically\n\n### Boolean conversion:\n```\n\"Yes\" → true\n\"No\" or empty → false\n```\n\n### Instructions:\n1. Make sure your Supabase table has UNIQUE constraint on email_address\n2. Run this workflow ONCE manually\n3. Check results in Supabase\n4. Disable after running - this is one-time migration\n\n### After migration:\n- Dashboard reads from Supabase (fast!)\n- Google Sheets still gets updates via n8n (for client)\n- Set up dual-write in your email workflows",
+        "height": 520,
         "width": 380,
         "color": 5
       },
       "type": "n8n-nodes-base.stickyNote",
-      "position": [-600, 100],
+      "position": [
+        848,
+        1072
+      ],
       "typeVersion": 1,
-      "id": "instructions",
-      "name": "Instructions"
+      "id": "89749c90-41a4-45e7-9a57-3dfb9075bdb1",
+      "name": "Instructions1"
     },
     {
-      "parameters": {
-        "content": "## After Migration Complete\n\nOnce this runs successfully:\n\n1. Your dashboard will now read from Supabase\n2. Set up dual-write in your email workflows:\n   - Path 1: Google Sheets (client access)\n   - Path 2: PostgreSQL (dashboard)\n\n3. Your client sees Google Sheets\n4. Dashboard reads fast PostgreSQL data",
-        "height": 260,
-        "width": 300,
-        "color": 4
-      },
-      "type": "n8n-nodes-base.stickyNote",
-      "position": [500, 100],
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "id": "next-steps",
-      "name": "Next Steps"
+      "position": [
+        1344,
+        1376
+      ],
+      "id": "61b96a6c-0db8-4f96-9386-33f30c646f02",
+      "name": "When clicking ‘Execute workflow’"
     }
   ],
   "pinData": {},
   "connections": {
-    "Run Once Manually": {
+    "Read All Rows from Sheets1": {
       "main": [
         [
           {
-            "node": "Read All Rows from Sheets",
+            "node": "Process in Batches1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Read All Rows from Sheets": {
-      "main": [
-        [
-          {
-            "node": "Process in Batches",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Process in Batches": {
+    "Process in Batches1": {
       "main": [
         [],
         [
           {
-            "node": "Upsert to Supabase",
+            "node": "Upsert to Supabase1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Upsert to Supabase": {
+    "Upsert to Supabase1": {
       "main": [
         [
           {
-            "node": "Rate Limit (1s)",
+            "node": "Rate Limit (0.5s)1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Rate Limit (1s)": {
+    "Rate Limit (0.5s)1": {
       "main": [
         [
           {
-            "node": "Process in Batches",
+            "node": "Process in Batches1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Read All Rows from Sheets1",
             "type": "main",
             "index": 0
           }
@@ -217,20 +625,12 @@
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1",
-    "timezone": "America/Los_Angeles",
-    "callerPolicy": "workflowsFromSameOwner"
+    "executionOrder": "v1"
   },
-  "versionId": "sheets-to-supabase-v1",
+  "versionId": "d373c189-0202-4351-9306-7b5881453f66",
   "meta": {
-    "templateCredsSetupCompleted": true
+    "instanceId": "fb0f3042150127121074617aaee31b106c313805cbc452132240d35f72eba898"
   },
-  "id": "backfill-sheets-to-supabase",
-  "tags": [
-    {
-      "id": "r8CZ5Y6mZ7dctfjE",
-      "name": "Cold Email"
-    }
-  ]
+  "id": "CJOW07NMkknwRCVz",
+  "tags": []
 }
-

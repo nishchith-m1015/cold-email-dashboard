@@ -17,17 +17,34 @@ interface HealthStatus {
     };
     cache: {
       status: 'ok';
-      entries: number;
+      totalEntries: number;
+      freshEntries: number;
+      staleEntries: number;
+      inFlightRequests: number;
+      hitRate?: string;
     };
   };
 }
 
 const startTime = Date.now();
 
+// Track cache hits/misses for hit rate calculation
+let cacheHits = 0;
+let cacheMisses = 0;
+
+export function recordCacheHit() { cacheHits++; }
+export function recordCacheMiss() { cacheMisses++; }
+
 export async function GET() {
   const checks: HealthStatus['checks'] = {
     supabase: { status: 'ok' },
-    cache: { status: 'ok', entries: 0 },
+    cache: { 
+      status: 'ok', 
+      totalEntries: 0, 
+      freshEntries: 0, 
+      staleEntries: 0,
+      inFlightRequests: 0,
+    },
   };
 
   let overallStatus: HealthStatus['status'] = 'healthy';
@@ -59,10 +76,19 @@ export async function GET() {
     overallStatus = 'degraded';
   }
 
-  // Check cache
+  // Check cache with detailed stats
   try {
     const cacheStats = cacheManager.stats();
-    checks.cache.entries = cacheStats.totalEntries;
+    checks.cache.totalEntries = cacheStats.totalEntries;
+    checks.cache.freshEntries = cacheStats.validEntries;
+    checks.cache.staleEntries = cacheStats.staleEntries;
+    checks.cache.inFlightRequests = cacheStats.inFlightRequests;
+    
+    // Calculate hit rate
+    const totalRequests = cacheHits + cacheMisses;
+    if (totalRequests > 0) {
+      checks.cache.hitRate = `${((cacheHits / totalRequests) * 100).toFixed(1)}%`;
+    }
   } catch {
     // Cache error is not critical
   }

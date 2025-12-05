@@ -366,7 +366,6 @@
           "mappingMode": "defineBelow",
           "value": {
             "linkedin_url": "={{ $('Get row(s) in sheet1').item.json['linkedin_url'] }}",
-            "research_report": "={{ $('Create HTML Report1').item.json.html }}",
             "report_sent": "Yes"
           },
           "matchingColumns": [
@@ -1624,7 +1623,7 @@
     "timezone": "America/Los_Angeles",
     "timeSavedPerExecution": 25
   },
-  "versionId": "3918024f-5cc6-4360-88f8-4175818329ff",
+  "versionId": "72d5fcbd-aea5-419f-b61c-48e27d5c48a7",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "fb0f3042150127121074617aaee31b106c313805cbc452132240d35f72eba898"
