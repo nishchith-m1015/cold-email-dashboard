@@ -1,32 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin, DEFAULT_WORKSPACE_ID } from '@/lib/supabase';
+import { supabaseAdmin, getWorkspaceId } from '@/lib/supabase';
 import { API_HEADERS } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  // Check if Supabase is configured
-  if (!supabaseAdmin) {
-    const { searchParams } = new URL(req.url);
-    const metric = searchParams.get('metric') || 'sends';
-    return NextResponse.json({
-      metric,
-      points: [],
-      start_date: new Date().toISOString().slice(0, 10),
-      end_date: new Date().toISOString().slice(0, 10),
-    }, { headers: API_HEADERS });
-  }
-
   const { searchParams } = new URL(req.url);
   const metric = searchParams.get('metric') || 'sends';
   const start = searchParams.get('start');
   const end = searchParams.get('end');
   const campaign = searchParams.get('campaign');
-  const workspaceId = searchParams.get('workspace_id') || DEFAULT_WORKSPACE_ID;
+  const workspaceId = getWorkspaceId(searchParams.get('workspace_id'));
 
   // Default to last 30 days
   const startDate = start || new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
   const endDate = end || new Date().toISOString().slice(0, 10);
+
+  // Return empty data if Supabase is not configured
+  if (!supabaseAdmin) {
+    return NextResponse.json({
+      metric,
+      points: fillMissingDays([], startDate, endDate),
+      start_date: startDate,
+      end_date: endDate,
+      source: 'fallback',
+    }, { headers: API_HEADERS });
+  }
 
   try {
     // Query daily_stats for the period
@@ -46,7 +45,15 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error('Timeseries query error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      // Return empty data instead of error to avoid breaking the UI
+      return NextResponse.json({
+        metric,
+        points: fillMissingDays([], startDate, endDate),
+        start_date: startDate,
+        end_date: endDate,
+        source: 'fallback',
+        debug: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      }, { headers: API_HEADERS });
     }
 
     // Aggregate by day if there are multiple campaigns
@@ -77,11 +84,15 @@ export async function GET(req: NextRequest) {
         clickQuery = clickQuery.eq('campaign_name', campaign);
       }
 
-      const { data: clickData } = await clickQuery;
+      const { data: clickData, error: clickError } = await clickQuery;
       
-      for (const row of clickData || []) {
-        const day = row.created_at.slice(0, 10);
-        clicksByDay.set(day, (clicksByDay.get(day) || 0) + 1);
+      if (clickError) {
+        console.error('Click query error:', clickError);
+      } else {
+        for (const row of clickData || []) {
+          const day = row.created_at.slice(0, 10);
+          clicksByDay.set(day, (clicksByDay.get(day) || 0) + 1);
+        }
       }
     }
 
@@ -135,7 +146,14 @@ export async function GET(req: NextRequest) {
     }, { headers: API_HEADERS });
   } catch (error) {
     console.error('Timeseries API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    // Return empty data instead of error
+    return NextResponse.json({
+      metric,
+      points: fillMissingDays([], startDate, endDate),
+      start_date: startDate,
+      end_date: endDate,
+      source: 'fallback',
+    }, { headers: API_HEADERS });
   }
 }
 

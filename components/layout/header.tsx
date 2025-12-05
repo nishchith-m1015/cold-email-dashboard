@@ -544,9 +544,9 @@ export function Header({ onCommandOpen }: HeaderProps) {
                 appearance={{
                   elements: {
                     avatarBox: 'h-8 w-8 ring-2 ring-transparent hover:ring-accent-primary/50 transition-all',
-                    userButtonPopoverCard: 'bg-surface border border-border shadow-2xl',
-                    userButtonPopoverActionButton: 'hover:bg-surface-elevated',
-                    userButtonPopoverActionButtonText: 'text-text-primary',
+                    userButtonPopoverCard: 'bg-[#13131a] border border-[#2a2a3c]',
+                    userButtonPopoverActionButton: 'hover:bg-[#1a1a2e]',
+                    userButtonPopoverActionButtonText: 'text-white',
                     userButtonPopoverFooter: 'hidden',
                   },
                 }}
