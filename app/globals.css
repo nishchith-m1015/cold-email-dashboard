@@ -775,3 +775,234 @@ html.light .rdp-day_today:not(.rdp-day_selected):not(.rdp-day_range_middle) {
   --tw-prose-th-borders: #27272a;
   --tw-prose-td-borders: #27272a;
 }
+
+/* ============================================================
+   CLERK UI OVERRIDES - Dark Mode
+   ============================================================ */
+
+/* User button popover */
+.cl-userButtonPopoverCard {
+  background-color: #141416 !important;
+  border: 1px solid #27272a !important;
+  border-radius: 12px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.cl-userButtonPopoverActionButton {
+  color: #fafafa !important;
+}
+
+.cl-userButtonPopoverActionButton:hover {
+  background-color: #1c1c1f !important;
+}
+
+.cl-userButtonPopoverActionButtonText {
+  color: #fafafa !important;
+}
+
+.cl-userButtonPopoverActionButtonIcon {
+  color: #a1a1aa !important;
+}
+
+.cl-userPreview {
+  border-bottom: 1px solid #27272a !important;
+}
+
+.cl-userPreviewMainIdentifier {
+  color: #fafafa !important;
+}
+
+.cl-userPreviewSecondaryIdentifier {
+  color: #a1a1aa !important;
+}
+
+/* Card styling */
+.cl-card {
+  background-color: #141416 !important;
+  border: 1px solid #27272a !important;
+  border-radius: 12px !important;
+}
+
+/* Form inputs */
+.cl-formFieldInput {
+  background-color: #1c1c1f !important;
+  border: 1px solid #27272a !important;
+  color: #fafafa !important;
+}
+
+.cl-formFieldInput:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+.cl-formFieldInput::placeholder {
+  color: #52525b !important;
+}
+
+.cl-formFieldLabel {
+  color: #a1a1aa !important;
+}
+
+/* Primary button */
+.cl-formButtonPrimary {
+  background-color: #3b82f6 !important;
+  border: none !important;
+}
+
+.cl-formButtonPrimary:hover {
+  background-color: #2563eb !important;
+}
+
+/* Social buttons */
+.cl-socialButtonsBlockButton {
+  background-color: #1c1c1f !important;
+  border: 1px solid #27272a !important;
+  color: #fafafa !important;
+}
+
+.cl-socialButtonsBlockButton:hover {
+  background-color: #27272a !important;
+}
+
+.cl-socialButtonsBlockButtonText {
+  color: #fafafa !important;
+}
+
+/* Header */
+.cl-headerTitle {
+  color: #fafafa !important;
+}
+
+.cl-headerSubtitle {
+  color: #a1a1aa !important;
+}
+
+/* Footer */
+.cl-footer {
+  background: transparent !important;
+}
+
+.cl-footerAction {
+  color: #a1a1aa !important;
+}
+
+.cl-footerActionLink {
+  color: #3b82f6 !important;
+}
+
+.cl-footerActionLink:hover {
+  color: #60a5fa !important;
+}
+
+/* Divider */
+.cl-dividerLine {
+  background-color: #27272a !important;
+}
+
+.cl-dividerText {
+  color: #52525b !important;
+}
+
+/* Identity preview */
+.cl-identityPreview {
+  background-color: #1c1c1f !important;
+  border: 1px solid #27272a !important;
+}
+
+.cl-identityPreviewText {
+  color: #fafafa !important;
+}
+
+.cl-identityPreviewEditButton {
+  color: #3b82f6 !important;
+}
+
+/* Internal elements */
+.cl-internal-1dauvpw {
+  background-color: #141416 !important;
+}
+
+/* Menu items */
+.cl-menuButton,
+.cl-menuItem {
+  color: #fafafa !important;
+}
+
+.cl-menuButton:hover,
+.cl-menuItem:hover {
+  background-color: #1c1c1f !important;
+}
+
+/* Avatar */
+.cl-avatarBox {
+  border: 2px solid #27272a !important;
+}
+
+/* Alert messages */
+.cl-alert {
+  background-color: #1c1c1f !important;
+  border: 1px solid #27272a !important;
+}
+
+.cl-alertText {
+  color: #fafafa !important;
+}
+
+/* Modal backdrop */
+.cl-modalBackdrop {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+/* Active session card */
+.cl-activeDeviceListItem,
+.cl-sessionListItem {
+  background-color: #1c1c1f !important;
+  border: 1px solid #27272a !important;
+}
+
+/* Badge */
+.cl-badge {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  color: #60a5fa !important;
+}
+
+/* Tab buttons */
+.cl-navbarButton {
+  color: #a1a1aa !important;
+}
+
+.cl-navbarButton:hover,
+.cl-navbarButton[data-active="true"] {
+  color: #fafafa !important;
+}
+
+/* Profile page */
+.cl-profileSectionTitle,
+.cl-profileSectionTitleText {
+  color: #fafafa !important;
+}
+
+.cl-profileSectionContent {
+  background-color: #1c1c1f !important;
+  border: 1px solid #27272a !important;
+}
+
+.cl-profileSectionPrimaryButton {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}
+
+.cl-profileSectionPrimaryButton:hover {
+  background-color: #2563eb !important;
+}
+
+/* Action cards */
+.cl-accordionTriggerButton {
+  background-color: #1c1c1f !important;
+  color: #fafafa !important;
+}
+
+.cl-accordionContent {
+  background-color: #141416 !important;
+}
