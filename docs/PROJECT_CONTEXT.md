@@ -17,6 +17,7 @@ GitHub: https://github.com/nishchith-m1015/cold-email-dashboard
 Workspace: /Users/nishchith.g.m/Desktop/UpShot_project/cold-email-dashboard-starter
 
 Completed: Phases 1-6 (Email tracking, LLM cost tracking, Dashboard UI, Reply tracking, Click tracking, Vercel deployment)
+          Phase 4 - Advanced Analytics & UX (Navigation, Date Persistence, Cost Tracking, Layout Optimization)
 Next up: Phase 7 (Testing & Validation) or Phase 8+ (Optional Enhancements)
 
 Read docs/PROJECT_CONTEXT.md for full context.
@@ -89,7 +90,49 @@ Nishchith @ Smartie Agents - an AI automation agency doing cold email outreach.
 
 ---
 
-### Phase 4: Reply Rate Tracking ✅
+### Phase 4: Advanced Analytics & UX ✅
+**Goal:** Improve navigation, date persistence, cost tracking accuracy, and dashboard layout
+
+**Implementation:**
+
+**1. Navigation & State Management:**
+- ✅ `header.tsx` now uses `usePathname()` for active tab detection (eliminated lag)
+- ✅ Navigation links preserve URL query params (dates persist across page changes)
+- ✅ Dashboard and Analytics pages read dates from `useSearchParams` instead of local state
+- ✅ Date range selection survives page navigation and browser refreshes
+
+**2. UI & Data Logic Enhancements:**
+- ✅ `formatCurrency()` in `utils.ts` now handles micro-costs with 4 decimal places (< $1.00)
+- ✅ Added `MODEL_DISPLAY_NAMES` mapping in `constants.ts` for user-friendly model names
+  - Example: `'o3-mini-2025-01-31'` → `'o3 Mini'`
+  - Example: `'google-maps-reviews-scraper'` → `'Reviews Scraper'`
+- ✅ Centralized `costPerReply` and `monthlyProjection` calculations in `use-dashboard-data.ts`
+- ✅ `getModelDisplayName()` function with fuzzy matching for API model name normalization
+
+**3. Layout Restructuring (Overview Page):**
+- ✅ Grid-aligned layout with equal-height rows
+- ✅ Removed "Cost by Provider" donut chart from Overview (Analytics-only feature)
+- ✅ Row 1: "Sequence Breakdown" & "Daily Sends" side-by-side (equal height)
+- ✅ Row 2: "Sends Trend" & "Efficiency Metrics" side-by-side (equal height)
+- ✅ Row 3: "Click Rate" & "Reply Rate" trends side-by-side (equal height)
+
+**4. Performance Optimization:**
+- ✅ Created SQL index on `email_events(event_ts)` for faster chart loading
+- ✅ Migration file: `supabase/migrations/20251205_add_event_ts_index.sql`
+- ✅ Index created with `CONCURRENTLY` to avoid table locking
+
+**Files Modified:**
+- `components/layout/header.tsx` - URL param preservation
+- `app/page.tsx` - URL-based state, grid layout
+- `app/analytics/page.tsx` - URL-based state
+- `lib/utils.ts` - 4-decimal currency formatting
+- `hooks/use-dashboard-data.ts` - Derived metrics (costPerReply, monthlyProjection)
+- `lib/constants.ts` - Model display name mapping
+- `supabase/migrations/20251205_add_event_ts_index.sql` - Performance index
+
+---
+
+### Phase 4 (Legacy): Reply Rate Tracking ✅
 **Goal:** Track when prospects reply to emails
 
 **Implementation:**
@@ -185,8 +228,12 @@ Tracks email sends, opens, clicks, replies, opt-outs
 ```sql
 - id, event_type, email_address, campaign_name
 - sender_email, email_number, subject
+- event_ts (INDEXED for performance)
 - created_at, metadata
 ```
+
+**Indexes:**
+- `idx_email_events_event_ts` - Speeds up time-series queries (Daily Sends, Sequence Breakdown)
 
 ### `llm_usage`
 Tracks LLM and API costs
@@ -242,10 +289,34 @@ x-webhook-token: 6de5a8d03ad6348f4110782372a82f1bb7c6ef43a8ce8810bf0459e73abaeb6
 
 ---
 
+## 🎨 Current Status
+
+**Navigation:**  
+✅ URL-based state management (dates persist across navigation)  
+✅ Active tab detection with `usePathname()` (no lag)  
+✅ Query params preserved in all navigation links
+
+**Cost Tracking:**  
+✅ 4-decimal precision for micro-costs (< $1.00)  
+✅ User-friendly model names with fuzzy matching  
+✅ `costPerReply` and `monthlyProjection` calculated centrally
+
+**Layout:**  
+✅ Grid-aligned dashboard with equal-height rows  
+✅ "Cost by Provider" chart moved to Analytics-only  
+✅ Sequence Breakdown + Daily Sends side-by-side (Row 1)  
+✅ Sends Trend + Efficiency Metrics side-by-side (Row 2)
+
+**Performance:**  
+✅ SQL index on `email_events.event_ts` for fast chart queries  
+✅ Server-side caching (5-min TTL) with manual cache clear
+
+---
+
 ## 📅 Last Updated
 
-**Date:** December 4, 2025  
-**Last Phase Completed:** Phase 5 (Click Rate Tracking)  
+**Date:** December 6, 2025  
+**Last Phase Completed:** Phase 4 (Advanced Analytics & UX)  
 **Next Phase:** Phase 7 (Testing & Validation)
 
 ---

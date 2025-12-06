@@ -1,0 +1,23 @@
+---
+alwaysApply: false
+---
+# Project Context & Tech Stack
+- **Framework:** Next.js 14 (App Router)
+- **Language:** TypeScript (Strict mode)
+- **Styling:** Tailwind CSS + Shadcn/Radix UI patterns (use `cn()` for class merging)
+- **Backend:** Supabase (PostgreSQL) via `supabase-js`
+- **Auth:** Clerk (`@clerk/nextjs`)
+- **Charts:** Recharts
+- **Automation:** n8n (Webhooks at `/api/cost-events`)
+
+# The "Memory File" Protocol
+- **CRITICAL:** This project uses `docs/PROJECT_CONTEXT.md` as the Single Source of Truth.
+- **Before answering:** Briefly scan `docs/PROJECT_CONTEXT.md` to understand the current phase.
+- **After completing a task:** You must remind me to update `docs/PROJECT_CONTEXT.md` with the changes we made (schema updates, new API routes, or completed tasks).
+
+# Coding Standards
+1. **Surgical Edits:** Do not rewrite entire files unless necessary. Output only the modified code blocks with context when possible.
+2. **Client/Server:** Explicitly mark components with `'use client'` only when using hooks or interactivity. Default to Server Components.
+3. **Icons:** Use `lucide-react`.
+4. **Database:** Always check `schema.sql` before suggesting database queries to ensure column names exist.
+5. **Security:** Never hardcode API keys. Use `process.env`.
