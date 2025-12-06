@@ -80,65 +80,65 @@ async function fetchSummaryData(
     new Date(startDate).getTime() - 24 * 3600 * 1000
   ).toISOString().slice(0, 10);
 
-  // Build queries with campaign exclusion filter
-  // TEMPORARY: Remove workspace_id filter until data migration is complete
-  let currentStatsQuery = supabaseAdmin
-    .from('daily_stats')
-    .select('sends, replies, opt_outs, bounces, opens, clicks')
-    .gte('day', startDate)
-    .lte('day', endDate);
+  // Build queries - use email_events as primary source (it has the actual data)
+  // daily_stats may be empty if n8n doesn't aggregate there
+  
+  // Current period: Count events by type from email_events
+  let currentEventsQuery = supabaseAdmin
+    .from('email_events')
+    .select('event_type')
+    .gte('event_ts', `${startDate}T00:00:00Z`)
+    .lte('event_ts', `${endDate}T23:59:59Z`);
 
+  // Previous period events
+  let prevEventsQuery = supabaseAdmin
+    .from('email_events')
+    .select('event_type')
+    .gte('event_ts', `${prevStartDate}T00:00:00Z`)
+    .lte('event_ts', `${prevEndDate}T23:59:59Z`);
+
+  // Cost query from llm_usage
   let costQuery = supabaseAdmin
     .from('llm_usage')
     .select('cost_usd')
     .gte('created_at', `${startDate}T00:00:00Z`)
     .lte('created_at', `${endDate}T23:59:59Z`);
 
-  let prevStatsQuery = supabaseAdmin
-    .from('daily_stats')
-    .select('sends, replies, opt_outs')
-    .gte('day', prevStartDate)
-    .lte('day', prevEndDate);
-
   // Apply campaign filter OR global exclusion
   if (campaign) {
-    // User selected a specific campaign
-    currentStatsQuery = currentStatsQuery.eq('campaign_name', campaign);
+    currentEventsQuery = currentEventsQuery.eq('campaign_name', campaign);
+    prevEventsQuery = prevEventsQuery.eq('campaign_name', campaign);
     costQuery = costQuery.eq('campaign_name', campaign);
-    prevStatsQuery = prevStatsQuery.eq('campaign_name', campaign);
   } else {
-    // No specific campaign - exclude test campaigns globally
     for (const excludedCampaign of EXCLUDED_CAMPAIGNS) {
-      currentStatsQuery = currentStatsQuery.neq('campaign_name', excludedCampaign);
+      currentEventsQuery = currentEventsQuery.neq('campaign_name', excludedCampaign);
+      prevEventsQuery = prevEventsQuery.neq('campaign_name', excludedCampaign);
       costQuery = costQuery.neq('campaign_name', excludedCampaign);
-      prevStatsQuery = prevStatsQuery.neq('campaign_name', excludedCampaign);
     }
   }
 
-  // Execute ALL queries in parallel (3 queries → 1 round trip latency)
-  const [statsResult, costResult, prevResult] = await Promise.all([
-    currentStatsQuery,
+  // Execute ALL queries in parallel
+  const [currentResult, prevResult, costResult] = await Promise.all([
+    currentEventsQuery,
+    prevEventsQuery,
     costQuery,
-    prevStatsQuery,
   ]);
 
-  if (statsResult.error) {
-    console.error('Stats query error:', statsResult.error);
+  if (currentResult.error) {
+    console.error('Events query error:', currentResult.error);
     return emptyResponse(startDate, endDate, 'db_error');
   }
 
-  // Aggregate current period stats
-  const totals = (statsResult.data || []).reduce(
-    (acc, row) => ({
-      sends: acc.sends + (row.sends || 0),
-      replies: acc.replies + (row.replies || 0),
-      opt_outs: acc.opt_outs + (row.opt_outs || 0),
-      bounces: acc.bounces + (row.bounces || 0),
-      opens: acc.opens + (row.opens || 0),
-      clicks: acc.clicks + (row.clicks || 0),
-    }),
-    { sends: 0, replies: 0, opt_outs: 0, bounces: 0, opens: 0, clicks: 0 }
-  );
+  // Aggregate current period events by type
+  const currentEvents = currentResult.data || [];
+  const totals = {
+    sends: currentEvents.filter(e => e.event_type === 'sent').length,
+    replies: currentEvents.filter(e => e.event_type === 'replied').length,
+    opt_outs: currentEvents.filter(e => e.event_type === 'opt_out').length,
+    bounces: currentEvents.filter(e => e.event_type === 'bounced').length,
+    opens: currentEvents.filter(e => e.event_type === 'opened').length,
+    clicks: currentEvents.filter(e => e.event_type === 'clicked').length,
+  };
 
   // Calculate rates
   const replyRatePct = totals.sends > 0
@@ -163,15 +163,13 @@ async function fetchSummaryData(
     0
   );
 
-  // Aggregate previous period stats
-  const prevTotals = (prevResult.data || []).reduce(
-    (acc, row) => ({
-      sends: acc.sends + (row.sends || 0),
-      replies: acc.replies + (row.replies || 0),
-      opt_outs: acc.opt_outs + (row.opt_outs || 0),
-    }),
-    { sends: 0, replies: 0, opt_outs: 0 }
-  );
+  // Aggregate previous period events
+  const prevEvents = prevResult.data || [];
+  const prevTotals = {
+    sends: prevEvents.filter(e => e.event_type === 'sent').length,
+    replies: prevEvents.filter(e => e.event_type === 'replied').length,
+    opt_outs: prevEvents.filter(e => e.event_type === 'opt_out').length,
+  };
 
   const prevReplyRatePct = prevTotals.sends > 0
     ? Number(((prevTotals.replies / prevTotals.sends) * 100).toFixed(2))

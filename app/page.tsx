@@ -251,7 +251,7 @@ export default function DashboardPage() {
         <EfficiencyMetrics
           costPerReply={costPerReply}
           monthlyProjection={monthlyProjection}
-          totalContacts={totalSends}
+          totalContacts={uniqueContacts} // Unique Email 1 recipients only
           loading={summaryLoading}
           className="h-full"
         />
