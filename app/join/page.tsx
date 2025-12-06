@@ -291,19 +291,17 @@ export default function JoinTeamPage() {
           </motion.div>
         </div>
 
-        {/* Skip Option */}
+        {/* Info note - no skip option, users must choose */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="text-center mt-8"
+          className="text-center mt-8 text-sm text-text-secondary"
         >
-          <button
-            onClick={() => router.push('/')}
-            className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-          >
-            Skip for now →
-          </button>
+          <p>Choose an option above to access the dashboard.</p>
+          <p className="mt-1 text-xs opacity-70">
+            You must join a team or create your own workspace to continue.
+          </p>
         </motion.div>
       </div>
     </div>
