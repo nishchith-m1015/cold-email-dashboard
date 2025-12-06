@@ -80,6 +80,23 @@ async function fetchBySenderData(
     throw error;
   }
 
+  // Get sender emails from leads_ohio table (join on contact_email)
+  const contactEmails = [...new Set((events || []).map(e => e.contact_email).filter(Boolean))];
+  
+  let senderLookup = new Map<string, string>();
+  if (contactEmails.length > 0) {
+    const { data: leadsData } = await client
+      .from('leads_ohio')
+      .select('email_address, sender_email')
+      .in('email_address', contactEmails);
+    
+    for (const lead of leadsData || []) {
+      if (lead.sender_email) {
+        senderLookup.set(lead.email_address?.toLowerCase(), lead.sender_email);
+      }
+    }
+  }
+
   // Aggregate by sender
   const senderMap = new Map<string, {
     sender_email: string;
@@ -96,7 +113,9 @@ async function fetchBySenderData(
     // Skip events from excluded campaigns (safety filter)
     if (shouldExcludeCampaign(event.campaign_name)) continue;
 
+    // Get sender email: first check leads_ohio lookup, then metadata, fallback to 'unknown'
     const senderEmail = 
+      senderLookup.get(event.contact_email?.toLowerCase()) ||
       (event.metadata as Record<string, unknown>)?.sender_email as string || 
       'unknown';
 

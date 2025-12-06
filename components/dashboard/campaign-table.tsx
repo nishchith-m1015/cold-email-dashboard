@@ -94,11 +94,10 @@ export function CampaignTable({ data, loading = false, className }: CampaignTabl
           )}
         </button>
       ),
-      cell: info => {
-        const value = info.getValue();
-        const variant = value >= 5 ? 'success' : value >= 2 ? 'warning' : 'danger';
-        return <Badge variant={variant}>{formatPercent(value)}</Badge>;
-      },
+      cell: info => (
+        // Always green to match "Replies" column
+        <Badge variant="success">{formatPercent(info.getValue())}</Badge>
+      ),
     }),
     columnHelper.accessor('opt_outs', {
       header: 'Opt-Outs',
@@ -108,11 +107,10 @@ export function CampaignTable({ data, loading = false, className }: CampaignTabl
     }),
     columnHelper.accessor('opt_out_rate_pct', {
       header: 'Opt-Out %',
-      cell: info => {
-        const value = info.getValue();
-        const variant = value <= 0.5 ? 'success' : value <= 1 ? 'warning' : 'danger';
-        return <Badge variant={variant}>{formatPercent(value)}</Badge>;
-      },
+      cell: info => (
+        // Always red to match "Opt-Outs" column
+        <Badge variant="danger">{formatPercent(info.getValue())}</Badge>
+      ),
     }),
     columnHelper.accessor('cost_usd', {
       header: ({ column }) => (

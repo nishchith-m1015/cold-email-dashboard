@@ -80,28 +80,18 @@ export function SenderBreakdown({
                   </span>
                 </td>
                 <td className="text-right py-3 px-2 text-text-primary">{sender.sends}</td>
-                <td className="text-right py-3 px-2 text-text-primary">{sender.replies}</td>
+                <td className="text-right py-3 px-2 text-accent-success">{sender.replies}</td>
                 <td className="text-right py-3 px-2">
-                  <span className={cn(
-                    'px-2 py-0.5 rounded text-xs font-medium',
-                    sender.reply_rate >= 10 
-                      ? 'bg-green-500/20 text-green-400'
-                      : sender.reply_rate >= 5
-                        ? 'bg-yellow-500/20 text-yellow-400'
-                        : 'bg-surface-elevated text-text-secondary'
-                  )}>
+                  {/* Always green to match Replies column */}
+                  <span className="px-2 py-0.5 rounded text-xs font-medium bg-accent-success/20 text-accent-success">
                     {sender.reply_rate.toFixed(1)}%
                   </span>
                 </td>
                 <td className="text-right py-3 px-2 text-text-secondary">{sender.opens}</td>
                 <td className="text-right py-3 px-2 text-text-secondary">{sender.clicks}</td>
                 <td className="text-right py-3 px-2">
-                  <span className={cn(
-                    'text-xs',
-                    sender.opt_out_rate > 2 
-                      ? 'text-red-400'
-                      : 'text-text-secondary'
-                  )}>
+                  {/* Always red to match Opt-outs concept */}
+                  <span className="text-xs text-accent-danger">
                     {sender.opt_outs} ({sender.opt_out_rate.toFixed(1)}%)
                   </span>
                 </td>
