@@ -29,7 +29,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { WorkspaceSwitcher } from '@/components/dashboard/workspace-switcher';
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut, SignInButton, useUser, useClerk } from '@clerk/nextjs';
+import { LogOut, UserCircle } from 'lucide-react';
 
 interface HeaderProps {
   onCommandOpen?: () => void;
@@ -151,13 +152,19 @@ export function Header({ onCommandOpen }: HeaderProps) {
   const [isClearing, setIsClearing] = useState(false);
   const [clearStatus, setClearStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
+  // Profile dropdown state
+  const [showProfile, setShowProfile] = useState(false);
+  const { user } = useUser();
+  const { signOut, openUserProfile } = useClerk();
+
   // Refs for click outside
   const notificationsRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
-  
+  const profileRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(notificationsRef, () => setShowNotifications(false));
   useClickOutside(settingsRef, () => setShowSettings(false));
+  useClickOutside(profileRef, () => setShowProfile(false));
   
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -547,14 +554,91 @@ export function Header({ onCommandOpen }: HeaderProps) {
               </SignInButton>
             </SignedOut>
             <SignedIn>
-              <UserButton 
-                afterSignOutUrl="/sign-in"
-                appearance={{
-                  elements: {
-                    avatarBox: 'h-8 w-8 ring-2 ring-transparent hover:ring-accent-primary/50 transition-all',
-                  },
-                }}
-              />
+              <div className="relative" ref={profileRef}>
+                <button
+                  onClick={() => {
+                    setShowProfile(!showProfile);
+                    setShowNotifications(false);
+                    setShowSettings(false);
+                  }}
+                  className="relative h-9 w-9 rounded-full ring-2 ring-transparent hover:ring-accent-primary/50 transition-all overflow-hidden focus:outline-none focus:ring-accent-primary/50"
+                >
+                  {user?.imageUrl ? (
+                    <img 
+                      src={user.imageUrl} 
+                      alt={user.fullName || 'Profile'} 
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-to-br from-accent-primary to-accent-purple flex items-center justify-center">
+                      <User className="h-5 w-5 text-white" />
+                    </div>
+                  )}
+                </button>
+
+                <AnimatePresence>
+                  {showProfile && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-border bg-surface shadow-2xl overflow-hidden z-50"
+                    >
+                      {/* User Info Header */}
+                      <div className="px-4 py-4 border-b border-border bg-surface-elevated">
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 rounded-full overflow-hidden ring-2 ring-accent-primary/30">
+                            {user?.imageUrl ? (
+                              <img 
+                                src={user.imageUrl} 
+                                alt={user.fullName || 'Profile'} 
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-full w-full bg-gradient-to-br from-accent-primary to-accent-purple flex items-center justify-center">
+                                <User className="h-6 w-6 text-white" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-text-primary truncate">
+                              {user?.fullName || 'User'}
+                            </p>
+                            <p className="text-xs text-text-secondary truncate">
+                              {user?.primaryEmailAddress?.emailAddress || ''}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Menu Items */}
+                      <div className="py-2">
+                        <button
+                          onClick={() => {
+                            setShowProfile(false);
+                            openUserProfile();
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-primary hover:bg-surface-elevated transition-colors"
+                        >
+                          <UserCircle className="h-4 w-4 text-text-secondary" />
+                          Manage Account
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowProfile(false);
+                            signOut({ redirectUrl: '/sign-in' });
+                          }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-accent-danger hover:bg-surface-elevated transition-colors"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </SignedIn>
           </div>
         </div>
