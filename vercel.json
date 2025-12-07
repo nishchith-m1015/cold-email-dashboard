@@ -1,0 +1,14 @@
+{
+  "crons": [
+    {
+      "path": "/api/admin/refresh-views",
+      "schedule": "*/5 * * * *",
+      "headers": [
+        {
+          "key": "x-refresh-token",
+          "value": "MATERIALIZED_VIEWS_REFRESH_TOKEN"
+        }
+      ]
+    }
+  ]
+}

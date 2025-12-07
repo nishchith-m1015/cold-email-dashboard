@@ -96,7 +96,7 @@ interface AggregateResponse {
 const aggregateConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
-  dedupingInterval: 10000, // Dedupe requests within 10 seconds
+  dedupingInterval: 60000, // Dedupe requests within 1 minute (prevents nav lag)
   errorRetryCount: 2,
   errorRetryInterval: 3000,
   keepPreviousData: true, // Keep showing old data while revalidating

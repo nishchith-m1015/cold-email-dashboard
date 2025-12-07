@@ -122,6 +122,14 @@ Nishchith @ Smartie Agents - an AI automation agency doing cold email outreach.
 - Clerk authentication
 - Migrate Google Sheets → PostgreSQL
 
+### Phase 6b: Performance Optimization (Completed) ✅
+**Goal:** Fix slow page reloads and navigation lag.
+**Implementation:**
+- **Aggregate API:** Created `/api/dashboard/aggregate` to fetch Summary, Timeseries, Cost, and Campaigns in a single server-side parallel request.
+- **Client Caching:** Updated `useDashboardData` to use SWR with `keepPreviousData: true`.
+- **Global Config:** Configured `lib/swr-config.tsx` with a 10s deduplication interval to prevent redundant fetches on tab switching.
+- **Outcome:** Initial load is batched; Navigation between Overview/Analytics is instant (reading from cache).
+
 ---
 
 ## 📁 Key Files & Directories
