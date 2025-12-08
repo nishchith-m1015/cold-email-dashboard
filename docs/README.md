@@ -1,147 +1,202 @@
-# Documentation
+# 📚 Cold Email Dashboard - Documentation Index
 
-This folder contains guides for setting up and integrating your Cold Email Analytics Dashboard with n8n.
-
-## 📚 Quick Navigation
-
-### For Getting Started Immediately
-- **[N8N_QUICK_SETUP.md](./N8N_QUICK_SETUP.md)** ⚡ **START HERE**
-  - Fast 5-minute setup
-  - Copy-paste ready values
-  - Hardcoded values method (easiest)
-  - Credentials method (recommended for production)
-
-### For Detailed Integration
-- **[N8N_INTEGRATION.md](./N8N_INTEGRATION.md)**
-  - Complete API reference
-  - Cost event schema
-  - Supported providers & pricing
-  - Testing guide
-
-### For Alternative Setup Methods
-- **[N8N_SETUP_WITHOUT_ENTERPRISE.md](./N8N_SETUP_WITHOUT_ENTERPRISE.md)**
-  - Why Environment Variables aren't available
-  - 4 different setup options
-  - Migration path from free to enterprise
-  - Detailed comparison
-
-### Architecture
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)**
-  - System overview
-  - Data flow diagram
+Welcome to the Cold Email Analytics Dashboard documentation. This directory contains all the guides and references you need to understand, set up, and deploy the project.
 
 ---
 
-## 🎯 Your Dashboard Connection Info
+## 🚀 Getting Started
 
-```
-🔗 Dashboard URL: http://localhost:3000
-🔐 Webhook Token: 6de5a8d03ad6348f4110782372a82f1bb7c6ef43a8ce8810bf0459e73abaeb61
-```
+Start here if you're new to the project:
 
-**For Production:** Replace `localhost:3000` with your deployed URL
+1. **[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md)** - ⭐ **START HERE**
+   - Complete project history and context
+   - All completed phases (1-15)
+   - Tech stack overview
+   - Quick start message for AI assistants
+   - Last updated: December 8, 2025
 
----
+2. **[ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)** - Environment Setup Guide
+   - All 12 environment variables documented
+   - Setup instructions for Supabase, Clerk, etc.
+   - Security best practices
+   - Troubleshooting common issues
 
-## 🚀 Quick Start (Choose One Path)
-
-### Path 1: Local Testing (Start Here!)
-1. Read: [`N8N_QUICK_SETUP.md`](./N8N_QUICK_SETUP.md)
-2. Import a workflow from `n8n-workflows/`
-3. Replace `{{ $env.DASHBOARD_URL }}` with `http://localhost:3000`
-4. Replace `{{ $env.DASH_WEBHOOK_TOKEN }}` with your token above
-5. Test and see costs in your dashboard
-
-### Path 2: Production Ready
-1. Read: [`N8N_QUICK_SETUP.md`](./N8N_QUICK_SETUP.md) (Method B)
-2. Create n8n Credentials for your dashboard
-3. Update workflows to use credentials
-4. Deploy to production
+3. **[WORKSPACE_SETUP.md](WORKSPACE_SETUP.md)** - Workspace & Multi-Tenancy Guide
+   - How workspaces work
+   - Creating and managing workspaces
+   - Inviting team members
+   - Role-based access control
 
 ---
 
-## 📁 File Structure
+## 📖 Core Documentation
+
+### Architecture & Design
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System Architecture Deep Dive
+  - Data flow diagrams
+  - Component architecture
+  - Database schema design
+  - Authentication & authorization
+  - Materialized views strategy
+
+- **[API_REFERENCE.md](API_REFERENCE.md)** - Complete API Documentation
+  - All endpoint specifications
+  - Request/response formats
+  - Authentication requirements
+  - Query parameters
+  - Example requests
+
+### Configuration
+
+- **[PRICING_CONFIG.md](PRICING_CONFIG.md)** - LLM Pricing Configuration
+  - Cost calculations for OpenAI, Anthropic, etc.
+  - Model pricing table
+  - Custom pricing setup
+  - Adding new providers
+
+- **[N8N_CONFIGURATION_GUIDE.md](N8N_CONFIGURATION_GUIDE.md)** - n8n Integration Setup
+  - Workflow configuration
+  - Environment variables for n8n
+  - Webhook setup
+  - Cost tracking implementation
+  - Event logging patterns
+
+- **[CLERK_ENV_SETUP.md](CLERK_ENV_SETUP.md)** - Clerk Environment Setup
+  - Quick setup guide for Clerk authentication
+  - Environment variable configuration
+  - Troubleshooting tips
+
+### n8n Guides
+
+- **[n8n/N8N_CHEAT_SHEET.md](n8n/N8N_CHEAT_SHEET.md)** - Quick reference for n8n integration
+- **[n8n/N8N_WEBHOOK_SETUP_GUIDE.md](n8n/N8N_WEBHOOK_SETUP_GUIDE.md)** - Webhook configuration
+- **[n8n/N8N_VISUAL_GUIDE.md](n8n/N8N_VISUAL_GUIDE.md)** - Visual setup instructions
+- **[n8n/N8N_EXACT_UPDATES.md](n8n/N8N_EXACT_UPDATES.md)** - Specific workflow updates
+- **[n8n/EMAIL_2_TRACKING_FIX.md](n8n/EMAIL_2_TRACKING_FIX.md)** - Email tracking fixes
+
+### Deployment
+
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production Deployment Guide
+  - Vercel deployment steps
+  - Environment variable setup
+  - Cron job configuration
+  - Custom domain setup
+  - Monitoring and logging
+
+- **[CLERK_INTEGRATION.md](CLERK_INTEGRATION.md)** - Clerk Authentication Setup
+  - Clerk account setup
+  - Application configuration
+  - Environment variables
+  - Middleware configuration
+  - Troubleshooting auth issues
+
+---
+
+## 🎯 Development Roadmap
+
+- **[PHASED_OPTIMIZATION_ROADMAP.md](PHASED_OPTIMIZATION_ROADMAP.md)** - Future Enhancements
+  - Planned features (Phases 16+)
+  - Performance optimizations
+  - Integration ideas
+  - Community requests
+
+---
+
+## 📁 File Organization
 
 ```
 docs/
-├── README.md (this file)
-├── N8N_QUICK_SETUP.md        ← START HERE for fast setup
-├── N8N_INTEGRATION.md        ← Complete reference
-├── N8N_SETUP_WITHOUT_ENTERPRISE.md  ← Setup alternatives
-└── ARCHITECTURE.md           ← System design
+├── README.md                              # 👈 You are here
+├── PROJECT_CONTEXT.md                     # ⭐ Project overview & history
+│
+├── 🚀 Setup & Configuration
+│   ├── ENVIRONMENT_VARIABLES.md
+│   ├── CLERK_ENV_SETUP.md
+│   ├── WORKSPACE_SETUP.md
+│   ├── CLERK_INTEGRATION.md
+│   └── N8N_CONFIGURATION_GUIDE.md
+│
+├── 📖 Technical Reference
+│   ├── ARCHITECTURE.md
+│   ├── API_REFERENCE.md
+│   ├── PRICING_CONFIG.md
+│   └── DEPLOYMENT.md
+│
+├── 📅 Planning
+│   └── PHASED_OPTIMIZATION_ROADMAP.md
+│
+├── 🔧 n8n Integration Guides
+│   └── n8n/
+│       ├── N8N_CHEAT_SHEET.md
+│       ├── N8N_WEBHOOK_SETUP_GUIDE.md
+│       ├── N8N_VISUAL_GUIDE.md
+│       ├── N8N_EXACT_UPDATES.md
+│       └── EMAIL_2_TRACKING_FIX.md
+│
+├── 🖼️ Assets
+│   ├── overview.png                       # Dashboard screenshot
+│   └── analytics.png                      # Analytics page screenshot
+│
+└── 📦 archive/                            # Historical documents (31 files)
+    ├── Bug Fixes (8 files)
+    │   ├── APPLY_FIX_NOW.md
+    │   ├── BUG_FIXES_MATERIALIZED_VIEWS.md
+    │   ├── CAMPAIGN_DROPDOWN_FIX.md
+    │   └── ...
+    ├── Phase Completions (6 files)
+    │   ├── PHASE_10_COMPLETE.md
+    │   ├── PHASE_13_COMPLETE.md
+    │   ├── PHASE_15_COMPLETE.md
+    │   └── ...
+    ├── Testing Docs (5 files)
+    │   ├── TESTING_GUIDE.md
+    │   ├── TEST_RESULTS.md
+    │   └── ...
+    └── Legacy Docs (12 files)
+        ├── IMPLEMENTATION_PLAN.md
+        ├── SESSION_CHANGELOG.md
+        └── ...
 ```
 
-```
-n8n-workflows/
-├── README.md                 ← Workflow documentation
-├── complete-cost-tracking-example.json
-├── openai-with-cost-tracking.json
-├── anthropic-with-cost-tracking.json
-├── email-prep-with-cost-tracking.json
-└── cost-tracking-subworkflow.json
-```
+---
+
+## 🆘 Quick Links
+
+| Need Help With... | Go To... |
+|-------------------|----------|
+| Setting up for the first time | [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) + [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md) |
+| Understanding the system | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| API integration | [API_REFERENCE.md](API_REFERENCE.md) |
+| n8n workflow setup | [N8N_CONFIGURATION_GUIDE.md](N8N_CONFIGURATION_GUIDE.md) or [n8n/N8N_CHEAT_SHEET.md](n8n/N8N_CHEAT_SHEET.md) |
+| n8n webhook configuration | [n8n/N8N_WEBHOOK_SETUP_GUIDE.md](n8n/N8N_WEBHOOK_SETUP_GUIDE.md) |
+| Deploying to production | [DEPLOYMENT.md](DEPLOYMENT.md) |
+| Authentication issues | [CLERK_INTEGRATION.md](CLERK_INTEGRATION.md) or [CLERK_ENV_SETUP.md](CLERK_ENV_SETUP.md) |
+| Workspace management | [WORKSPACE_SETUP.md](WORKSPACE_SETUP.md) |
+| LLM cost tracking | [PRICING_CONFIG.md](PRICING_CONFIG.md) |
+| Future features | [PHASED_OPTIMIZATION_ROADMAP.md](PHASED_OPTIMIZATION_ROADMAP.md) |
 
 ---
 
-## 🔗 n8n Workflow Import
+## 📝 Documentation Standards
 
-1. Go to your n8n instance
-2. Click **Add workflow** → **Import from file**
-3. Select a JSON from `n8n-workflows/`
-4. Follow [`N8N_QUICK_SETUP.md`](./N8N_QUICK_SETUP.md)
+When contributing to documentation:
 
-Recommended workflow to start with:
-- **`complete-cost-tracking-example.json`** - Shows all provider types
-
----
-
-## ❓ Common Questions
-
-**Q: Why can't I use Environment Variables?**
-A: They're only on n8n Enterprise plan. Use the alternatives in [`N8N_QUICK_SETUP.md`](./N8N_QUICK_SETUP.md)
-
-**Q: Which setup method should I use?**
-A: 
-- Development: Hardcoded values (Method A)
-- Production: Credentials (Method B)
-- See [`N8N_SETUP_WITHOUT_ENTERPRISE.md`](./N8N_SETUP_WITHOUT_ENTERPRISE.md) for all options
-
-**Q: How do I test the integration?**
-A: Follow the testing section in [`N8N_QUICK_SETUP.md`](./N8N_QUICK_SETUP.md)
-
-**Q: Where do I see the costs in the dashboard?**
-A: Go to `http://localhost:3000/analytics` after sending cost events
+1. **Keep it current**: Update dates when making changes
+2. **Use examples**: Code samples are better than abstract descriptions
+3. **Link liberally**: Cross-reference related docs
+4. **Use emoji headers**: Makes scanning easier 📊 🔧 ✅
+5. **Test instructions**: Verify setup steps actually work
+6. **Include troubleshooting**: Document common issues
 
 ---
 
-## 🔑 Key Information
+## 🔄 Last Updated
 
-| Item | Value |
-|------|-------|
-| Dashboard URL | `http://localhost:3000` |
-| API Endpoint | `/api/cost-events` |
-| Webhook Token | `6de5a8d03ad6348f4110782372a82f1bb7c6ef43a8ce8810bf0459e73abaeb61` |
-| Token Header | `X-Webhook-Token` |
-| Method | `POST` |
-| Content-Type | `application/json` |
+**Date:** December 8, 2025  
+**Documentation Version:** 2.0 (Phase 15 Complete)  
+**Maintained by:** Nishchith @ Smartie Agents
 
 ---
 
-## 📞 Support
-
-If you get stuck:
-1. Check the specific guide for your setup method
-2. Test with the curl example in [`N8N_QUICK_SETUP.md`](./N8N_QUICK_SETUP.md)
-3. Verify your dashboard is running: `npm run dev`
-4. Check browser console for errors
-
----
-
-## 🎓 Learning Path
-
-1. **Day 1**: Read `N8N_QUICK_SETUP.md` + set up one workflow
-2. **Day 2**: Test with the example workflows
-3. **Day 3**: Integrate into your actual n8n workflows
-4. **Week 2**: Switch to production setup with credentials
-5. **Month 2**: Consider n8n Professional/Enterprise for advanced features
-
+**Questions?** Open an issue or check [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) for contact info.

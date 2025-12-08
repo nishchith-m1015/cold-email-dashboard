@@ -1,0 +1,13 @@
+# Playwright Test Results
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Screenshots
+screenshots/
+
+# Videos
+videos/
+
+# Trace files
+traces/

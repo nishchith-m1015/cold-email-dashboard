@@ -27,6 +27,14 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
+  // Bypass auth for E2E tests (localhost only for security)
+  const isE2ETest = process.env.PLAYWRIGHT_TEST === 'true' && 
+                    request.nextUrl.hostname === 'localhost';
+  
+  if (isE2ETest) {
+    return; // Skip auth protection for E2E tests
+  }
+  
   // Protect all routes except public ones
   if (!isPublicRoute(request)) {
     await auth.protect();
