@@ -10,10 +10,10 @@ Start here if you're new to the project:
 
 1. **[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md)** - ⭐ **START HERE**
    - Complete project history and context
-   - All completed phases (1-15)
+   - All completed phases (1-21)
    - Tech stack overview
    - Quick start message for AI assistants
-   - Last updated: December 8, 2025
+   - Last updated: December 9, 2025
 
 2. **[ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)** - Environment Setup Guide
    - All 12 environment variables documented
@@ -21,11 +21,10 @@ Start here if you're new to the project:
    - Security best practices
    - Troubleshooting common issues
 
-3. **[WORKSPACE_SETUP.md](WORKSPACE_SETUP.md)** - Workspace & Multi-Tenancy Guide
-   - How workspaces work
-   - Creating and managing workspaces
-   - Inviting team members
-   - Role-based access control
+3. **[CLERK_INTEGRATION.md](CLERK_INTEGRATION.md)** - Authentication Setup
+   - Clerk account & app configuration
+   - Middleware and env vars
+   - Troubleshooting auth issues
 
 ---
 
@@ -55,17 +54,11 @@ Start here if you're new to the project:
   - Custom pricing setup
   - Adding new providers
 
-- **[N8N_CONFIGURATION_GUIDE.md](N8N_CONFIGURATION_GUIDE.md)** - n8n Integration Setup
-  - Workflow configuration
-  - Environment variables for n8n
-  - Webhook setup
-  - Cost tracking implementation
-  - Event logging patterns
-
-- **[CLERK_ENV_SETUP.md](CLERK_ENV_SETUP.md)** - Clerk Environment Setup
-  - Quick setup guide for Clerk authentication
-  - Environment variable configuration
-  - Troubleshooting tips
+- **[CLERK_ENV_SETUP.md](CLERK_ENV_SETUP.md)** - Clerk Environment Setup (quick start)
+- **[CLERK_JWT_SETUP_VISUAL.md](CLERK_JWT_SETUP_VISUAL.md)** - Visual JWT setup guide
+- **[CLERK_SUPABASE_SETUP_GUIDE.md](CLERK_SUPABASE_SETUP_GUIDE.md)** - Clerk + Supabase deep setup
+- **[CLERK_SUPABASE_TROUBLESHOOTING.md](CLERK_SUPABASE_TROUBLESHOOTING.md)** - Auth troubleshooting playbook
+- **[COST_TRACKING_IMPLEMENTATION_TRANSCRIPT.md](COST_TRACKING_IMPLEMENTATION_TRANSCRIPT.md)** - Cost tracking implementation notes
 
 ### n8n Guides
 
@@ -74,6 +67,8 @@ Start here if you're new to the project:
 - **[n8n/N8N_VISUAL_GUIDE.md](n8n/N8N_VISUAL_GUIDE.md)** - Visual setup instructions
 - **[n8n/N8N_EXACT_UPDATES.md](n8n/N8N_EXACT_UPDATES.md)** - Specific workflow updates
 - **[n8n/EMAIL_2_TRACKING_FIX.md](n8n/EMAIL_2_TRACKING_FIX.md)** - Email tracking fixes
+- **[n8n/EMAIL_2_BEFORE_AFTER.md](n8n/EMAIL_2_BEFORE_AFTER.md)** - Before/after snapshots for Email 2
+- **[n8n/CURSOR_MIGRATION_PLAN.md](n8n/CURSOR_MIGRATION_PLAN.md)** - Cursor migration plan for n8n
 
 ### Deployment
 
@@ -113,18 +108,23 @@ docs/
 ├── 🚀 Setup & Configuration
 │   ├── ENVIRONMENT_VARIABLES.md
 │   ├── CLERK_ENV_SETUP.md
-│   ├── WORKSPACE_SETUP.md
 │   ├── CLERK_INTEGRATION.md
-│   └── N8N_CONFIGURATION_GUIDE.md
+│   ├── CLERK_JWT_SETUP_VISUAL.md
+│   ├── CLERK_SUPABASE_SETUP_GUIDE.md
+│   ├── CLERK_SUPABASE_TROUBLESHOOTING.md
+│   └── (n8n setup lives under n8n/)
 │
 ├── 📖 Technical Reference
 │   ├── ARCHITECTURE.md
 │   ├── API_REFERENCE.md
 │   ├── PRICING_CONFIG.md
+│   ├── COST_TRACKING_IMPLEMENTATION_TRANSCRIPT.md
 │   └── DEPLOYMENT.md
 │
 ├── 📅 Planning
-│   └── PHASED_OPTIMIZATION_ROADMAP.md
+│   ├── PHASED_OPTIMIZATION_ROADMAP.md
+│   ├── PHASES_16-20_IMPLEMENTATION_SUMMARY.md
+│   └── PHASE_21_IMPLEMENTATION_SUMMARY.md
 │
 ├── 🔧 n8n Integration Guides
 │   └── n8n/
@@ -132,31 +132,16 @@ docs/
 │       ├── N8N_WEBHOOK_SETUP_GUIDE.md
 │       ├── N8N_VISUAL_GUIDE.md
 │       ├── N8N_EXACT_UPDATES.md
-│       └── EMAIL_2_TRACKING_FIX.md
+│       ├── EMAIL_2_TRACKING_FIX.md
+│       ├── EMAIL_2_BEFORE_AFTER.md
+│       └── CURSOR_MIGRATION_PLAN.md
 │
-├── 🖼️ Assets
-│   ├── overview.png                       # Dashboard screenshot
-│   └── analytics.png                      # Analytics page screenshot
-│
-└── 📦 archive/                            # Historical documents (31 files)
-    ├── Bug Fixes (8 files)
-    │   ├── APPLY_FIX_NOW.md
-    │   ├── BUG_FIXES_MATERIALIZED_VIEWS.md
-    │   ├── CAMPAIGN_DROPDOWN_FIX.md
-    │   └── ...
-    ├── Phase Completions (6 files)
-    │   ├── PHASE_10_COMPLETE.md
-    │   ├── PHASE_13_COMPLETE.md
-    │   ├── PHASE_15_COMPLETE.md
-    │   └── ...
-    ├── Testing Docs (5 files)
-    │   ├── TESTING_GUIDE.md
-    │   ├── TEST_RESULTS.md
-    │   └── ...
-    └── Legacy Docs (12 files)
-        ├── IMPLEMENTATION_PLAN.md
-        ├── SESSION_CHANGELOG.md
-        └── ...
+└── 📦 archive/                            # Historical docs & assets
+    ├── overview.png, analytics.png        # Legacy screenshots
+    ├── Phase completions (PHASE_7B, PHASE_8, PHASE_9, PHASE_10, PHASE_13, PHASE_14)
+    ├── Bug fixes & testing docs           # APPLY_FIX_NOW, TRIGGER_FIX_SUMMARY, TESTING_GUIDE, etc.
+    ├── Legacy n8n & setup notes           # N8N_CONFIGURATION_GUIDE (legacy), START_HERE, README_NEW, etc.
+    └── Other historical references        # SESSION_CHANGELOG, IMPLEMENTATION_PLAN, more...
 ```
 
 ---
@@ -168,13 +153,13 @@ docs/
 | Setting up for the first time | [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) + [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md) |
 | Understanding the system | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | API integration | [API_REFERENCE.md](API_REFERENCE.md) |
-| n8n workflow setup | [N8N_CONFIGURATION_GUIDE.md](N8N_CONFIGURATION_GUIDE.md) or [n8n/N8N_CHEAT_SHEET.md](n8n/N8N_CHEAT_SHEET.md) |
+| n8n workflow setup | [n8n/N8N_CHEAT_SHEET.md](n8n/N8N_CHEAT_SHEET.md) or [n8n/N8N_VISUAL_GUIDE.md](n8n/N8N_VISUAL_GUIDE.md) |
 | n8n webhook configuration | [n8n/N8N_WEBHOOK_SETUP_GUIDE.md](n8n/N8N_WEBHOOK_SETUP_GUIDE.md) |
 | Deploying to production | [DEPLOYMENT.md](DEPLOYMENT.md) |
-| Authentication issues | [CLERK_INTEGRATION.md](CLERK_INTEGRATION.md) or [CLERK_ENV_SETUP.md](CLERK_ENV_SETUP.md) |
-| Workspace management | [WORKSPACE_SETUP.md](WORKSPACE_SETUP.md) |
+| Authentication issues | [CLERK_INTEGRATION.md](CLERK_INTEGRATION.md), [CLERK_ENV_SETUP.md](CLERK_ENV_SETUP.md), or [CLERK_SUPABASE_TROUBLESHOOTING.md](CLERK_SUPABASE_TROUBLESHOOTING.md) |
 | LLM cost tracking | [PRICING_CONFIG.md](PRICING_CONFIG.md) |
 | Future features | [PHASED_OPTIMIZATION_ROADMAP.md](PHASED_OPTIMIZATION_ROADMAP.md) |
+| Phase summaries | [PHASES_16-20_IMPLEMENTATION_SUMMARY.md](PHASES_16-20_IMPLEMENTATION_SUMMARY.md) and [PHASE_21_IMPLEMENTATION_SUMMARY.md](PHASE_21_IMPLEMENTATION_SUMMARY.md) |
 
 ---
 
@@ -193,8 +178,8 @@ When contributing to documentation:
 
 ## 🔄 Last Updated
 
-**Date:** December 8, 2025  
-**Documentation Version:** 2.0 (Phase 15 Complete)  
+**Date:** December 10, 2025  
+**Documentation Version:** 2.1 (Post Phase 21 Cleanup)  
 **Maintained by:** Nishchith @ Smartie Agents
 
 ---
