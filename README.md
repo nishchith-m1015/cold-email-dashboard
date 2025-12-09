@@ -1,187 +1,201 @@
-# 📚 Cold Email Dashboard - Documentation Index
+# Cold Email Analytics Dashboard
 
-Welcome to the Cold Email Analytics Dashboard documentation. This directory contains all the guides and references you need to understand, set up, and deploy the project.
+A beautiful, real-time analytics dashboard for tracking your n8n cold email campaigns. Built with Next.js 14, Tailwind CSS, Supabase, and Recharts.
 
----
+## Dashboard Preview
 
-## 🚀 Getting Started
+**Overview Page** - Real-time campaign metrics, sequence breakdown, and efficiency metrics
+![Overview Dashboard](docs/overview.png)
 
-Start here if you're new to the project:
+**Analytics Page** - Deep dive into LLM costs, engagement metrics, and detailed analytics
+![Analytics Dashboard](docs/analytics.png)
 
-1. **[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md)** - ⭐ **START HERE**
-   - Complete project history and context
-   - All completed phases (1-21)
-   - Tech stack overview
-   - Quick start message for AI assistants
-   - Last updated: December 9, 2025
+## Features
 
-2. **[ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)** - Environment Setup Guide
-   - All 12 environment variables documented
-   - Setup instructions for Supabase, Clerk, etc.
-   - Security best practices
-   - Troubleshooting common issues
+-  **Real-time Metrics** - Track sends, replies, opt-outs, and bounce rates
+-  **Cost Analytics** - Monitor LLM costs by provider and model
+-  **Time Series Charts** - Visualize trends over customizable date ranges
+-  **Multi-Campaign Support** - Filter and compare campaigns
+-  **AI Insights** - Ask natural language questions about your data
+-  **Command Palette** - Quick navigation with Cmd+K
+-  **Beautiful Dark Theme** - Modern, eye-friendly UI
 
-3. **[CLERK_INTEGRATION.md](CLERK_INTEGRATION.md)** - Authentication Setup
-   - Clerk account & app configuration
-   - Middleware and env vars
-   - Troubleshooting auth issues
+## Quick Start
 
----
+### 1. Set up Supabase
 
-## 📖 Core Documentation
+1. Create a new [Supabase](https://supabase.com) project
+2. Go to the SQL Editor and run the contents of `schema.sql`
+3. Get your project URL and service role key from Settings > API
 
-### Architecture & Design
+### 2. Configure Environment
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System Architecture Deep Dive
-  - Data flow diagrams
-  - Component architecture
-  - Database schema design
-  - Authentication & authorization
-  - Materialized views strategy
+Create a `.env.local` file in the project root:
 
-- **[API_REFERENCE.md](API_REFERENCE.md)** - Complete API Documentation
-  - All endpoint specifications
-  - Request/response formats
-  - Authentication requirements
-  - Query parameters
-  - Example requests
-
-### Configuration
-
-- **[PRICING_CONFIG.md](PRICING_CONFIG.md)** - LLM Pricing Configuration
-  - Cost calculations for OpenAI, Anthropic, etc.
-  - Model pricing table
-  - Custom pricing setup
-  - Adding new providers
-
-- **[CLERK_ENV_SETUP.md](CLERK_ENV_SETUP.md)** - Clerk Environment Setup (quick start)
-- **[CLERK_JWT_SETUP_VISUAL.md](CLERK_JWT_SETUP_VISUAL.md)** - Visual JWT setup guide
-- **[CLERK_SUPABASE_SETUP_GUIDE.md](CLERK_SUPABASE_SETUP_GUIDE.md)** - Clerk + Supabase deep setup
-- **[CLERK_SUPABASE_TROUBLESHOOTING.md](CLERK_SUPABASE_TROUBLESHOOTING.md)** - Auth troubleshooting playbook
-- **[COST_TRACKING_IMPLEMENTATION_TRANSCRIPT.md](COST_TRACKING_IMPLEMENTATION_TRANSCRIPT.md)** - Cost tracking implementation notes
-
-### n8n Guides
-
-- **[n8n/N8N_CHEAT_SHEET.md](n8n/N8N_CHEAT_SHEET.md)** - Quick reference for n8n integration
-- **[n8n/N8N_WEBHOOK_SETUP_GUIDE.md](n8n/N8N_WEBHOOK_SETUP_GUIDE.md)** - Webhook configuration
-- **[n8n/N8N_VISUAL_GUIDE.md](n8n/N8N_VISUAL_GUIDE.md)** - Visual setup instructions
-- **[n8n/N8N_EXACT_UPDATES.md](n8n/N8N_EXACT_UPDATES.md)** - Specific workflow updates
-- **[n8n/EMAIL_2_TRACKING_FIX.md](n8n/EMAIL_2_TRACKING_FIX.md)** - Email tracking fixes
-- **[n8n/EMAIL_2_BEFORE_AFTER.md](n8n/EMAIL_2_BEFORE_AFTER.md)** - Before/after snapshots for Email 2
-- **[n8n/CURSOR_MIGRATION_PLAN.md](n8n/CURSOR_MIGRATION_PLAN.md)** - Cursor migration plan for n8n
-
-### Deployment
-
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production Deployment Guide
-  - Vercel deployment steps
-  - Environment variable setup
-  - Cron job configuration
-  - Custom domain setup
-  - Monitoring and logging
-
-- **[CLERK_INTEGRATION.md](CLERK_INTEGRATION.md)** - Clerk Authentication Setup
-  - Clerk account setup
-  - Application configuration
-  - Environment variables
-  - Middleware configuration
-  - Troubleshooting auth issues
-
----
-
-## 🎯 Development Roadmap
-
-- **[PHASED_OPTIMIZATION_ROADMAP.md](PHASED_OPTIMIZATION_ROADMAP.md)** - Future Enhancements
-  - Planned features (Phases 16+)
-  - Performance optimizations
-  - Integration ideas
-  - Community requests
-
----
-
-## 📁 File Organization
-
-```
-docs/
-├── README.md                              # 👈 You are here
-├── PROJECT_CONTEXT.md                     # ⭐ Project overview & history
-│
-├── 🚀 Setup & Configuration
-│   ├── ENVIRONMENT_VARIABLES.md
-│   ├── CLERK_ENV_SETUP.md
-│   ├── CLERK_INTEGRATION.md
-│   ├── CLERK_JWT_SETUP_VISUAL.md
-│   ├── CLERK_SUPABASE_SETUP_GUIDE.md
-│   ├── CLERK_SUPABASE_TROUBLESHOOTING.md
-│   └── (n8n setup lives under n8n/)
-│
-├── 📖 Technical Reference
-│   ├── ARCHITECTURE.md
-│   ├── API_REFERENCE.md
-│   ├── PRICING_CONFIG.md
-│   ├── COST_TRACKING_IMPLEMENTATION_TRANSCRIPT.md
-│   └── DEPLOYMENT.md
-│
-├── 📅 Planning
-│   ├── PHASED_OPTIMIZATION_ROADMAP.md
-│   ├── PHASES_16-20_IMPLEMENTATION_SUMMARY.md
-│   └── PHASE_21_IMPLEMENTATION_SUMMARY.md
-│
-├── 🔧 n8n Integration Guides
-│   └── n8n/
-│       ├── N8N_CHEAT_SHEET.md
-│       ├── N8N_WEBHOOK_SETUP_GUIDE.md
-│       ├── N8N_VISUAL_GUIDE.md
-│       ├── N8N_EXACT_UPDATES.md
-│       ├── EMAIL_2_TRACKING_FIX.md
-│       ├── EMAIL_2_BEFORE_AFTER.md
-│       └── CURSOR_MIGRATION_PLAN.md
-│
-└── 📦 archive/                            # Historical docs & assets
-    ├── overview.png, analytics.png        # Legacy screenshots
-    ├── Phase completions (PHASE_7B, PHASE_8, PHASE_9, PHASE_10, PHASE_13, PHASE_14)
-    ├── Bug fixes & testing docs           # APPLY_FIX_NOW, TRIGGER_FIX_SUMMARY, TESTING_GUIDE, etc.
-    ├── Legacy n8n & setup notes           # N8N_CONFIGURATION_GUIDE (legacy), START_HERE, README_NEW, etc.
-    └── Other historical references        # SESSION_CHANGELOG, IMPLEMENTATION_PLAN, more...
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+DASH_WEBHOOK_TOKEN=your-random-webhook-token-here
 ```
 
----
+Generate a secure webhook token:
+```bash
+openssl rand -hex 32
+```
 
-## 🆘 Quick Links
+### 3. Install Dependencies
 
-| Need Help With... | Go To... |
-|-------------------|----------|
-| Setting up for the first time | [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) + [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md) |
-| Understanding the system | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| API integration | [API_REFERENCE.md](API_REFERENCE.md) |
-| n8n workflow setup | [n8n/N8N_CHEAT_SHEET.md](n8n/N8N_CHEAT_SHEET.md) or [n8n/N8N_VISUAL_GUIDE.md](n8n/N8N_VISUAL_GUIDE.md) |
-| n8n webhook configuration | [n8n/N8N_WEBHOOK_SETUP_GUIDE.md](n8n/N8N_WEBHOOK_SETUP_GUIDE.md) |
-| Deploying to production | [DEPLOYMENT.md](DEPLOYMENT.md) |
-| Authentication issues | [CLERK_INTEGRATION.md](CLERK_INTEGRATION.md), [CLERK_ENV_SETUP.md](CLERK_ENV_SETUP.md), or [CLERK_SUPABASE_TROUBLESHOOTING.md](CLERK_SUPABASE_TROUBLESHOOTING.md) |
-| LLM cost tracking | [PRICING_CONFIG.md](PRICING_CONFIG.md) |
-| Future features | [PHASED_OPTIMIZATION_ROADMAP.md](PHASED_OPTIMIZATION_ROADMAP.md) |
-| Phase summaries | [PHASES_16-20_IMPLEMENTATION_SUMMARY.md](PHASES_16-20_IMPLEMENTATION_SUMMARY.md) and [PHASE_21_IMPLEMENTATION_SUMMARY.md](PHASE_21_IMPLEMENTATION_SUMMARY.md) |
+```bash
+npm install
+```
 
----
+### 4. Run the Development Server
 
-## 📝 Documentation Standards
+```bash
+npm run dev
+```
 
-When contributing to documentation:
+Open [http://localhost:3000](http://localhost:3000) to see the dashboard.
 
-1. **Keep it current**: Update dates when making changes
-2. **Use examples**: Code samples are better than abstract descriptions
-3. **Link liberally**: Cross-reference related docs
-4. **Use emoji headers**: Makes scanning easier 📊 🔧 ✅
-5. **Test instructions**: Verify setup steps actually work
-6. **Include troubleshooting**: Document common issues
+## n8n Integration
 
----
+### Add to n8n Environment
 
-## 🔄 Last Updated
+Set these environment variables in your n8n instance:
 
-**Date:** December 10, 2025  
-**Documentation Version:** 2.1 (Post Phase 21 Cleanup)  
-**Maintained by:** Nishchith @ Smartie Agents
+```
+DASHBOARD_URL=https://your-dashboard-domain.com
+DASH_WEBHOOK_TOKEN=same-token-as-above
+```
 
----
+### Log Email Events
 
-**Questions?** Open an issue or check [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) for contact info.
+After each email send in your n8n workflows, add an HTTP Request node:
+
+```json
+POST {{ $env.DASHBOARD_URL }}/api/events
+Headers:
+  X-Webhook-Token: {{ $env.DASH_WEBHOOK_TOKEN }}
+  Content-Type: application/json
+
+Body:
+{
+  "contact_email": "{{ $json.Email }}",
+  "campaign": "Real Estate CA",
+  "step": 1,
+  "event_type": "sent",
+  "provider": "gmail",
+  "provider_message_id": "{{ $json.id }}",
+  "event_ts": "{{ $now }}"
+}
+```
+
+Event types: `sent`, `delivered`, `replied`, `opt_out`, `bounced`
+
+### Log LLM Usage
+
+After LLM calls in your workflows:
+
+```json
+POST {{ $env.DASHBOARD_URL }}/api/llm-usage
+Headers:
+  X-Webhook-Token: {{ $env.DASH_WEBHOOK_TOKEN }}
+  Content-Type: application/json
+
+Body:
+{
+  "campaign": "Real Estate CA",
+  "provider": "openai",
+  "model": "o3-mini",
+  "tokens_in": {{ $json.usage.prompt_tokens }},
+  "tokens_out": {{ $json.usage.completion_tokens }},
+  "contact_email": "{{ $json.Email }}"
+}
+```
+
+## API Reference
+
+### Ingestion Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/events` | POST | Log email events (sent, replied, etc.) |
+| `/api/llm-usage` | POST | Log LLM token usage and costs |
+
+### Metrics Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/metrics/summary` | GET | Aggregate stats with comparisons |
+| `/api/metrics/timeseries` | GET | Daily data points for charts |
+| `/api/metrics/by-campaign` | GET | Stats broken down by campaign |
+| `/api/metrics/cost-breakdown` | GET | LLM costs by provider/model |
+| `/api/campaigns` | GET | List of campaigns |
+| `/api/ask` | POST | AI-powered insights |
+
+### Query Parameters
+
+Most metrics endpoints accept:
+- `start` - Start date (YYYY-MM-DD)
+- `end` - End date (YYYY-MM-DD)
+- `campaign` - Filter by campaign name
+- `workspace_id` - Filter by workspace (for multi-tenant)
+
+## Tech Stack
+
+- **Framework**: Next.js 14 (App Router)
+- **Styling**: Tailwind CSS
+- **Database**: Supabase (PostgreSQL)
+- **Charts**: Recharts
+- **Data Fetching**: SWR
+- **Animations**: Framer Motion
+- **UI Components**: Radix UI
+- **Tables**: TanStack Table
+- **Icons**: Lucide React
+
+## Project Structure
+
+```
+cold-email-dashboard-starter/
+├── app/
+│   ├── api/
+│   │   ├── events/           # Event ingestion
+│   │   ├── llm-usage/        # Cost ingestion
+│   │   ├── metrics/          # Analytics queries
+│   │   ├── campaigns/        # Campaign list
+│   │   └── ask/              # AI insights
+│   ├── analytics/            # Analytics page
+│   ├── page.tsx              # Dashboard home
+│   ├── layout.tsx            # Root layout
+│   └── globals.css           # Tailwind + custom styles
+├── components/
+│   ├── ui/                   # Base components
+│   ├── dashboard/            # Dashboard-specific
+│   └── layout/               # Layout components
+├── hooks/                    # SWR hooks
+├── lib/                      # Utilities
+│   ├── supabase.ts           # DB client
+│   ├── utils.ts              # Helpers
+│   └── constants.ts          # Config
+└── schema.sql                # Database schema
+```
+
+## Deployment
+
+### Vercel (Recommended)
+
+1. Push to GitHub
+2. Import in Vercel
+3. Add environment variables
+4. Deploy
+
+### Self-Hosted
+
+```bash
+npm run build
+npm start
+```
+
+## License
+
+MIT
