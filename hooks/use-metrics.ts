@@ -2,6 +2,7 @@
 
 import useSWR, { SWRConfiguration } from 'swr';
 import { fetcher } from '@/lib/fetcher';
+import { useWorkspace } from '@/lib/workspace-context';
 
 // Re-export types from shared types file for backwards compatibility
 export type {
@@ -66,7 +67,6 @@ export function useMetricsSummary(start: string, end: string, campaign?: string)
     isLoading,
     isError: error,
     mutate,
-    retry: () => mutate(), // Phase 13: Add retry capability
   };
 }
 
@@ -80,7 +80,7 @@ export function useTimeSeries(
   const params = new URLSearchParams({ metric, start, end });
   if (campaign) params.set('campaign', campaign);
 
-  const { data, error, isLoading, mutate } = useSWR<TimeSeriesData>(
+  const { data, error, isLoading } = useSWR<TimeSeriesData>(
     `/api/metrics/timeseries?${params.toString()}`,
     fetcher,
     { 
@@ -93,8 +93,6 @@ export function useTimeSeries(
     data: data?.points || [],
     isLoading,
     isError: error,
-    mutate,
-    retry: () => mutate(), // Phase 13: Add retry capability
   };
 }
 
@@ -102,7 +100,7 @@ export function useTimeSeries(
 export function useCampaignStats(start: string, end: string) {
   const params = new URLSearchParams({ start, end });
 
-  const { data, error, isLoading, mutate } = useSWR<CampaignData>(
+  const { data, error, isLoading } = useSWR<CampaignData>(
     `/api/metrics/by-campaign?${params.toString()}`,
     fetcher,
     { 
@@ -115,8 +113,6 @@ export function useCampaignStats(start: string, end: string) {
     campaigns: data?.campaigns || [],
     isLoading,
     isError: error,
-    mutate,
-    retry: () => mutate(), // Phase 13: Add retry capability
   };
 }
 
@@ -140,13 +136,12 @@ export function useCostBreakdown(start: string, end: string, campaign?: string, 
     isLoading,
     isError: error,
     mutate,
-    retry: () => mutate(), // Phase 13: Add retry capability
   };
 }
 
 // Hook to fetch campaigns list (from Supabase)
 export function useCampaigns() {
-  const { data, error, isLoading, mutate } = useSWR<CampaignList>(
+  const { data, error, isLoading } = useSWR<CampaignList>(
     '/api/campaigns',
     fetcher,
     { 
@@ -160,8 +155,6 @@ export function useCampaigns() {
     campaigns: data?.campaigns || [],
     isLoading,
     isError: error,
-    mutate,
-    retry: () => mutate(), // Phase 13: Add retry capability
   };
 }
 
@@ -183,7 +176,6 @@ export function useGoogleSheetsStats() {
     isLoading,
     isError: error,
     mutate,
-    retry: () => mutate(), // Phase 13: Add retry capability
   };
 }
 
@@ -211,7 +203,6 @@ export function useStepBreakdown(start: string, end: string, campaign?: string) 
     isLoading,
     isError: error,
     mutate,
-    retry: () => mutate(), // Phase 13: Add retry capability
   };
 }
 
@@ -236,8 +227,11 @@ export interface SenderStatsData {
 
 // Hook to fetch per-sender statistics (from Supabase)
 export function useSenderStats(start: string, end: string, campaign?: string) {
+  const { workspaceId, isLoading: workspaceLoading } = useWorkspace();
+
   const params = new URLSearchParams({ start, end });
   if (campaign) params.set('campaign', campaign);
+  if (workspaceId) params.set('workspace_id', workspaceId);
 
   const { data, error, isLoading, mutate } = useSWR<SenderStatsData>(
     `/api/metrics/by-sender?${params.toString()}`,
@@ -254,6 +248,5 @@ export function useSenderStats(start: string, end: string, campaign?: string) {
     isLoading,
     isError: error,
     mutate,
-    retry: () => mutate(), // Phase 13: Add retry capability
   };
 }

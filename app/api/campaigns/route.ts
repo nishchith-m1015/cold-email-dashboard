@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, DEFAULT_WORKSPACE_ID } from '@/lib/supabase';
 import { EXCLUDED_CAMPAIGNS, shouldExcludeCampaign } from '@/lib/db-queries';
+import { validateWorkspaceAccess } from '@/lib/api-workspace-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,11 +18,16 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const workspaceId = searchParams.get('workspace_id') || DEFAULT_WORKSPACE_ID;
 
+  // Workspace access validation (SECURITY: Prevents unauthorized data access)
+  const accessError = await validateWorkspaceAccess(req, searchParams);
+  if (accessError) {
+    return accessError;
+  }
+
   try {
-    // Get unique campaign names from mv_daily_stats (materialized view)
-    // Using materialized view for better performance
+    // Get unique campaign names from daily_stats (with exclusion filter)
     let query = supabaseAdmin
-      .from('mv_daily_stats')
+      .from('daily_stats')
       .select('campaign_name')
       .eq('workspace_id', workspaceId)
       .not('campaign_name', 'is', null);

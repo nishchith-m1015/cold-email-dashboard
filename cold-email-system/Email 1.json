@@ -3,8 +3,33 @@
   "nodes": [
     {
       "parameters": {
+        "sendTo": "={{ $json.email_address }}",
+        "subject": "={{ $json.email_1_subject }}",
+        "message": "={{ $json['email_1_body'] + '<br><br><a href=\"https://n8n-deployment-hlnal.ondigitalocean.app/webhook/Unsubscribe?tkn=' + $json.Token + '\">Click Here to Unsubscribe</a>' }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1264,
+        992
+      ],
+      "id": "c661b711-92da-4f22-a506-cc64dc69f606",
+      "name": "Gmail",
+      "webhookId": "7991dbd6-9db7-4a38-ab95-b4c9756b93ee",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tUD6GQ7CnHfvUM7k",
+          "name": "Smartie Agents"
+        }
+      }
+    },
+    {
+      "parameters": {
         "method": "POST",
-        "url": "https://cold-email-dashboard.vercel.app/api/cost-events",
+        "url": "https://cold-email-dashboard.vercel.app/api/events",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -20,43 +45,18 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contact_email\": \"{{ $('Google Sheets').item.json.email_address }}\",\n  \"campaign\": \"Ohio\",\n  \"step\": 1,\n  \"event_type\": \"sent\",\n  \"provider\": \"gmail\",\n  \"provider_message_id\": \"{{ $json.id }}\",\n  \"event_ts\": \"{{ new Date().toISOString() }}\",\n  \"subject\": \"{{ $('Google Sheets').item.json.email_1_subject }}\",\n  \"body\": \"{{ $('Google Sheets').item.json.email_1_body }}\",\n  \"idempotency_key\": \"email_{{ $execution.id }}_{{ $('Google Sheets').item.json.email_address }}_step1\",\n  \"n8n_execution_id\": \"{{ $execution.id }}\"\n}",
+        "jsonBody": "={\n  \"contact_email\": \"{{ $('Google Sheets5').item.json.email_address }}\",\n  \"campaign\": \"Ohio\",\n  \"step\": 1,\n  \"event_type\": \"sent\",\n  \"provider\": \"gmail\",\n  \"provider_message_id\": \"{{ $json.id }}\",\n  \"event_ts\": \"{{ new Date().toISOString() }}\",\n  \"subject\": \"{{ $('Google Sheets5').item.json.email_1_subject }}\",\n  \"body\": \"{{ $('Google Sheets5').item.json.email_1_body }}\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3680,
-        2032
+        1464,
+        992
       ],
-      "id": "8a2e8d0d-e417-4654-84ea-401658c98942",
+      "id": "track-email-1",
       "name": "Track Email Sent",
       "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "sendTo": "={{ $json.email_address }}",
-        "subject": "={{ $json.email_1_subject }}",
-        "message": "={{ $json.tracked_body + '<br><br><a href=\"https://n8n-deployment-hlnal.ondigitalocean.app/webhook/Unsubscribe?tkn=' + $json.Token + '\">Click Here to Unsubscribe</a>' }}",
-        "options": {
-          "appendAttribution": false
-        }
-      },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
-      "position": [
-        3488,
-        2032
-      ],
-      "id": "bb291b29-83ac-462d-8d6a-5ae18915e7c1",
-      "name": "Gmail1",
-      "webhookId": "7991dbd6-9db7-4a38-ab95-b4c9756b93ee",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "tUD6GQ7CnHfvUM7k",
-          "name": "Smartie Agents"
-        }
-      }
     },
     {
       "parameters": {
@@ -65,11 +65,11 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        2848,
-        2032
+        736,
+        992
       ],
-      "id": "a8c7507b-c84c-4eb6-b262-2834dbf7c9dc",
-      "name": "Loop Over Items1"
+      "id": "4611ef28-e1aa-4d40-b0a2-5c0f8b2a487d",
+      "name": "Loop Over Items"
     },
     {
       "parameters": {
@@ -85,11 +85,11 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        2256,
-        2032
+        144,
+        992
       ],
-      "id": "ef449e59-b4b5-46f2-9906-4adaa64e2028",
-      "name": "Schedule Trigger"
+      "id": "27497a6b-9af1-4919-b30a-d309553fff3a",
+      "name": "Schedule Trigger1"
     },
     {
       "parameters": {
@@ -120,16 +120,16 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        2432,
-        2032
+        320,
+        992
       ],
-      "id": "3bb176d2-c5b9-44ef-b6d7-1d6954057224",
-      "name": "Google Sheets",
+      "id": "f83e0446-e0b1-468c-822b-d29ac6181440",
+      "name": "Google Sheets5",
       "alwaysOutputData": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "2EUpgH0WFkM3Lr6E",
-          "name": "Nishchith Sheets account"
+          "id": "p8ESE0UMGdJsRvZv",
+          "name": "Smartie Agents"
         }
       }
     },
@@ -137,17 +137,17 @@
       "parameters": {
         "content": "## Email 1\n",
         "height": 608,
-        "width": 2064,
+        "width": 1856,
         "color": 4
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        2192,
-        1904
+        80,
+        864
       ],
       "typeVersion": 1,
-      "id": "9ab6cc03-42ef-4a13-940f-1b58e782a978",
-      "name": "Sticky Note"
+      "id": "22697491-9caa-4230-8478-676ed8063e44",
+      "name": "Sticky Note9"
     },
     {
       "parameters": {
@@ -177,11 +177,11 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3072,
-        2048
+        1024,
+        1008
       ],
-      "id": "b69d766e-73ec-47da-9195-9306be2d722d",
-      "name": "If1"
+      "id": "bc837160-29d7-4a67-a3c3-be9d30af68d0",
+      "name": "If"
     },
     {
       "parameters": {
@@ -190,11 +190,11 @@
       "type": "n8n-nodes-base.limit",
       "typeVersion": 1,
       "position": [
-        2624,
-        2032
+        512,
+        992
       ],
-      "id": "2dd23029-5f3d-45c1-9590-b08aa3da616d",
-      "name": "Limit1"
+      "id": "a4d9d223-9134-444d-8f8d-65f396973436",
+      "name": "Limit"
     },
     {
       "parameters": {
@@ -612,11 +612,11 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        3920,
-        2272
+        1728,
+        1232
       ],
-      "id": "7772919b-0951-4ed9-b965-6a9b6ee5eecf",
-      "name": "Email #1 not sent1",
+      "id": "b8b17f78-3c4f-459e-9303-88c3df999474",
+      "name": "Email #1 not sent",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "p8ESE0UMGdJsRvZv",
@@ -644,7 +644,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "linkedin_url": "={{ $('Google Sheets').item.json.linkedin_url }}",
+            "linkedin_url": "={{ $('Google Sheets5').item.json.linkedin_url }}",
             "email_1_sent": "Yes",
             "message_id": "={{ $json.threadId }}"
           },
@@ -1041,11 +1041,11 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        3888,
-        2032
+        1520,
+        992
       ],
-      "id": "92eb9084-788f-4839-b210-765f5811be27",
-      "name": "Email Sent Yes1",
+      "id": "c58deb53-5bae-4eac-a015-8fa940a59016",
+      "name": "Email Sent Yes",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "p8ESE0UMGdJsRvZv",
@@ -1060,41 +1060,17 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        4064,
-        2032
+        1776,
+        992
       ],
-      "id": "0e714d2c-c37d-46e5-bb07-c04985bfcb5f",
-      "name": "Wait1",
+      "id": "08ff7d51-8182-4f1b-bcdc-dc87357a4e90",
+      "name": "Wait",
       "webhookId": "55a02575-e3a1-4f7c-8dcd-eb9245256d57"
-    },
-    {
-      "parameters": {
-        "jsCode": "// EMAIL 1 TRACKING INJECTOR\nconst DASHBOARD_URL = 'https://cold-email-dashboard.vercel.app';\n\nconst emailBody = $json.email_1_body || '';\nconst contactEmail = $json.email_address || '';\nconst campaign = $json.state || 'Ohio';\nconst step = 1;\n\nconst token = `${contactEmail}-${step}-${Date.now()}`;\nconst encodedToken = encodeURIComponent(token);\n\nconst trackingPixelUrl = `${DASHBOARD_URL}/api/track/open?e=${encodeURIComponent(contactEmail)}&c=${encodeURIComponent(campaign)}&s=${step}&t=${encodedToken}`;\n\nfunction wrapLink(originalUrl, linkId) {\n  return `${DASHBOARD_URL}/api/track/click?url=${encodeURIComponent(originalUrl)}&e=${encodeURIComponent(contactEmail)}&c=${encodeURIComponent(campaign)}&s=${step}&l=${encodeURIComponent(linkId || 'cta')}`;\n}\n\nlet trackedBody = emailBody;\nconst linkRegex = /<a\\s+([^>]*?)href=[\"']([^\"']+)[\"']([^>]*?)>/gi;\nlet linkIndex = 0;\n\ntrackedBody = trackedBody.replace(linkRegex, (match, before, url, after) => {\n  if (url.startsWith('mailto:') || url.startsWith('tel:') || url.startsWith('#')) return match;\n  linkIndex++;\n  return `<a ${before}href=\"${wrapLink(url, 'link_' + linkIndex)}\"${after}>`;\n});\n\nconst trackingPixel = `<img src=\"${trackingPixelUrl}\" width=\"1\" height=\"1\" style=\"display:none;\" alt=\"\" />`;\ntrackedBody = trackedBody.includes('</body>') \n  ? trackedBody.replace('</body>', trackingPixel + '</body>') \n  : trackedBody + '\\n' + trackingPixel;\n\nreturn [{\n  json: {\n    ...$json,\n    email_1_body: trackedBody,\n    links_tracked: linkIndex\n  }\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        3280,
-        2032
-      ],
-      "id": "2da61d76-b371-44f7-b3d8-a698c5d91397",
-      "name": " Inject Tracking  "
     }
   ],
   "pinData": {},
   "connections": {
-    "Track Email Sent": {
-      "main": [
-        [
-          {
-            "node": "Email Sent Yes1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Gmail1": {
+    "Gmail": {
       "main": [
         [
           {
@@ -1105,107 +1081,107 @@
         ]
       ]
     },
-    "Loop Over Items1": {
+    "Track Email Sent": {
+      "main": [
+        [
+          {
+            "node": "Email Sent Yes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
       "main": [
         [],
         [
           {
-            "node": "If1",
+            "node": "If",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Schedule Trigger": {
+    "Schedule Trigger1": {
       "main": [
         [
           {
-            "node": "Google Sheets",
+            "node": "Google Sheets5",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Google Sheets": {
+    "Google Sheets5": {
       "main": [
         [
           {
-            "node": "Limit1",
+            "node": "Limit",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If1": {
+    "If": {
       "main": [
         [
           {
-            "node": " Inject Tracking  ",
+            "node": "Gmail",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Email #1 not sent1",
+            "node": "Email #1 not sent",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Limit1": {
+    "Limit": {
       "main": [
         [
           {
-            "node": "Loop Over Items1",
+            "node": "Loop Over Items",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Email #1 not sent1": {
+    "Email #1 not sent": {
       "main": [
         [
           {
-            "node": "Loop Over Items1",
+            "node": "Loop Over Items",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Email Sent Yes1": {
+    "Email Sent Yes": {
       "main": [
         [
           {
-            "node": "Wait1",
+            "node": "Wait",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Wait1": {
+    "Wait": {
       "main": [
         [
           {
-            "node": "Loop Over Items1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    " Inject Tracking  ": {
-      "main": [
-        [
-          {
-            "node": "Gmail1",
+            "node": "Loop Over Items",
             "type": "main",
             "index": 0
           }
@@ -1223,7 +1199,7 @@
     "timeSavedPerExecution": 5,
     "availableInMCP": false
   },
-  "versionId": "62c77f9c-fed6-4674-9d33-69cf29106f90",
+  "versionId": "d472d330-ada6-452d-8aba-b2dc8c9f374e",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "fb0f3042150127121074617aaee31b106c313805cbc452132240d35f72eba898"

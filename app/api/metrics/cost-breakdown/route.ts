@@ -4,6 +4,7 @@ import { API_HEADERS } from '@/lib/utils';
 import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '@/lib/rate-limit';
 import { cacheManager, apiCacheKey, CACHE_TTL } from '@/lib/cache';
 import { EXCLUDED_CAMPAIGNS } from '@/lib/db-queries';
+import { validateWorkspaceAccess } from '@/lib/api-workspace-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,10 +61,10 @@ async function fetchCostBreakdown(
   }
 
   // Query LLM usage
-  // TEMPORARY: Remove workspace_id filter until data migration is complete
   let query = supabaseAdmin
     .from('llm_usage')
     .select('provider, model, tokens_in, tokens_out, cost_usd, created_at')
+    .eq('workspace_id', workspaceId)
     .gte('created_at', `${startDate}T00:00:00Z`)
     .lte('created_at', `${endDate}T23:59:59Z`);
 
@@ -224,6 +225,12 @@ export async function GET(req: NextRequest) {
   const campaign = searchParams.get('campaign');
   const provider = searchParams.get('provider');
   const workspaceId = searchParams.get('workspace_id') || DEFAULT_WORKSPACE_ID;
+
+  // Workspace access validation (SECURITY: Prevents unauthorized data access)
+  const accessError = await validateWorkspaceAccess(req, searchParams);
+  if (accessError) {
+    return accessError;
+  }
 
   // Default to last 30 days
   const startDate = start || new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);

@@ -4,6 +4,7 @@ import { API_HEADERS } from '@/lib/utils';
 import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '@/lib/rate-limit';
 import { cacheManager, apiCacheKey, CACHE_TTL } from '@/lib/cache';
 import { EXCLUDED_CAMPAIGNS, shouldExcludeCampaign } from '@/lib/db-queries';
+import { validateWorkspaceAccess } from '@/lib/api-workspace-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -214,152 +215,146 @@ async function fetchAggregateData(
     return emptyResponse(startDate, endDate);
   }
 
-  try {
-    // Calculate previous period dates
-    const periodDays = Math.ceil(
-      (new Date(endDate).getTime() - new Date(startDate).getTime()) / (24 * 3600 * 1000)
-    ) + 1;
-    const prevStartDate = new Date(
-      new Date(startDate).getTime() - periodDays * 24 * 3600 * 1000
-    ).toISOString().slice(0, 10);
-    const prevEndDate = new Date(
-      new Date(startDate).getTime() - 24 * 3600 * 1000
-    ).toISOString().slice(0, 10);
+  // Calculate previous period dates
+  const periodDays = Math.ceil(
+    (new Date(endDate).getTime() - new Date(startDate).getTime()) / (24 * 3600 * 1000)
+  ) + 1;
+  const prevStartDate = new Date(
+    new Date(startDate).getTime() - periodDays * 24 * 3600 * 1000
+  ).toISOString().slice(0, 10);
+  const prevEndDate = new Date(
+    new Date(startDate).getTime() - 24 * 3600 * 1000
+  ).toISOString().slice(0, 10);
 
   // ============================================
-  // BUILD ALL QUERIES (OPTIMIZED WITH MATERIALIZED VIEWS)
+  // BUILD ALL QUERIES
   // ============================================
 
-  // OPTIMIZATION: Use materialized views for aggregated data
-  // This reduces query complexity from O(n) table scans to O(1) index lookups
-  
-  // 1. Summary data from mv_daily_stats (much faster than email_events scan)
-  let currentStatsQuery = supabaseAdmin
-    .from('mv_daily_stats')
-    .select('day, campaign_name, sends, delivered, opens, clicks, replies, bounces, opt_outs, unique_contacts, email_1_sends, email_2_sends, email_3_sends')
+  // 1. Current period email events (for summary)
+  let currentEventsQuery = supabaseAdmin
+    .from('email_events')
+    .select('event_type, step, event_ts, contact_email, campaign_name')
+    .eq('workspace_id', workspaceId)
+    .gte('event_ts', `${startDate}T00:00:00Z`)
+    .lte('event_ts', `${endDate}T23:59:59Z`);
+
+  // 2. Previous period email events (for comparison)
+  let prevEventsQuery = supabaseAdmin
+    .from('email_events')
+    .select('event_type')
+    .eq('workspace_id', workspaceId)
+    .gte('event_ts', `${prevStartDate}T00:00:00Z`)
+    .lte('event_ts', `${prevEndDate}T23:59:59Z`);
+
+  // 3. Daily stats (for timeseries)
+  let dailyStatsQuery = supabaseAdmin
+    .from('daily_stats')
+    .select('day, sends, replies, opt_outs, bounces, campaign_name')
     .eq('workspace_id', workspaceId)
     .gte('day', startDate)
-    .lte('day', endDate);
+    .lte('day', endDate)
+    .order('day', { ascending: true });
 
-  // 2. Previous period stats for comparison
-  let prevStatsQuery = supabaseAdmin
-    .from('mv_daily_stats')
-    .select('sends, replies')
+  // 4. LLM usage (for cost breakdown)
+  let llmUsageQuery = supabaseAdmin
+    .from('llm_usage')
+    .select('provider, model, tokens_in, tokens_out, cost_usd, created_at, campaign_name')
     .eq('workspace_id', workspaceId)
-    .gte('day', prevStartDate)
-    .lte('day', prevEndDate);
+    .gte('created_at', `${startDate}T00:00:00Z`)
+    .lte('created_at', `${endDate}T23:59:59Z`);
 
-  // 3. Cost data from mv_llm_cost (aggregated by day/provider/model)
-  let costStatsQuery = supabaseAdmin
-    .from('mv_llm_cost')
-    .select('day, provider, model, total_cost, total_tokens_in, total_tokens_out, call_count')
-    .gte('day', startDate)
-    .lte('day', endDate);
+  // 5. Click events (for click rate timeseries)
+  let clickEventsQuery = supabaseAdmin
+    .from('email_events')
+    .select('created_at')
+    .eq('workspace_id', workspaceId)
+    .eq('event_type', 'clicked')
+    .gte('created_at', `${startDate}T00:00:00Z`)
+    .lte('created_at', `${endDate}T23:59:59Z`);
 
-  // 4. Campaign names (for dropdown) - get ALL campaigns in workspace (not filtered by date)
-  // This ensures dropdown always shows all available campaigns, not just those in date range
+  // 6. Campaign names (for dropdown)
   let campaignNamesQuery = supabaseAdmin
-    .from('mv_daily_stats')
+    .from('daily_stats')
     .select('campaign_name')
     .eq('workspace_id', workspaceId)
     .not('campaign_name', 'is', null);
 
-  // 5. Leads count (for percentage calculation)
+  // 7. Leads count (for percentage calculation)
   const leadsCountQuery = supabaseAdmin
     .from('leads_ohio')
-    .select('*', { count: 'exact', head: true });
-
-  // REMOVED: uniqueContactsQuery - We'll calculate from materialized view instead
-  // This eliminates a slow raw table scan and uses pre-aggregated data
+    .select('*', { count: 'exact', head: true })
+    .eq('workspace_id', workspaceId);
 
   // Apply campaign filter OR global exclusion
-  // CRITICAL FIX: Use case-insensitive matching and trim whitespace
-  const trimmedCampaign = campaign?.trim();
-  
-  if (trimmedCampaign) {
-    // Filter by campaign name (case-insensitive match, trimmed)
-    // Using ilike for case-insensitive matching to handle "Ohio" vs "ohio"
-    currentStatsQuery = currentStatsQuery.ilike('campaign_name', trimmedCampaign);
-    prevStatsQuery = prevStatsQuery.ilike('campaign_name', trimmedCampaign);
-    // Note: mv_llm_cost might not have campaign_name, so skip it for now
-    // costStatsQuery = costStatsQuery.ilike('campaign_name', trimmedCampaign);
+  if (campaign) {
+    currentEventsQuery = currentEventsQuery.eq('campaign_name', campaign);
+    prevEventsQuery = prevEventsQuery.eq('campaign_name', campaign);
+    dailyStatsQuery = dailyStatsQuery.eq('campaign_name', campaign);
+    llmUsageQuery = llmUsageQuery.eq('campaign_name', campaign);
+    clickEventsQuery = clickEventsQuery.eq('campaign_name', campaign);
   } else {
-    // Exclude test/internal campaigns globally
     for (const excludedCampaign of EXCLUDED_CAMPAIGNS) {
-      currentStatsQuery = currentStatsQuery.neq('campaign_name', excludedCampaign);
-      prevStatsQuery = prevStatsQuery.neq('campaign_name', excludedCampaign);
+      currentEventsQuery = currentEventsQuery.neq('campaign_name', excludedCampaign);
+      prevEventsQuery = prevEventsQuery.neq('campaign_name', excludedCampaign);
+      dailyStatsQuery = dailyStatsQuery.neq('campaign_name', excludedCampaign);
+      llmUsageQuery = llmUsageQuery.neq('campaign_name', excludedCampaign);
+      clickEventsQuery = clickEventsQuery.neq('campaign_name', excludedCampaign);
       campaignNamesQuery = campaignNamesQuery.neq('campaign_name', excludedCampaign);
     }
   }
 
   // Apply provider filter for cost breakdown
   if (providerFilter && providerFilter !== 'all') {
-    costStatsQuery = costStatsQuery.eq('provider', providerFilter);
+    llmUsageQuery = llmUsageQuery.eq('provider', providerFilter);
   }
 
   // ============================================
-  // EXECUTE ALL QUERIES IN PARALLEL (OPTIMIZED)
+  // EXECUTE ALL QUERIES IN PARALLEL
   // ============================================
 
   const [
-    currentStatsResult,
-    prevStatsResult,
-    costStatsResult,
+    currentEventsResult,
+    prevEventsResult,
+    dailyStatsResult,
+    llmUsageResult,
+    clickEventsResult,
     campaignNamesResult,
     leadsCountResult,
   ] = await Promise.all([
-    currentStatsQuery,
-    prevStatsQuery,
-    costStatsQuery,
+    currentEventsQuery,
+    prevEventsQuery,
+    dailyStatsQuery,
+    llmUsageQuery,
+    clickEventsQuery,
     campaignNamesQuery,
     leadsCountQuery,
   ]);
 
   // Handle errors
-  if (currentStatsResult.error) {
-    console.error('Current stats query error:', currentStatsResult.error);
+  if (currentEventsResult.error) {
+    console.error('Current events query error:', currentEventsResult.error);
     return emptyResponse(startDate, endDate);
   }
 
   // ============================================
-  // PROCESS SUMMARY DATA (FROM MATERIALIZED VIEW)
+  // PROCESS SUMMARY DATA
   // ============================================
 
-  const dailyStats = Array.isArray(currentStatsResult.data) ? currentStatsResult.data : [];
-  
-  // Defensive: Ensure all rows have valid structure and normalize dates
-  // CRITICAL FIX: Materialized view might return timestamps, normalize to YYYY-MM-DD
-  const validDailyStats = dailyStats.filter(row => 
-    row && typeof row === 'object' && row.day
-  ).map(row => ({
-    ...row,
-    // Normalize day to YYYY-MM-DD format (in case it's a timestamp)
-    day: typeof row.day === 'string' ? row.day.slice(0, 10) : row.day
-  }));
-  
-  // Aggregate totals from daily stats (already pre-aggregated)
-  const totals = validDailyStats.reduce((acc, row) => ({
-    sends: acc.sends + (Number(row.sends) || 0),
-    replies: acc.replies + (Number(row.replies) || 0),
-    opt_outs: acc.opt_outs + (Number(row.opt_outs) || 0),
-    bounces: acc.bounces + (Number(row.bounces) || 0),
-    opens: acc.opens + (Number(row.opens) || 0),
-    clicks: acc.clicks + (Number(row.clicks) || 0),
-    // Include email sequence breakdown for unique contacts calculation
-    email_1_sends: acc.email_1_sends + (Number(row.email_1_sends) || 0),
-    email_2_sends: acc.email_2_sends + (Number(row.email_2_sends) || 0),
-    email_3_sends: acc.email_3_sends + (Number(row.email_3_sends) || 0),
-  }), { 
-    sends: 0, 
-    replies: 0, 
-    opt_outs: 0, 
-    bounces: 0, 
-    opens: 0, 
-    clicks: 0,
-    email_1_sends: 0,
-    email_2_sends: 0,
-    email_3_sends: 0,
-  });
+  const currentEvents = currentEventsResult.data as Array<{
+    event_type: string;
+    step: number | null;
+    event_ts: string;
+    contact_email: string | null;
+    campaign_name?: string | null;
+  }> || [];
+  const totals = {
+    sends: currentEvents.filter(e => e.event_type === 'sent').length,
+    replies: currentEvents.filter(e => e.event_type === 'replied').length,
+    opt_outs: currentEvents.filter(e => e.event_type === 'opt_out').length,
+    bounces: currentEvents.filter(e => e.event_type === 'bounced').length,
+    opens: currentEvents.filter(e => e.event_type === 'opened').length,
+    clicks: currentEvents.filter(e => e.event_type === 'clicked').length,
+  };
 
   // Calculate rates
   const replyRatePct = totals.sends > 0
@@ -378,13 +373,12 @@ async function fetchAggregateData(
     ? Number(((totals.clicks / totals.sends) * 100).toFixed(2))
     : 0;
 
-  // Previous period comparison (also from materialized view)
-  const prevStats = Array.isArray(prevStatsResult.data) ? prevStatsResult.data : [];
-  const prevTotals = prevStats.reduce((acc, row) => ({
-    sends: acc.sends + (Number(row.sends) || 0),
-    replies: acc.replies + (Number(row.replies) || 0),
-  }), { sends: 0, replies: 0 });
-  
+  // Previous period comparison
+  const prevEvents = prevEventsResult.data || [];
+  const prevTotals = {
+    sends: prevEvents.filter(e => e.event_type === 'sent').length,
+    replies: prevEvents.filter(e => e.event_type === 'replied').length,
+  };
   const prevReplyRatePct = prevTotals.sends > 0
     ? Number(((prevTotals.replies / prevTotals.sends) * 100).toFixed(2))
     : 0;
@@ -395,60 +389,82 @@ async function fetchAggregateData(
   const replyRateChange = Number((replyRatePct - prevReplyRatePct).toFixed(2));
 
   // ============================================
-  // PROCESS TIMESERIES DATA (FROM MATERIALIZED VIEW)
+  // PROCESS TIMESERIES DATA
   // ============================================
 
-  // Data is already aggregated by day in mv_daily_stats!
-  // No need to group by day manually - just use the pre-aggregated values
+  const dailyStats = dailyStatsResult.data || [];
+  const dayMap = new Map<string, { sends: number; replies: number; opt_outs: number; bounces: number }>();
 
-  // Build timeseries arrays directly from aggregated data
+  for (const row of dailyStats) {
+    const existing = dayMap.get(row.day) || { sends: 0, replies: 0, opt_outs: 0, bounces: 0 };
+    dayMap.set(row.day, {
+      sends: existing.sends + (row.sends || 0),
+      replies: existing.replies + (row.replies || 0),
+      opt_outs: existing.opt_outs + (row.opt_outs || 0),
+      bounces: existing.bounces + (row.bounces || 0),
+    });
+  }
+
+  // Click events by day
+  const clicksByDay = new Map<string, number>();
+  if (clickEventsResult.data && !clickEventsResult.error) {
+    for (const row of clickEventsResult.data) {
+      const day = row.created_at?.slice(0, 10);
+      if (day) {
+        clicksByDay.set(day, (clicksByDay.get(day) || 0) + 1);
+      }
+    }
+  }
+
+  // Build timeseries arrays
   const sendsPoints: TimeseriesPoint[] = [];
   const repliesPoints: TimeseriesPoint[] = [];
   const replyRatePoints: TimeseriesPoint[] = [];
   const clickRatePoints: TimeseriesPoint[] = [];
   const optOutRatePoints: TimeseriesPoint[] = [];
 
-  for (const row of validDailyStats) {
-    const day = row.day;
-    const sends = Number(row.sends) || 0;
-    const replies = Number(row.replies) || 0;
-    const clicks = Number(row.clicks) || 0;
-    const optOuts = Number(row.opt_outs) || 0;
-
-    sendsPoints.push({ day, value: sends });
-    repliesPoints.push({ day, value: replies });
+  for (const [day, stats] of dayMap) {
+    sendsPoints.push({ day, value: stats.sends });
+    repliesPoints.push({ day, value: stats.replies });
     replyRatePoints.push({
       day,
-      value: sends > 0 ? Number(((replies / sends) * 100).toFixed(2)) : 0,
+      value: stats.sends > 0 ? Number(((stats.replies / stats.sends) * 100).toFixed(2)) : 0,
     });
+    const clicks = clicksByDay.get(day) || 0;
     clickRatePoints.push({
       day,
-      value: sends > 0 ? Number(((clicks / sends) * 100).toFixed(2)) : 0,
+      value: stats.sends > 0 ? Number(((clicks / stats.sends) * 100).toFixed(2)) : 0,
     });
     optOutRatePoints.push({
       day,
-      value: sends > 0 ? Number(((optOuts / sends) * 100).toFixed(2)) : 0,
+      value: stats.sends > 0 ? Number(((stats.opt_outs / stats.sends) * 100).toFixed(2)) : 0,
     });
   }
 
   // ============================================
-  // PROCESS COST BREAKDOWN DATA (FROM MATERIALIZED VIEW)
+  // PROCESS COST BREAKDOWN DATA
   // ============================================
 
-  const costStats = Array.isArray(costStatsResult.data) ? costStatsResult.data : [];
+  const llmUsage = llmUsageResult.data as Array<{
+    provider: string | null;
+    model: string | null;
+    tokens_in: number | null;
+    tokens_out: number | null;
+    cost_usd: number | null;
+    created_at: string | null;
+    campaign_name?: string | null;
+  }> || [];
   const providerMap = new Map<string, { cost_usd: number; tokens_in: number; tokens_out: number; calls: number }>();
   const modelMap = new Map<string, { cost_usd: number; tokens_in: number; tokens_out: number; calls: number; provider: string }>();
   const dailyCosts = new Map<string, number>();
 
-  // Aggregate pre-calculated stats from mv_llm_cost
-  for (const row of costStats) {
+  for (const row of llmUsage) {
     const provider = row.provider || 'unknown';
     const model = row.model || 'unknown';
-    const cost = Number(row.total_cost) || 0;
-    const tokensIn = row.total_tokens_in || 0;
-    const tokensOut = row.total_tokens_out || 0;
-    const calls = row.call_count || 0;
-    const day = row.day;
+    const cost = Number(row.cost_usd) || 0;
+    const tokensIn = row.tokens_in || 0;
+    const tokensOut = row.tokens_out || 0;
+    const day = row.created_at?.slice(0, 10) || 'unknown';
 
     // By provider
     const existingProvider = providerMap.get(provider) || { cost_usd: 0, tokens_in: 0, tokens_out: 0, calls: 0 };
@@ -456,7 +472,7 @@ async function fetchAggregateData(
       cost_usd: existingProvider.cost_usd + cost,
       tokens_in: existingProvider.tokens_in + tokensIn,
       tokens_out: existingProvider.tokens_out + tokensOut,
-      calls: existingProvider.calls + calls,
+      calls: existingProvider.calls + 1,
     });
 
     // By model
@@ -467,7 +483,7 @@ async function fetchAggregateData(
       cost_usd: existingModel.cost_usd + cost,
       tokens_in: existingModel.tokens_in + tokensIn,
       tokens_out: existingModel.tokens_out + tokensOut,
-      calls: existingModel.calls + calls,
+      calls: existingModel.calls + 1,
     });
 
     // Daily costs
@@ -505,16 +521,31 @@ async function fetchAggregateData(
   const totalCalls = byProvider.reduce((sum, p) => sum + p.calls, 0);
 
   // ============================================
-  // PROCESS STEP BREAKDOWN DATA (FROM MATERIALIZED VIEW)
+  // PROCESS STEP BREAKDOWN DATA
   // ============================================
 
-  // Use the email_X_sends columns from mv_daily_stats
-  const stepTotals = validDailyStats.reduce((acc, row) => ({
-    email_1: acc.email_1 + (Number(row.email_1_sends) || 0),
-    email_2: acc.email_2 + (Number(row.email_2_sends) || 0),
-    email_3: acc.email_3 + (Number(row.email_3_sends) || 0),
-    totalSends: acc.totalSends + (Number(row.sends) || 0),
-  }), { email_1: 0, email_2: 0, email_3: 0, totalSends: 0 });
+  const stepMap = new Map<number, { count: number; lastSent: string | null }>();
+  const stepDailyMap = new Map<string, number>();
+  const email1Recipients = new Set<string>();
+
+  for (const event of currentEvents.filter(e => e.event_type === 'sent')) {
+    const step = event.step || 1;
+    const current = stepMap.get(step) || { count: 0, lastSent: null };
+    current.count++;
+    if (!current.lastSent || event.event_ts > current.lastSent) {
+      current.lastSent = event.event_ts;
+    }
+    stepMap.set(step, current);
+
+    // Track unique Email 1 recipients
+    if (step === 1 && event.contact_email) {
+      email1Recipients.add(event.contact_email.toLowerCase());
+    }
+
+    // Daily sends
+    const day = event.event_ts.slice(0, 10);
+    stepDailyMap.set(day, (stepDailyMap.get(day) || 0) + 1);
+  }
 
   const stepNames: Record<number, string> = {
     1: 'Email 1 (Initial Outreach)',
@@ -522,43 +553,28 @@ async function fetchAggregateData(
     3: 'Email 3 (Final Follow-up)',
   };
 
-  const steps: StepBreakdown[] = [
-    {
-      step: 1,
-      name: stepNames[1],
-      sends: stepTotals.email_1,
-      lastSentAt: undefined, // Can add this later if needed
-    },
-    {
-      step: 2,
-      name: stepNames[2],
-      sends: stepTotals.email_2,
-      lastSentAt: undefined,
-    },
-    {
-      step: 3,
-      name: stepNames[3],
-      sends: stepTotals.email_3,
-      lastSentAt: undefined,
-    },
-  ];
+  const steps: StepBreakdown[] = [1, 2, 3].map(step => ({
+    step,
+    name: stepNames[step],
+    sends: stepMap.get(step)?.count || 0,
+    lastSentAt: stepMap.get(step)?.lastSent || undefined,
+  }));
 
-  // Daily sends for chart (aggregated from mv_daily_stats)
-  const dailySends: DailySend[] = validDailyStats
-    .map(row => ({
-      date: row.day,
-      count: Number(row.sends) || 0,
-    }))
-    .filter(item => item.date) // Remove any invalid dates
-    .sort((a, b) => a.date.localeCompare(b.date));
+  // Daily sends for chart
+  const dailySends: DailySend[] = [];
+  const startD = new Date(startDate);
+  const endD = new Date(endDate);
 
-  // PERFORMANCE & ACCURACY FIX: Calculate unique contacts from materialized view
-  // "Contacts Reached" = number of people who received Email 1 (initial outreach)
-  // This uses pre-aggregated data from stepTotals, which comes from mv_daily_stats
-  // The view already filters by step=1 for email_1_sends, giving us unique reach
-  const uniqueContacts = stepTotals.email_1;
+  for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().slice(0, 10);
+    dailySends.push({
+      date: dateStr,
+      count: stepDailyMap.get(dateStr) || 0,
+    });
+  }
 
-  const stepTotalSends = stepTotals.totalSends;
+  const stepTotalSends = steps.reduce((sum, s) => sum + s.sends, 0);
+  const uniqueContacts = email1Recipients.size;
   const totalLeads = leadsCountResult.count || 0;
 
   // ============================================
@@ -578,27 +594,41 @@ async function fetchAggregateData(
     .map(name => ({ name }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // Campaign stats (aggregate by campaign)
+  // Campaign stats (aggregate by campaign from email_events - source of truth)
   const campaignStatsMap = new Map<string, { sends: number; replies: number; opt_outs: number; bounces: number }>();
   const campaignCostMap = new Map<string, number>();
 
-  for (const row of validDailyStats) {
-    const name = row.campaign_name || 'Unknown';
+  // Count by campaign from email_events (source of truth)
+  for (const event of currentEvents) {
+    const name = event.campaign_name || 'Unknown';
     if (shouldExcludeCampaign(name)) continue;
     
     const existing = campaignStatsMap.get(name) || { sends: 0, replies: 0, opt_outs: 0, bounces: 0 };
-    campaignStatsMap.set(name, {
-      sends: existing.sends + (Number(row.sends) || 0),
-      replies: existing.replies + (Number(row.replies) || 0),
-      opt_outs: existing.opt_outs + (Number(row.opt_outs) || 0),
-      bounces: existing.bounces + (Number(row.bounces) || 0),
-    });
+    
+    switch (event.event_type) {
+      case 'sent':
+      case 'delivered':
+        existing.sends++;
+        break;
+      case 'replied':
+        existing.replies++;
+        break;
+      case 'opt_out':
+        existing.opt_outs++;
+        break;
+      case 'bounced':
+        existing.bounces++;
+        break;
+    }
+    
+    campaignStatsMap.set(name, existing);
   }
 
-  // Aggregate costs by campaign from cost stats
-  for (const row of costStats) {
-    const name = 'Unknown'; // mv_llm_cost doesn't have campaign_name - need to add it later
-    campaignCostMap.set(name, (campaignCostMap.get(name) || 0) + (Number(row.total_cost) || 0));
+  for (const row of llmUsage) {
+    const name = row.campaign_name || 'Unknown';
+    if (shouldExcludeCampaign(name)) continue;
+    
+    campaignCostMap.set(name, (campaignCostMap.get(name) || 0) + (Number(row.cost_usd) || 0));
   }
 
   const campaignStats: CampaignStats[] = Array.from(campaignStatsMap.entries()).map(([name, stats]) => {
@@ -676,10 +706,6 @@ async function fetchAggregateData(
     },
     source: 'supabase',
   };
-  } catch (error) {
-    console.error('Error in fetchAggregateData:', error);
-    return emptyResponse(startDate, endDate);
-  }
 }
 
 // ============================================
@@ -687,6 +713,17 @@ async function fetchAggregateData(
 // ============================================
 
 export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  
+  
+  // Workspace access validation (SECURITY: Prevents unauthorized data access)
+  const accessError = await validateWorkspaceAccess(req, searchParams);
+  
+  
+  if (accessError) {
+    return accessError;
+  }
+
   // Rate limiting
   const clientId = getClientId(req);
   const rateLimit = checkRateLimit(`aggregate:${clientId}`, RATE_LIMIT_READ);
@@ -698,7 +735,6 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const { searchParams } = new URL(req.url);
   const start = searchParams.get('start');
   const end = searchParams.get('end');
   const campaign = searchParams.get('campaign');
@@ -725,6 +761,7 @@ export async function GET(req: NextRequest) {
       workspace: workspaceId,
     });
 
+    
     // Use cache with 30 second TTL (stale-while-revalidate)
     const data = await cacheManager.getOrSet(
       cacheKey,

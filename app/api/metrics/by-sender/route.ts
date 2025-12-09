@@ -12,6 +12,7 @@ import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '
 import { cacheManager, apiCacheKey, CACHE_TTL } from '@/lib/cache';
 import { EXCLUDED_CAMPAIGNS, shouldExcludeCampaign } from '@/lib/db-queries';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { validateWorkspaceAccess } from '@/lib/api-workspace-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,10 +53,10 @@ async function fetchBySenderData(
   senderFilter?: string | null
 ): Promise<BySenderResponse> {
   // Build query for sender stats
-  // TEMPORARY: Remove workspace_id filter until data migration is complete
   let query = client
     .from('email_events')
     .select('*')
+    .eq('workspace_id', workspaceId)
     .gte('event_ts', `${startDate}T00:00:00Z`)
     .lte('event_ts', `${endDate}T23:59:59Z`);
 
@@ -88,6 +89,7 @@ async function fetchBySenderData(
     const { data: leadsData } = await client
       .from('leads_ohio')
       .select('email_address, sender_email')
+      .eq('workspace_id', workspaceId)
       .in('email_address', contactEmails);
     
     for (const lead of leadsData || []) {
@@ -210,6 +212,12 @@ export async function GET(req: NextRequest) {
 
     const params = getSearchParams(req);
     const workspaceId = getWorkspaceFromParams(params);
+    
+    // Workspace access validation (SECURITY: Prevents unauthorized data access)
+    const accessError = await validateWorkspaceAccess(req, params);
+    if (accessError) {
+      return accessError;
+    }
     const { startDate, endDate } = parseDateRange(
       params.get('start'),
       params.get('end')

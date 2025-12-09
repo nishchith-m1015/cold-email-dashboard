@@ -17,13 +17,20 @@
 'use client';
 
 import { ComponentProps } from 'react';
-import { DashboardErrorBoundary } from '@/components/ui/error-boundary';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import {
   KPIErrorFallback,
   ChartErrorFallback,
   TableErrorFallback,
   WidgetErrorFallback,
 } from '@/components/ui/error-fallbacks';
+
+// Simple fallback for ErrorBoundary (no error props available from our wrapper)
+const SimpleFallback = ({ label }: { label: string }) => (
+  <div className="p-4 rounded-lg border border-border bg-surface text-sm text-text-primary">
+    {`Something went wrong loading ${label}. Please try again.`}
+  </div>
+);
 
 // Import all dashboard components
 import { MetricCard } from './metric-card';
@@ -55,16 +62,11 @@ import {
  */
 export function SafeMetricCard(props: ComponentProps<typeof MetricCard>) {
   return (
-    <DashboardErrorBoundary
-      fallback={(fallbackProps) => (
-        <KPIErrorFallback
-          {...fallbackProps}
-          componentName="Metric Card"
-        />
-      )}
+    <ErrorBoundary
+      fallback={<SimpleFallback label="Metric Card" />}
     >
       <MetricCard {...props} />
-    </DashboardErrorBoundary>
+    </ErrorBoundary>
   );
 }
 
@@ -80,16 +82,11 @@ export function SafeMetricCard(props: ComponentProps<typeof MetricCard>) {
  */
 export function SafeTimeSeriesChart(props: ComponentProps<typeof TimeSeriesChart>) {
   return (
-    <DashboardErrorBoundary
-      fallback={(fallbackProps) => (
-        <ChartErrorFallback
-          {...fallbackProps}
-          componentName="Time Series Chart"
-        />
-      )}
+    <ErrorBoundary
+      fallback={<SimpleFallback label="Time Series Chart" />}
     >
       <TimeSeriesChart {...props} />
-    </DashboardErrorBoundary>
+    </ErrorBoundary>
   );
 }
 
@@ -100,16 +97,11 @@ export function SafeTimeSeriesChart(props: ComponentProps<typeof TimeSeriesChart
  */
 export function SafeDonutChart(props: ComponentProps<typeof DonutChart>) {
   return (
-    <DashboardErrorBoundary
-      fallback={(fallbackProps) => (
-        <ChartErrorFallback
-          {...fallbackProps}
-          componentName="Donut Chart"
-        />
-      )}
+    <ErrorBoundary
+      fallback={<SimpleFallback label="Donut Chart" />}
     >
       <DonutChart {...props} />
-    </DashboardErrorBoundary>
+    </ErrorBoundary>
   );
 }
 
@@ -120,16 +112,11 @@ export function SafeDonutChart(props: ComponentProps<typeof DonutChart>) {
  */
 export function SafeDailySendsChart(props: ComponentProps<typeof DailySendsChart>) {
   return (
-    <DashboardErrorBoundary
-      fallback={(fallbackProps) => (
-        <ChartErrorFallback
-          {...fallbackProps}
-          componentName="Daily Sends Chart"
-        />
-      )}
+    <ErrorBoundary
+      fallback={<SimpleFallback label="Daily Sends Chart" />}
     >
       <DailySendsChart {...props} />
-    </DashboardErrorBoundary>
+    </ErrorBoundary>
   );
 }
 
@@ -141,16 +128,11 @@ export function SafeDailySendsChart(props: ComponentProps<typeof DailySendsChart
  */
 export function SafeDailyCostChart(props: ComponentProps<typeof LazyDailyCostChart>) {
   return (
-    <DashboardErrorBoundary
-      fallback={(fallbackProps) => (
-        <ChartErrorFallback
-          {...fallbackProps}
-          componentName="Daily Cost Chart"
-        />
-      )}
+    <ErrorBoundary
+      fallback={<SimpleFallback label="Daily Cost Chart" />}
     >
       <LazyDailyCostChart {...props} />
-    </DashboardErrorBoundary>
+    </ErrorBoundary>
   );
 }
 
@@ -166,16 +148,11 @@ export function SafeDailyCostChart(props: ComponentProps<typeof LazyDailyCostCha
  */
 export function SafeLazyTimeSeriesChart(props: ComponentProps<typeof LazyTimeSeriesChart>) {
   return (
-    <DashboardErrorBoundary
-      fallback={(fallbackProps) => (
-        <ChartErrorFallback
-          {...fallbackProps}
-          componentName="Time Series Chart"
-        />
-      )}
+    <ErrorBoundary
+      fallback={<SimpleFallback label="Time Series Chart" />}
     >
       <LazyTimeSeriesChart {...props} />
-    </DashboardErrorBoundary>
+    </ErrorBoundary>
   );
 }
 
@@ -184,16 +161,11 @@ export function SafeLazyTimeSeriesChart(props: ComponentProps<typeof LazyTimeSer
  */
 export function SafeLazyDonutChart(props: ComponentProps<typeof LazyDonutChart>) {
   return (
-    <DashboardErrorBoundary
-      fallback={(fallbackProps) => (
-        <ChartErrorFallback
-          {...fallbackProps}
-          componentName="Donut Chart"
-        />
-      )}
+    <ErrorBoundary
+      fallback={<SimpleFallback label="Donut Chart" />}
     >
       <LazyDonutChart {...props} />
-    </DashboardErrorBoundary>
+    </ErrorBoundary>
   );
 }
 
@@ -202,16 +174,11 @@ export function SafeLazyDonutChart(props: ComponentProps<typeof LazyDonutChart>)
  */
 export function SafeLazyDailySendsChart(props: ComponentProps<typeof LazyDailySendsChart>) {
   return (
-    <DashboardErrorBoundary
-      fallback={(fallbackProps) => (
-        <ChartErrorFallback
-          {...fallbackProps}
-          componentName="Daily Sends Chart"
-        />
-      )}
+    <ErrorBoundary
+      fallback={<SimpleFallback label="Daily Sends Chart" />}
     >
       <LazyDailySendsChart {...props} />
-    </DashboardErrorBoundary>
+    </ErrorBoundary>
   );
 }
 
@@ -220,16 +187,11 @@ export function SafeLazyDailySendsChart(props: ComponentProps<typeof LazyDailySe
  */
 export function SafeLazyDailyCostChart(props: ComponentProps<typeof LazyDailyCostChart>) {
   return (
-    <DashboardErrorBoundary
-      fallback={(fallbackProps) => (
-        <ChartErrorFallback
-          {...fallbackProps}
-          componentName="Daily Cost Chart"
-        />
-      )}
+    <ErrorBoundary
+      fallback={<SimpleFallback label="Daily Cost Chart" />}
     >
       <LazyDailyCostChart {...props} />
-    </DashboardErrorBoundary>
+    </ErrorBoundary>
   );
 }
 
@@ -245,16 +207,11 @@ export function SafeLazyDailyCostChart(props: ComponentProps<typeof LazyDailyCos
  */
 export function SafeStepBreakdown(props: ComponentProps<typeof StepBreakdown>) {
   return (
-    <DashboardErrorBoundary
-      fallback={(fallbackProps) => (
-        <WidgetErrorFallback
-          {...fallbackProps}
-          componentName="Step Breakdown"
-        />
-      )}
+    <ErrorBoundary
+      fallback={<SimpleFallback label="Step Breakdown" />}
     >
       <StepBreakdown {...props} />
-    </DashboardErrorBoundary>
+    </ErrorBoundary>
   );
 }
 
@@ -265,16 +222,11 @@ export function SafeStepBreakdown(props: ComponentProps<typeof StepBreakdown>) {
  */
 export function SafeEfficiencyMetrics(props: ComponentProps<typeof EfficiencyMetrics>) {
   return (
-    <DashboardErrorBoundary
-      fallback={(fallbackProps) => (
-        <WidgetErrorFallback
-          {...fallbackProps}
-          componentName="Efficiency Metrics"
-        />
-      )}
+    <ErrorBoundary
+      fallback={<SimpleFallback label="Efficiency Metrics" />}
     >
       <EfficiencyMetrics {...props} />
-    </DashboardErrorBoundary>
+    </ErrorBoundary>
   );
 }
 
@@ -285,16 +237,11 @@ export function SafeEfficiencyMetrics(props: ComponentProps<typeof EfficiencyMet
  */
 export function SafeSenderBreakdown(props: ComponentProps<typeof SenderBreakdown>) {
   return (
-    <DashboardErrorBoundary
-      fallback={(fallbackProps) => (
-        <WidgetErrorFallback
-          {...fallbackProps}
-          componentName="Sender Breakdown"
-        />
-      )}
+    <ErrorBoundary
+      fallback={<SimpleFallback label="Sender Breakdown" />}
     >
       <SenderBreakdown {...props} />
-    </DashboardErrorBoundary>
+    </ErrorBoundary>
   );
 }
 
@@ -310,16 +257,11 @@ export function SafeSenderBreakdown(props: ComponentProps<typeof SenderBreakdown
  */
 export function SafeCampaignTable(props: ComponentProps<typeof CampaignTable>) {
   return (
-    <DashboardErrorBoundary
-      fallback={(fallbackProps) => (
-        <TableErrorFallback
-          {...fallbackProps}
-          componentName="Campaign Table"
-        />
-      )}
+    <ErrorBoundary
+      fallback={<SimpleFallback label="Campaign Table" />}
     >
       <CampaignTable {...props} />
-    </DashboardErrorBoundary>
+    </ErrorBoundary>
   );
 }
 

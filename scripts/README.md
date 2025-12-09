@@ -1,63 +1,77 @@
-# 🔧 Scripts Directory
+# Scripts Directory
 
-This directory contains utility scripts for testing, verification, and maintenance.
+This directory contains maintenance and setup scripts for the Cold Email Dashboard.
 
-## 📁 Contents
+## Available Scripts
 
-### Database Testing & Verification
-- **`check-database-schema.js`** - Verify database schema structure
-- **`verify-database-data.js`** - Check database data integrity
-- **`test-workspace-setup.sql`** - SQL script for workspace setup testing
-- **`test-campaign-dropdown.js`** - Test campaign dropdown functionality
+### `backfill-clerk-users.ts`
 
-### Queue Health Monitoring
-- **`check-queue-health.sh`** - Monitor webhook queue health status
+Syncs existing Clerk users to the Supabase `public.users` table.
 
-### Phase Verification Scripts
-- **`verify-phase-8-complete.sh`** - Verify Phase 8 (Caching) completion
-- **`verify-phase-8-step-1-2.sh`** - Verify Phase 8 steps 1-2
-- **`verify-phase-8-step-3-4.sh`** - Verify Phase 8 steps 3-4
-- **`verify-phase-9-batch-1.sh`** - Verify Phase 9 Batch 1 (Lazy Loading)
-- **`verify-phase-9-batch-2.sh`** - Verify Phase 9 Batch 2
-- **`verify-phase-9-batch-3.sh`** - Verify Phase 9 Batch 3
-- **`verify-phase-9-step-1-2.sh`** - Verify Phase 9 steps 1-2
-- **`verify-phase-10-migration.sh`** - Verify Phase 10 (Webhook Queue) migration
-- **`test-phase-10.sh`** - Test Phase 10 functionality
+**When to use:**
+- After initial Clerk-Supabase integration setup
+- After the webhook endpoint is created but before it has processed any events
+- To recover from sync failures
 
-## 🚀 Usage
+**Prerequisites:**
+- Supabase migration `20251209_clerk_sync_rls.sql` must be applied
+- Environment variables must be set:
+  - `CLERK_SECRET_KEY`
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `SUPABASE_SERVICE_ROLE_KEY`
 
-### Running Shell Scripts
+**Usage:**
 ```bash
-# Make executable (if needed)
-chmod +x scripts/*.sh
-
-# Run a script
-./scripts/check-queue-health.sh
+npx tsx scripts/backfill-clerk-users.ts
 ```
 
-### Running Node.js Scripts
-```bash
-# Run database schema check
-node scripts/check-database-schema.js
+**What it does:**
+1. Fetches all users from Clerk API (paginated)
+2. Upserts each user to Supabase `public.users` table
+3. Reports success/failure for each user
+4. Verifies total count in Supabase
 
-# Run data verification
-node scripts/verify-database-data.js
+**Expected output:**
+```
+🔄 Starting Clerk user backfill...
+
+📥 Fetching users from Clerk...
+✓ Found 3 users in Clerk
+
+📤 Syncing users to Supabase...
+  ✓ John Doe (user_xxx)
+  ✓ Jane Smith (user_yyy)
+  ✓ Admin User (user_zzz)
+
+==================================================
+📊 Backfill Summary:
+   Total users: 3
+   ✓ Synced: 3
+==================================================
+
+🔍 Verifying users in Supabase...
+✓ Total users in Supabase: 3
+
+✅ Backfill complete!
 ```
 
-### Running SQL Scripts
-```bash
-# Execute in Supabase SQL Editor or via psql
-psql -h <your-host> -U <user> -d <database> -f scripts/test-workspace-setup.sql
-```
+---
 
-## 📝 Notes
+## Development Notes
 
-- Most phase verification scripts are historical and relate to completed development phases
-- Database testing scripts require environment variables to be set (see `.env.local`)
-- Queue health monitoring is useful for production debugging
+- Scripts use `tsx` for TypeScript execution (no build step needed)
+- All scripts use the service role key to bypass RLS
+- Scripts are idempotent (safe to run multiple times)
+- Failed operations are logged but don't stop execution
 
-## 🔗 Related
+---
 
-- See `supabase/scripts/` for SQL debugging and migration scripts
-- See `tests/` for automated tests (Jest, Playwright)
-- See `docs/` for documentation on system architecture
+## Adding New Scripts
+
+When creating new scripts:
+1. Add TypeScript shebang: `#!/usr/bin/env node`
+2. Use clear console output with emojis for status
+3. Validate environment variables at the start
+4. Handle errors gracefully
+5. Provide a summary at the end
+6. Update this README

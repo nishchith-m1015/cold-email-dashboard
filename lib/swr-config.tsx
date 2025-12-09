@@ -19,7 +19,7 @@ const swrConfig: SWRConfiguration = {
   revalidateIfStale: true,         // Refetch if data is stale
   
   // Deduplication
-  dedupingInterval: 60000,         // Dedupe requests within 1 minute (prevents nav lag)
+  dedupingInterval: 10000,         // Dedupe requests within 10 seconds
   
   // Error handling
   errorRetryCount: 2,              // Retry failed requests twice

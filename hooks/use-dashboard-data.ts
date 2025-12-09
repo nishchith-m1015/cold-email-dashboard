@@ -96,7 +96,7 @@ interface AggregateResponse {
 const aggregateConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
-  dedupingInterval: 60000, // Dedupe requests within 1 minute (prevents nav lag)
+  dedupingInterval: 10000, // Dedupe requests within 10 seconds
   errorRetryCount: 2,
   errorRetryInterval: 3000,
   keepPreviousData: true, // Keep showing old data while revalidating
@@ -150,6 +150,7 @@ export function useDashboardData(params: DashboardParams): DashboardData {
     data: aggregateData, 
     error: aggregateError, 
     isLoading: aggregateLoading,
+    isValidating: aggregateValidating,
     mutate: mutateAggregate,
   } = useSWR<AggregateResponse>(
     shouldFetch ? `/api/dashboard/aggregate?${urlParams}` : null,
@@ -279,8 +280,10 @@ export function useDashboardData(params: DashboardParams): DashboardData {
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     
-    // Parse selected date range
-    const rangeStart = new Date(startDate);
+    // Parse selected date range as LOCAL date (not UTC) to avoid timezone shifts
+    // e.g., "2024-12-02" should be Dec 2 in local time, not Dec 1 if in negative UTC offset
+    const [year, month, day] = startDate.split('-').map(Number);
+    const rangeStart = new Date(year, month - 1, day); // month is 0-indexed
     
     // Check if selected range overlaps with current month
     const isCurrentMonth = 
@@ -316,6 +319,7 @@ export function useDashboardData(params: DashboardParams): DashboardData {
   // 1. Workspace context is loading, OR
   // 2. Aggregate data is loading (and we haven't fetched yet)
   const isLoading = workspaceLoading || aggregateLoading;
+  const isRefetching = !!aggregateData && aggregateValidating;
 
   // Only show loading states when we don't have any data yet
   const summaryLoading = !summary && isLoading;
@@ -386,6 +390,7 @@ export function useDashboardData(params: DashboardParams): DashboardData {
 
     // Flags
     isLoading,
+    isRefetching,
     hasError,
 
     // Actions

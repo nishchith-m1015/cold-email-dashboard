@@ -21,9 +21,6 @@ const costEventSchema = z.object({
   workflow_id: z.string().max(100).optional(),
   run_id: z.string().max(100).optional(),
   metadata: z.record(z.unknown()).optional(),
-  // Phase 10: Idempotency fields
-  idempotency_key: z.string().max(200).optional(),
-  n8n_execution_id: z.string().max(200).optional(),
 });
 
 const batchCostEventsSchema = z.union([
@@ -97,52 +94,65 @@ export async function POST(req: NextRequest) {
     const results = [];
     const errors = [];
 
-    // Phase 10: Queue each event for async processing
     for (const event of events) {
       try {
-        // Generate idempotency key (3-tier fallback)
-        const idempotencyKey = event.idempotency_key || 
-          event.n8n_execution_id || 
-          crypto.randomUUID();
+        // Calculate cost if not provided
+        let costUsd = event.cost_usd;
+        if (costUsd === undefined && event.tokens_in !== undefined && event.tokens_out !== undefined) {
+          costUsd = calculateLlmCost(
+            event.provider,
+            event.model,
+            event.tokens_in,
+            event.tokens_out
+          );
+        }
 
-        // Fast path: Single insert into webhook queue (2-5ms)
-        const { error: queueError } = await supabaseAdmin
-          .from('webhook_queue')
+        // If still no cost and we have raw_usage, try to estimate
+        if (costUsd === undefined && event.raw_usage !== undefined) {
+          // For non-token APIs (Apify, etc.), just store raw_usage
+          costUsd = 0; // Will need manual cost mapping or config
+        }
+
+        // Default to 0 if we can't calculate
+        if (costUsd === undefined) {
+          costUsd = 0;
+        }
+
+        // Insert into llm_usage table
+        const { data, error } = await supabaseAdmin
+          .from('llm_usage')
           .insert({
-            idempotency_key: idempotencyKey,
-            event_source: 'n8n',
-            event_type: 'cost_event',
-            raw_payload: event,
-            status: 'pending',
-          });
-
-        // Handle duplicate idempotency_key (database enforced)
-        if (queueError) {
-          if (queueError.code === '23505') {
-            // Unique constraint violation = duplicate
-            results.push({
-              queued: true,
-              deduped: true,
-              idempotency_key: idempotencyKey,
-              provider: event.provider,
-              model: event.model,
-            });
-          } else {
-            // Other database error
-            console.error('Webhook queue insert error:', queueError);
-            errors.push({ event, error: queueError.message });
-          }
-        } else {
-          // Successfully queued
-          results.push({
-            queued: true,
-            idempotency_key: idempotencyKey,
+            workspace_id: event.workspace_id || DEFAULT_WORKSPACE_ID,
+            campaign_name: event.campaign_name || null,
+            contact_email: event.contact_email || null,
             provider: event.provider,
             model: event.model,
+            tokens_in: event.tokens_in || 0,
+            tokens_out: event.tokens_out || 0,
+            cost_usd: costUsd,
+            purpose: event.purpose || null,
+            metadata: {
+              workflow_id: event.workflow_id,
+              run_id: event.run_id,
+              raw_usage: event.raw_usage,
+              ...event.metadata,
+            },
+            created_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (error) {
+          errors.push({ event, error: error.message });
+        } else {
+          results.push({
+            id: data.id,
+            provider: event.provider,
+            model: event.model,
+            cost_usd: costUsd,
           });
         }
       } catch (err) {
-        console.error('Cost event processing error:', err);
         errors.push({ event, error: String(err) });
       }
     }
@@ -152,7 +162,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: results.length > 0,
-        queued: results.length,
+        inserted: results.length,
         errors: errors.length,
         results,
         error_details: errors.length > 0 ? errors : undefined,

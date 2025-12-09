@@ -4,6 +4,7 @@ import { API_HEADERS } from '@/lib/utils';
 import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '@/lib/rate-limit';
 import { cacheManager, apiCacheKey, CACHE_TTL } from '@/lib/cache';
 import { EXCLUDED_CAMPAIGNS, shouldExcludeCampaign } from '@/lib/db-queries';
+import { validateWorkspaceAccess } from '@/lib/api-workspace-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,38 +44,39 @@ async function fetchByCampaignData(
     };
   }
 
-  // Build queries with exclusion filter
-  // TEMPORARY: Remove workspace_id filter until data migration is complete
-  let statsQuery = supabaseAdmin
-    .from('daily_stats')
-    .select('campaign_name, sends, replies, opt_outs, bounces')
-    .gte('day', startDate)
-    .lte('day', endDate);
+  // Build queries - query email_events directly (source of truth) instead of daily_stats
+  let eventsQuery = supabaseAdmin
+    .from('email_events')
+    .select('campaign_name, event_type')
+    .eq('workspace_id', workspaceId)
+    .gte('event_ts', `${startDate}T00:00:00Z`)
+    .lte('event_ts', `${endDate}T23:59:59Z`);
 
   let costQuery = supabaseAdmin
     .from('llm_usage')
     .select('campaign_name, cost_usd')
+    .eq('workspace_id', workspaceId)
     .gte('created_at', `${startDate}T00:00:00Z`)
     .lte('created_at', `${endDate}T23:59:59Z`);
 
   // Exclude test campaigns globally
   for (const excludedCampaign of EXCLUDED_CAMPAIGNS) {
-    statsQuery = statsQuery.neq('campaign_name', excludedCampaign);
+    eventsQuery = eventsQuery.neq('campaign_name', excludedCampaign);
     costQuery = costQuery.neq('campaign_name', excludedCampaign);
   }
 
   // Execute BOTH queries in parallel (2 queries → 1 round trip latency)
-  const [statsResult, costResult] = await Promise.all([
-    statsQuery,
+  const [eventsResult, costResult] = await Promise.all([
+    eventsQuery,
     costQuery,
   ]);
 
-  if (statsResult.error) {
-    console.error('By-campaign query error:', statsResult.error);
-    throw statsResult.error;
+  if (eventsResult.error) {
+    console.error('By-campaign query error:', eventsResult.error);
+    throw eventsResult.error;
   }
 
-  // Aggregate by campaign (with additional safety filter)
+  // Aggregate by campaign from email_events (with additional safety filter)
   const campaignMap = new Map<string, {
     sends: number;
     replies: number;
@@ -82,7 +84,7 @@ async function fetchByCampaignData(
     bounces: number;
   }>();
 
-  for (const row of statsResult.data || []) {
+  for (const row of eventsResult.data || []) {
     const campaignName = row.campaign_name || 'Unknown';
     // Double-check exclusion (safety net)
     if (shouldExcludeCampaign(campaignName)) continue;
@@ -93,12 +95,25 @@ async function fetchByCampaignData(
       opt_outs: 0,
       bounces: 0,
     };
-    campaignMap.set(campaignName, {
-      sends: existing.sends + (row.sends || 0),
-      replies: existing.replies + (row.replies || 0),
-      opt_outs: existing.opt_outs + (row.opt_outs || 0),
-      bounces: existing.bounces + (row.bounces || 0),
-    });
+
+    // Count event types
+    switch (row.event_type) {
+      case 'sent':
+      case 'delivered':
+        existing.sends++;
+        break;
+      case 'replied':
+        existing.replies++;
+        break;
+      case 'opt_out':
+        existing.opt_outs++;
+        break;
+      case 'bounced':
+        existing.bounces++;
+        break;
+    }
+
+    campaignMap.set(campaignName, existing);
   }
 
   // Aggregate costs by campaign (with additional safety filter)
@@ -171,6 +186,12 @@ export async function GET(req: NextRequest) {
   const start = searchParams.get('start');
   const end = searchParams.get('end');
   const workspaceId = searchParams.get('workspace_id') || DEFAULT_WORKSPACE_ID;
+
+  // Workspace access validation (SECURITY: Prevents unauthorized data access)
+  const accessError = await validateWorkspaceAccess(req, searchParams);
+  if (accessError) {
+    return accessError;
+  }
 
   // Default to last 30 days
   const startDate = start || new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);

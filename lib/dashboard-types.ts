@@ -238,6 +238,7 @@ export interface DashboardData {
 
   // Convenience flags
   isLoading: boolean;
+  isRefetching?: boolean;
   hasError: boolean;
 
   // Refresh functions

@@ -69,14 +69,14 @@
 - n8n workflows: All 7 workflows updated with idempotency support
 - Final deployment: Apply `apply_fixed_trigger.sql` in Supabase (5 min)
 
-### Phase 11: Advanced Analytics Features
+### Phase 11: Advanced Analytics Features (Paused and will not implement now)
 **Objective:** Deeper insights.
 - [ ] **11a: Trend Lines:** Add "vs previous period" dotted lines to the main Time Series chart.
 - [ ] **11b: Campaign Comparison:** Allow selecting 2 campaigns to graph side-by-side.
 - [ ] **11c: Weekday Analysis:** New chart: "Best Day to Send" (Heatmap of Reply Rate by Day of Week).
 - [ ] **Validation:** Compare two campaigns and verify the "Winner" logic works.
 
-### Phase 12: Cost Forecasting & Alerts
+### Phase 12: Cost Forecasting & Alerts (Paused and will not implement now)
 **Objective:** Prevent billing surprises.
 - [ ] **12a: Budget Limits:** Add a "Monthly Budget" setting in the DB.
 - [ ] **12b: Alert Logic:** Create an API route that checks if `current_spend > 80% of budget` and emails you.
@@ -86,19 +86,19 @@
 
 ## 🛡️ Part 3: Reliability & Infrastructure
 
-### Phase 13: Error Boundaries & Recovery
+### Phase 13: Error Boundaries & Recovery (Complete)
 **Objective:** If one chart crashes, the dashboard stays alive.
 - [ ] **13a: Component Isolation:** Wrap each KPI card and Chart in a separate `<ErrorBoundary>`.
 - [ ] **13b: Fallback UI:** Design a "Data Unavailable" empty state for each component type.
 - [ ] **Validation:** Manually throw an error in one chart; ensure the rest of the page loads fine.
 
-### Phase 14: Automated Testing (Safety Net)
+### Phase 14: Automated Testing (Safety Net) (Complete)
 **Objective:** Never ship a broken update again.
 - [ ] **14a: Unit Tests:** Write Jest tests for `calculateLlmCost` and `useDashboardData`.
 - [ ] **14b: E2E Tests:** Set up Playwright to visit the dashboard, click "Analytics," and verify charts load.
 - [ ] **Validation:** Run `npm run test` before every commit.
 
-### Phase 15: Multi-Tenant Hardening (Future Proofing)
+### Phase 15: Multi-Tenant Hardening (Future Proofing) - (Ignored for now)
 **Objective:** Prepare for selling this as a SaaS.
 - [ ] **15a: RLS Audit:** Review every Supabase Row Level Security policy.
 - [ ] **15b: Tenant Isolation:** Ensure `workspace_id` is mandatory on EVERY database query.

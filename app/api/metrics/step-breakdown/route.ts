@@ -4,6 +4,7 @@ import { API_HEADERS } from '@/lib/utils';
 import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '@/lib/rate-limit';
 import { cacheManager, apiCacheKey, CACHE_TTL } from '@/lib/cache';
 import { EXCLUDED_CAMPAIGNS } from '@/lib/db-queries';
+import { validateWorkspaceAccess } from '@/lib/api-workspace-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,10 +53,10 @@ async function fetchStepBreakdownData(
   }
 
   // Query email_events for step-level breakdown
-  // TEMPORARY: Remove workspace_id filter until data migration is complete
   let stepQuery = supabaseAdmin
     .from('email_events')
     .select('step, event_ts, contact_email')
+    .eq('workspace_id', workspaceId)
     .eq('event_type', 'sent')
     .gte('event_ts', `${startDate}T00:00:00Z`)
     .lte('event_ts', `${endDate}T23:59:59Z`);
@@ -135,7 +136,8 @@ async function fetchStepBreakdownData(
   try {
     const { count, error: countError } = await supabaseAdmin
       .from('leads_ohio')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId);
     
     if (!countError && count !== null) {
       totalLeads = count;
@@ -175,6 +177,12 @@ export async function GET(req: NextRequest) {
   const end = searchParams.get('end');
   const campaign = searchParams.get('campaign');
   const workspaceId = searchParams.get('workspace_id') || DEFAULT_WORKSPACE_ID;
+
+  // Workspace access validation (SECURITY: Prevents unauthorized data access)
+  const accessError = await validateWorkspaceAccess(req, searchParams);
+  if (accessError) {
+    return accessError;
+  }
 
   // Default to last 30 days
   const startDate = start || new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Globe, ChevronDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Globe, ChevronDown, MapPin } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -30,14 +30,43 @@ interface TimezoneSelectorProps {
   className?: string;
 }
 
+/**
+ * Detect the user's system timezone
+ */
+function detectTimezone(): string {
+  try {
+    const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // Check if detected timezone is in our list
+    const match = TIMEZONES.find(tz => tz.value === detected);
+    return match ? detected : 'UTC'; // Fallback to UTC
+  } catch {
+    return 'UTC';
+  }
+}
+
 export function TimezoneSelector({
   selectedTimezone,
   onTimezoneChange,
   className,
 }: TimezoneSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [autoDetected, setAutoDetected] = useState(false);
+
+  // Auto-detect timezone on mount if not already set
+  useEffect(() => {
+    if (!autoDetected) {
+      const detected = detectTimezone();
+      // Only auto-set if it's different from current and we're on default (UTC)
+      if (detected !== selectedTimezone && selectedTimezone === 'UTC') {
+        onTimezoneChange(detected);
+      }
+      setAutoDetected(true);
+    }
+  }, [autoDetected, selectedTimezone, onTimezoneChange]);
 
   const selected = TIMEZONES.find(tz => tz.value === selectedTimezone) || TIMEZONES[0];
+  const detectedTz = detectTimezone();
+  const isAutoDetected = detectedTz === selectedTimezone;
 
   return (
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
@@ -46,7 +75,11 @@ export function TimezoneSelector({
           variant="outline"
           className={cn('justify-start gap-2 min-w-[140px]', className)}
         >
-          <Globe className="h-4 w-4 text-text-secondary" />
+          {isAutoDetected ? (
+            <MapPin className="h-4 w-4 text-accent-success" />
+          ) : (
+            <Globe className="h-4 w-4 text-text-secondary" />
+          )}
           <span className="flex-1 text-left text-sm">{selected.offset}</span>
           <ChevronDown className={cn(
             'h-4 w-4 text-text-secondary transition-transform',
@@ -62,9 +95,23 @@ export function TimezoneSelector({
           align="end"
         >
           <div className="rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-[#141416] p-2 min-w-[180px]">
-            <p className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-              Timezone
-            </p>
+            <div className="flex items-center justify-between px-2 py-1.5 mb-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                Timezone
+              </p>
+              {detectedTz !== selectedTimezone && (
+                <button
+                  onClick={() => {
+                    onTimezoneChange(detectedTz);
+                    setIsOpen(false);
+                  }}
+                  className="text-[10px] text-accent-primary hover:text-accent-primary/80 font-medium flex items-center gap-1"
+                >
+                  <MapPin className="h-3 w-3" />
+                  Auto
+                </button>
+              )}
+            </div>
             {TIMEZONES.map(tz => (
               <button
                 key={tz.value}
@@ -79,7 +126,12 @@ export function TimezoneSelector({
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
                 )}
               >
-                <span>{tz.label}</span>
+                <span className="flex items-center gap-1.5">
+                  {tz.label}
+                  {tz.value === detectedTz && (
+                    <MapPin className="h-3 w-3 text-accent-success" />
+                  )}
+                </span>
                 <span className="text-slate-400 dark:text-slate-500">{tz.offset}</span>
               </button>
             ))}

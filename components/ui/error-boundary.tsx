@@ -6,9 +6,8 @@ import { Button } from './button';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
-  fallback?: ReactNode | ((props: { error: Error; resetErrorBoundary: () => void }) => ReactNode);
+  fallback?: ReactNode;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
-  onReset?: () => void;
   resetKeys?: unknown[];
 }
 
@@ -18,14 +17,12 @@ interface ErrorBoundaryState {
 }
 
 /**
- * Dashboard Error Boundary Component
+ * Error Boundary Component
  * 
  * Catches JavaScript errors in child component tree and displays
  * a fallback UI instead of crashing the whole app.
- * 
- * Note: Named DashboardErrorBoundary to avoid conflict with Next.js built-in ErrorBoundary
  */
-export class DashboardErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -53,23 +50,12 @@ export class DashboardErrorBoundary extends Component<ErrorBoundaryProps, ErrorB
   }
 
   handleRetry = (): void => {
-    // Call onReset callback before clearing error state
-    // This allows parent components to trigger data refetches, etc.
-    this.props.onReset?.();
-    
     this.setState({ hasError: false, error: null });
   };
 
   render(): ReactNode {
     if (this.state.hasError) {
       if (this.props.fallback) {
-        // Support both ReactNode and function fallback
-        if (typeof this.props.fallback === 'function') {
-          return this.props.fallback({
-            error: this.state.error!,
-            resetErrorBoundary: this.handleRetry,
-          });
-        }
         return this.props.fallback;
       }
 
@@ -113,9 +99,9 @@ export function withErrorBoundary<P extends object>(
   options: WithErrorBoundaryOptions = {}
 ): React.FC<P> {
   const WrappedComponent: React.FC<P> = (props) => (
-    <DashboardErrorBoundary fallback={options.fallback} onError={options.onError}>
+    <ErrorBoundary fallback={options.fallback} onError={options.onError}>
       <Component {...props} />
-    </DashboardErrorBoundary>
+    </ErrorBoundary>
   );
 
   WrappedComponent.displayName = `WithErrorBoundary(${Component.displayName || Component.name || 'Component'})`;
@@ -167,9 +153,4 @@ export function ErrorDisplay({ error, onRetry, compact = false }: ErrorDisplayPr
     </div>
   );
 }
-
-
-// Export alias for backward compatibility
-// Use DashboardErrorBoundary in new code to avoid Next.js conflicts
-export { DashboardErrorBoundary as ErrorBoundary };
 

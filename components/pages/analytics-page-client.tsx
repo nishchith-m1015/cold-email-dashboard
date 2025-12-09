@@ -1,0 +1,356 @@
+'use client';
+
+import { useState, useCallback, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { toISODate, daysAgo, formatCurrency, formatNumber } from '@/lib/utils';
+import { CHART_COLORS, getModelDisplayName } from '@/lib/constants';
+import { useDashboardData } from '@/hooks/use-dashboard-data';
+
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { MetricCard } from '@/components/dashboard/metric-card';
+import { TimeSeriesChart } from '@/components/dashboard/time-series-chart';
+import { DonutChart } from '@/components/dashboard/donut-chart';
+import { DateRangePicker } from '@/components/dashboard/date-range-picker';
+import { CampaignSelector } from '@/components/dashboard/campaign-selector';
+import { TimezoneSelector } from '@/components/dashboard/timezone-selector';
+import { ProviderSelector, ProviderId } from '@/components/dashboard/provider-selector';
+import { DailyCostChart } from '@/components/dashboard/daily-cost-chart';
+import { SenderBreakdown } from '@/components/dashboard/sender-breakdown';
+import { Skeleton } from '@/components/ui/skeleton';
+import { 
+  Cpu, 
+  Zap, 
+  TrendingUp, 
+  DollarSign,
+  BarChart3
+} from 'lucide-react';
+
+export default function AnalyticsPageClient() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  const startDate = searchParams.get('start') ?? toISODate(daysAgo(30));
+  const endDate = searchParams.get('end') ?? toISODate(new Date());
+  const selectedCampaign = searchParams.get('campaign') ?? undefined;
+  
+  const [selectedProvider, setSelectedProvider] = useState<ProviderId | undefined>();
+  const [timezone, setTimezone] = useState('America/Los_Angeles');
+  
+  useEffect(() => {
+    const saved = localStorage.getItem('dashboard_timezone');
+    if (saved) setTimezone(saved);
+  }, []);
+  
+  const handleTimezoneChange = useCallback((tz: string) => {
+    setTimezone(tz);
+    localStorage.setItem('dashboard_timezone', tz);
+  }, []);
+
+  const dashboardData = useDashboardData({
+    startDate,
+    endDate,
+    selectedCampaign,
+    selectedProvider,
+  });
+
+  const {
+    summary,
+    summaryLoading,
+    isRefetching,
+    replyRateSeries,
+    replyRateLoading,
+    optOutRateSeries,
+    optOutRateLoading,
+    costData,
+    costLoading,
+    costByProvider,
+    costByModel,
+    costPerReply,
+    costPerSend,
+    campaigns,
+    campaignsLoading,
+  } = dashboardData;
+
+  const handleDateChange = useCallback((start: string, end: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('start', start);
+    params.set('end', end);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
+
+  const handleCampaignChange = useCallback((campaign: string | undefined) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (campaign) {
+      params.set('campaign', campaign);
+    } else {
+      params.delete('campaign');
+    }
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
+
+  return (
+    <div className="space-y-8">
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+      >
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2">
+            <BarChart3 className="h-6 w-6 text-accent-purple" />
+            Analytics
+          </h1>
+          <div className="text-text-secondary text-sm mt-1">
+            Deep dive into your campaign performance and costs
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3 flex-wrap">
+          <CampaignSelector
+            campaigns={campaigns}
+            selectedCampaign={selectedCampaign}
+            onCampaignChange={handleCampaignChange}
+            loading={campaignsLoading}
+          />
+          <ProviderSelector
+            selectedProvider={selectedProvider}
+            onProviderChange={(p) => setSelectedProvider(p === 'all' ? undefined : p)}
+          />
+          <DateRangePicker
+            startDate={startDate}
+            endDate={endDate}
+            onDateChange={handleDateChange}
+          />
+          <TimezoneSelector
+            selectedTimezone={timezone}
+            onTimezoneChange={handleTimezoneChange}
+          />
+        </div>
+      </motion.div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard
+          title="Total Cost"
+          value={costData?.total.cost_usd ?? 0}
+          format="currency"
+          icon="cost"
+          loading={costLoading}
+          isRefetching={isRefetching}
+          delay={0}
+          description={`Based on ${formatNumber(costData?.total.calls ?? 0)} API calls`}
+        />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+        >
+          <Card className="h-full">
+            <div className="flex items-start justify-between p-6">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-text-secondary">Cost per Reply</p>
+                <div className="text-3xl font-bold text-text-primary tracking-tight">
+                  {summaryLoading || costLoading ? (
+                    <Skeleton className="h-8 w-24" />
+                  ) : (
+                    formatCurrency(costPerReply)
+                  )}
+                </div>
+                <div className="text-xs text-text-secondary">
+                  Based on {summary?.replies ?? 0} replies
+                </div>
+              </div>
+              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-accent-success/10">
+                <TrendingUp className="h-6 w-6 text-accent-success" />
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
+          <Card className="h-full">
+            <div className="flex items-start justify-between p-6">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-text-secondary">Cost per Send</p>
+                <div className="text-3xl font-bold text-text-primary tracking-tight">
+                  {summaryLoading || costLoading ? (
+                    <Skeleton className="h-8 w-24" />
+                  ) : (
+                    formatCurrency(costPerSend)
+                  )}
+                </div>
+                <div className="text-xs text-text-secondary">
+                  Based on {formatNumber(summary?.sends ?? 0)} sends
+                </div>
+              </div>
+              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-accent-primary/10">
+                <DollarSign className="h-6 w-6 text-accent-primary" />
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+        >
+          <Card className="h-full">
+            <div className="flex items-start justify-between p-6">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-text-secondary">Total API Calls</p>
+                <div className="text-3xl font-bold text-text-primary tracking-tight">
+                  {costLoading ? (
+                    <Skeleton className="h-8 w-24" />
+                  ) : (
+                    formatNumber(costData?.total.calls ?? 0)
+                  )}
+                </div>
+                <div className="text-xs text-text-secondary">
+                  LLM requests made
+                </div>
+              </div>
+              <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-accent-warning/10">
+                <Zap className="h-6 w-6 text-accent-warning" />
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <DonutChart
+          title="Cost by Provider"
+          data={costByProvider}
+          loading={costLoading}
+        />
+        <DonutChart
+          title="Cost by Model"
+          data={costByModel}
+          loading={costLoading}
+        />
+      </div>
+
+      <DailyCostChart
+        data={costData?.daily || []}
+        loading={costLoading}
+        timezone={timezone}
+        startDate={startDate}
+        endDate={endDate}
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TimeSeriesChart
+          title="Reply Rate Trend"
+          data={replyRateSeries}
+          color={CHART_COLORS.replies}
+          loading={replyRateLoading}
+          type="line"
+          valueFormatter={(v) => `${v}%`}
+          height={240}
+        />
+        <TimeSeriesChart
+          title="Opt-Out Rate Trend"
+          data={optOutRateSeries}
+          color={CHART_COLORS.optOuts}
+          loading={optOutRateLoading}
+          type="line"
+          valueFormatter={(v) => `${v}%`}
+          height={240}
+        />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Cpu className="h-4 w-4 text-accent-purple" />
+              Model Usage Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {costLoading ? (
+              <div className="space-y-3">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Model</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Provider</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase">Calls</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase">Tokens In</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase">Tokens Out</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase">Cost</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {costData?.by_model.map((model, index) => (
+                      <motion.tr
+                        key={`${model.provider}-${model.model}`}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.2, delay: index * 0.05 }}
+                        className="hover:bg-surface-elevated/50 transition-colors"
+                      >
+                        <td className="px-4 py-3 text-sm font-medium text-text-primary">{getModelDisplayName(model.model)}</td>
+                        <td className="px-4 py-3">
+                          <Badge variant={model.provider === 'openai' ? 'success' : 'warning'}>
+                            {model.provider}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-text-secondary">
+                          {formatNumber(model.calls)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-text-secondary">
+                          {formatNumber(model.tokens_in)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right text-text-secondary">
+                          {formatNumber(model.tokens_out)}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right font-medium text-accent-purple">
+                          {formatCurrency(model.cost_usd)}
+                        </td>
+                      </motion.tr>
+                    ))}
+                    {(!costData?.by_model || costData.by_model.length === 0) && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-12 text-center text-text-secondary">
+                          No model usage data available
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+      >
+        <SenderBreakdown
+          startDate={startDate}
+          endDate={endDate}
+          campaign={selectedCampaign}
+        />
+      </motion.div>
+    </div>
+  );
+}
+

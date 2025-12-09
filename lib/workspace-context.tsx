@@ -35,6 +35,7 @@ export interface WorkspaceContextValue {
   switchWorkspace: (workspaceId: string) => void;
   refreshWorkspaces: () => Promise<void>;
   createWorkspace: (name: string) => Promise<{ success: boolean; error?: string }>;
+  validateWorkspaceAccess: (workspaceId: string) => Promise<{ hasAccess: boolean; error?: string }>;
   
   // Loading state
   isLoading: boolean;
@@ -50,6 +51,10 @@ export interface WorkspaceContextValue {
   isDefaultWorkspace: boolean;
   canWrite: boolean;
   canManage: boolean;
+  
+  // Access validation
+  accessDenied: boolean;
+  accessError: string | null;
 }
 
 // ============================================
@@ -92,6 +97,8 @@ export function WorkspaceProvider({
   const [isLoading, setIsLoading] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
 
   // Fetch workspaces from API
   const fetchWorkspaces = useCallback(async () => {
@@ -205,6 +212,34 @@ export function WorkspaceProvider({
     }
   }, [fetchWorkspaces, setWorkspace]);
 
+  // Validate workspace access
+  const validateWorkspaceAccess = useCallback(async (workspaceId: string): Promise<{ hasAccess: boolean; error?: string }> => {
+    try {
+      const response = await fetch(`/api/workspaces?workspace_id=${workspaceId}`);
+      
+      if (response.status === 403) {
+        setAccessDenied(true);
+        setAccessError('You do not have access to this workspace');
+        return { hasAccess: false, error: 'Access denied' };
+      }
+      
+      if (!response.ok) {
+        const data = await response.json();
+        setAccessError(data.error || 'Failed to validate workspace access');
+        return { hasAccess: false, error: data.error };
+      }
+      
+      // Access validated
+      setAccessDenied(false);
+      setAccessError(null);
+      return { hasAccess: true };
+    } catch (error) {
+      console.error('Workspace validation error:', error);
+      setAccessError('Failed to validate workspace access');
+      return { hasAccess: false, error: 'Validation failed' };
+    }
+  }, []);
+
   // Memoized context value
   const value = useMemo<WorkspaceContextValue>(() => ({
     workspace,
@@ -214,6 +249,7 @@ export function WorkspaceProvider({
     switchWorkspace,
     refreshWorkspaces,
     createWorkspace,
+    validateWorkspaceAccess,
     isLoading,
     needsOnboarding,
     isSuperAdmin,
@@ -221,12 +257,17 @@ export function WorkspaceProvider({
     isDefaultWorkspace: workspace.id === DEFAULT_WORKSPACE_ID,
     canWrite: workspace.canWrite ?? true,
     canManage: workspace.canManage ?? false,
+    accessDenied,
+    accessError,
   }), [
     workspace, 
     workspaces, 
     setWorkspace, 
     switchWorkspace, 
-    refreshWorkspaces, 
+    refreshWorkspaces,
+    validateWorkspaceAccess,
+    accessDenied,
+    accessError, 
     createWorkspace, 
     isLoading,
     needsOnboarding,

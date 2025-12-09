@@ -1,151 +1,156 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin, DEFAULT_WORKSPACE_ID } from '@/lib/supabase';
+import { auth } from '@clerk/nextjs/server';
+import { DEFAULT_WORKSPACE_ID } from '@/lib/supabase';
+import { buildRAGContext, formatContextForPrompt } from '@/lib/rag-context';
+import { extractWorkspaceId, canAccessWorkspace } from '@/lib/api-workspace-guard';
 
 export const dynamic = 'force-dynamic';
 
-async function getSummary(workspaceId: string, start: string, end: string) {
-  if (!supabaseAdmin) {
-    return { sends: 0, replies: 0, opt_outs: 0, replyRatePct: 0, optOutRatePct: 0 };
-  }
-
-  const { data } = await supabaseAdmin
-    .from('daily_stats')
-    .select('sends, replies, opt_outs')
-    .eq('workspace_id', workspaceId)
-    .gte('day', start)
-    .lte('day', end);
-
-  const totals = (data || []).reduce(
-    (acc, row) => ({
-      sends: acc.sends + (row.sends || 0),
-      replies: acc.replies + (row.replies || 0),
-      opt_outs: acc.opt_outs + (row.opt_outs || 0),
-    }),
-    { sends: 0, replies: 0, opt_outs: 0 }
-  );
-
-  const replyRatePct = totals.sends > 0 ? (totals.replies / totals.sends) * 100 : 0;
-  const optOutRatePct = totals.sends > 0 ? (totals.opt_outs / totals.sends) * 100 : 0;
-
-  return { 
-    ...totals, 
-    replyRatePct: Number(replyRatePct.toFixed(2)), 
-    optOutRatePct: Number(optOutRatePct.toFixed(2)) 
+interface AskRequest {
+  question: string;
+  context?: {
+    start_date: string;
+    end_date: string;
+    campaign?: string;
   };
 }
 
-async function getCosts(workspaceId: string, start: string, end: string) {
-  if (!supabaseAdmin) return 0;
-  
-  const { data } = await supabaseAdmin
-    .from('llm_usage')
-    .select('cost_usd')
-    .eq('workspace_id', workspaceId)
-    .gte('created_at', `${start}T00:00:00Z`)
-    .lte('created_at', `${end}T23:59:59Z`);
-
-  const total = (data || []).reduce((sum, row) => sum + (Number(row.cost_usd) || 0), 0);
-  return Number(total.toFixed(2));
+interface AskResponse {
+  answer: string;
+  sources?: Array<{
+    type: 'metric' | 'chart' | 'contact' | 'campaign';
+    label: string;
+    value: string | number;
+  }>;
+  suggested_followups?: string[];
 }
 
+/**
+ * POST /api/ask
+ * RAG-powered AI assistant using GPT-4o
+ */
 export async function POST(req: NextRequest) {
-  const workspaceId = DEFAULT_WORKSPACE_ID;
-  
-  let question = '';
   try {
-    const body = await req.json();
-    question = body.question || '';
-  } catch {
-    // Ignore parse errors
-  }
-
-  const today = new Date();
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-
-  // Current week (last 7 days)
-  const end = fmt(today);
-  const start = fmt(new Date(today.getTime() - 7 * 24 * 3600 * 1000));
-  
-  // Previous week
-  const prevEnd = fmt(new Date(today.getTime() - 8 * 24 * 3600 * 1000));
-  const prevStart = fmt(new Date(today.getTime() - 15 * 24 * 3600 * 1000));
-
-  try {
-    const [cur, prev, curCost, prevCost] = await Promise.all([
-      getSummary(workspaceId, start, end),
-      getSummary(workspaceId, prevStart, prevEnd),
-      getCosts(workspaceId, start, end),
-      getCosts(workspaceId, prevStart, prevEnd),
-    ]);
-
-    const replyDelta = cur.replyRatePct - prev.replyRatePct;
-    const optOutDelta = cur.optOutRatePct - prev.optOutRatePct;
-    const costDelta = curCost - prevCost;
-
-    // Simple template-based response (can be replaced with actual LLM later)
-    let answer = '';
+    const { userId } = await auth();
     
-    const questionLower = question.toLowerCase();
-    
-    if (questionLower.includes('reply') || questionLower.includes('response')) {
-      answer = `📊 **Reply Rate Analysis**
-
-**This Week (${start} to ${end}):**
-• Reply Rate: ${cur.replyRatePct}% (${cur.replies} replies from ${cur.sends} sends)
-
-**Previous Week (${prevStart} to ${prevEnd}):**
-• Reply Rate: ${prev.replyRatePct}% (${prev.replies} replies from ${prev.sends} sends)
-
-**Change:** ${replyDelta >= 0 ? '+' : ''}${replyDelta.toFixed(2)} percentage points
-
-${replyDelta > 0 ? '✅ Your reply rate improved this week!' : replyDelta < 0 ? '⚠️ Reply rate decreased. Consider reviewing your email copy or targeting.' : 'Reply rate remained stable.'}`;
-    } else if (questionLower.includes('opt') || questionLower.includes('unsubscribe')) {
-      answer = `📊 **Opt-Out Rate Analysis**
-
-**This Week (${start} to ${end}):**
-• Opt-Out Rate: ${cur.optOutRatePct}% (${cur.opt_outs} opt-outs from ${cur.sends} sends)
-
-**Previous Week (${prevStart} to ${prevEnd}):**
-• Opt-Out Rate: ${prev.optOutRatePct}% (${prev.opt_outs} opt-outs from ${prev.sends} sends)
-
-**Change:** ${optOutDelta >= 0 ? '+' : ''}${optOutDelta.toFixed(2)} percentage points
-
-${optOutDelta < 0 ? '✅ Fewer opt-outs this week!' : optOutDelta > 0 ? '⚠️ Opt-outs increased. Review your messaging or list quality.' : 'Opt-out rate remained stable.'}`;
-    } else if (questionLower.includes('cost') || questionLower.includes('spend') || questionLower.includes('llm')) {
-      answer = `💰 **LLM Cost Analysis**
-
-**This Week (${start} to ${end}):**
-• Total LLM Cost: $${curCost.toFixed(2)}
-
-**Previous Week (${prevStart} to ${prevEnd}):**
-• Total LLM Cost: $${prevCost.toFixed(2)}
-
-**Change:** ${costDelta >= 0 ? '+' : '-'}$${Math.abs(costDelta).toFixed(2)}
-
-${costDelta < 0 ? '✅ You spent less on LLM this week!' : costDelta > 0 ? '📈 LLM costs increased, likely due to higher volume.' : 'LLM costs remained stable.'}`;
-    } else {
-      // General summary
-      answer = `📊 **Weekly Performance Summary**
-
-**This Week (${start} to ${end}):**
-• Sends: ${cur.sends.toLocaleString()}
-• Replies: ${cur.replies} (${cur.replyRatePct}% rate)
-• Opt-Outs: ${cur.opt_outs} (${cur.optOutRatePct}% rate)
-• LLM Cost: $${curCost.toFixed(2)}
-
-**Week-over-Week Changes:**
-• Reply Rate: ${replyDelta >= 0 ? '+' : ''}${replyDelta.toFixed(2)}pp
-• Opt-Out Rate: ${optOutDelta >= 0 ? '+' : ''}${optOutDelta.toFixed(2)}pp
-• LLM Cost: ${costDelta >= 0 ? '+' : '-'}$${Math.abs(costDelta).toFixed(2)}
-
-💡 **Tip:** Ask me about specific metrics like "How did reply rates change?" or "What's my LLM spend?"`;
+    if (!userId) {
+      return NextResponse.json(
+        { answer: 'Please sign in to use the AI assistant.' },
+        { status: 401 }
+      );
     }
 
-    return NextResponse.json({ answer }, { headers: { 'content-type': 'application/json' } });
+    // Workspace validation
+    const workspaceId = extractWorkspaceId(req) || DEFAULT_WORKSPACE_ID;
+    const { hasAccess } = await canAccessWorkspace(userId, workspaceId);
+    
+    if (!hasAccess) {
+      return NextResponse.json(
+        { answer: 'Access denied to this workspace.' },
+        { status: 403 }
+      );
+    }
+
+    const body: AskRequest = await req.json();
+    const question = body.question?.trim();
+
+    if (!question || question.length < 3) {
+      return NextResponse.json({
+        answer: 'Please ask a question about your dashboard data.',
+      } as AskResponse);
+    }
+
+    // Get date range from context or use last 7 days
+    const today = new Date();
+    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+    const endDate = body.context?.end_date || fmt(today);
+    const startDate = body.context?.start_date || fmt(new Date(today.getTime() - 7 * 24 * 3600 * 1000));
+    const campaign = body.context?.campaign;
+
+    // Build RAG context
+    const ragContext = await buildRAGContext(workspaceId, startDate, endDate, campaign);
+    const contextPrompt = formatContextForPrompt(ragContext);
+
+    // Call OpenAI GPT-4o
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    
+    if (!openaiApiKey) {
+      return NextResponse.json({
+        answer: 'AI assistant is not configured. Please add OPENAI_API_KEY to your environment variables.',
+      } as AskResponse);
+    }
+
+    const systemPrompt = `You are a helpful analytics assistant for a cold email dashboard. 
+You have access to real-time campaign data and should provide clear, actionable insights.
+Be concise and data-driven. Format numbers nicely (e.g., 1,234 instead of 1234).
+Use bullet points for lists. When suggesting improvements, be specific.
+
+Current dashboard data:
+${contextPrompt}
+
+User's timezone: UTC (all times in UTC)`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiApiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: question },
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('OpenAI API error:', await response.text());
+      return NextResponse.json({
+        answer: 'Sorry, I encountered an error processing your question. Please try again.',
+      } as AskResponse);
+    }
+
+    const data = await response.json();
+    const answer = data.choices[0]?.message?.content || 'No response generated.';
+
+    // Extract sources from context
+    const sources = [
+      { type: 'metric' as const, label: 'Reply Rate', value: `${ragContext.summary.reply_rate_pct}%` },
+      { type: 'metric' as const, label: 'Total Sends', value: ragContext.summary.sends },
+      { type: 'metric' as const, label: 'LLM Cost', value: `$${ragContext.summary.cost_usd.toFixed(2)}` },
+    ];
+
+    // Generate suggested follow-ups based on the data
+    const followups: string[] = [];
+    
+    if (ragContext.summary.reply_rate_pct < 2) {
+      followups.push('Why is my reply rate low?');
+    }
+    if (ragContext.summary.opt_out_rate_pct > 2) {
+      followups.push('How can I reduce opt-outs?');
+    }
+    if (ragContext.topCampaigns.length > 1) {
+      followups.push('Which campaign is performing best?');
+    }
+    if (ragContext.summary.cost_usd > 10) {
+      followups.push('How can I reduce my LLM costs?');
+    }
+    followups.push('What are the trends this week?');
+
+    return NextResponse.json({
+      answer,
+      sources,
+      suggested_followups: followups.slice(0, 3),
+    } as AskResponse);
+
   } catch (error) {
     console.error('Ask API error:', error);
-    return NextResponse.json({ 
-      answer: 'Sorry, I encountered an error fetching your data. Please ensure your database is connected properly.' 
-    }, { headers: { 'content-type': 'application/json' } });
+    return NextResponse.json({
+      answer: 'Sorry, I encountered an unexpected error. Please try again later.',
+    } as AskResponse);
   }
 }

@@ -212,11 +212,3 @@ INSERT INTO contacts (workspace_id, email)
 VALUES ('default', 'system@dashboard.local')
 ON CONFLICT DO NOTHING;
 
--- ============================================
--- MATERIALIZED VIEWS (Performance Optimization)
--- See: supabase/migrations/20251207_materialized_views.sql
--- ============================================
--- mv_daily_stats: Pre-aggregated email event counts by day/campaign/workspace
--- mv_llm_cost: Pre-aggregated LLM costs by day/model/provider/workspace
--- refresh_dashboard_views(): Function to refresh both views concurrently
--- get_view_freshness(): Function to check view staleness

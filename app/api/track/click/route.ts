@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const campaign = searchParams.get('c') || searchParams.get('campaign') || 'Unknown';
   const step = parseInt(searchParams.get('s') || searchParams.get('step') || '1', 10);
   const linkId = searchParams.get('l') || searchParams.get('link') || 'main_cta';
+  const workspaceId = searchParams.get('w') || searchParams.get('workspace_id') || DEFAULT_WORKSPACE_ID;
   
   // Validate destination URL
   if (!destinationUrl) {
@@ -32,9 +33,9 @@ export async function GET(req: NextRequest) {
   }
 
   // Track the click event asynchronously (don't block redirect)
-  if (contactEmail && supabaseAdmin) {
+  if (contactEmail && supabaseAdmin && workspaceId) {
     // Fire and forget
-    trackClickEvent(contactEmail, campaign, step, linkId, finalUrl).catch(console.error);
+    trackClickEvent(contactEmail, campaign, step, linkId, finalUrl, workspaceId).catch(console.error);
   }
 
   // Redirect to the destination URL immediately
@@ -46,7 +47,8 @@ async function trackClickEvent(
   campaign: string,
   step: number,
   linkId: string,
-  destinationUrl: string
+  destinationUrl: string,
+  workspaceId: string
 ) {
   if (!supabaseAdmin) return;
 
@@ -57,7 +59,7 @@ async function trackClickEvent(
       .upsert(
         {
           email: contactEmail,
-          workspace_id: DEFAULT_WORKSPACE_ID,
+          workspace_id: workspaceId,
         },
         { onConflict: 'email,workspace_id' }
       )
@@ -68,7 +70,7 @@ async function trackClickEvent(
 
     // Insert click event
     await supabaseAdmin.from('email_events').insert({
-      workspace_id: DEFAULT_WORKSPACE_ID,
+      workspace_id: workspaceId,
       contact_id: contact.id,
       contact_email: contactEmail,
       campaign_name: campaign,

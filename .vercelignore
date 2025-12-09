@@ -1,0 +1,23 @@
+# Test files and directories
+e2e
+__tests__
+playwright-report
+test-results
+coverage
+
+# Scripts and development files
+scripts
+prompts
+
+# Documentation
+docs
+Phases-completed- docs
+*.md
+!README.md
+
+# Other development files
+*.sh
+load-test.yml
+playwright.config.*.ts
+jest.config.ts
+

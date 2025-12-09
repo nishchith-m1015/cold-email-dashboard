@@ -76,6 +76,7 @@ export async function GET() {
     checks.cache.freshEntries = cacheStats.validEntries;
     checks.cache.staleEntries = cacheStats.staleEntries;
     checks.cache.inFlightRequests = cacheStats.inFlightRequests;
+    
   } catch {
     // Cache error is not critical
   }

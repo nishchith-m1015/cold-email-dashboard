@@ -26,7 +26,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        1504,
+        1296,
         336
       ],
       "id": "892f97da-feac-48f4-9aa6-fceeadad5ebf",
@@ -36,7 +36,7 @@
       "parameters": {
         "content": "## Opt-out\n",
         "height": 368,
-        "width": 1152,
+        "width": 992,
         "color": 3
       },
       "type": "n8n-nodes-base.stickyNote",
@@ -498,50 +498,49 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        1056,
+        1072,
         336
       ],
       "id": "a9b487b3-e2e0-4196-85fc-2b7b0bd104b3",
       "name": "Opted-Out",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "2EUpgH0WFkM3Lr6E",
-          "name": "Nishchith Sheets account"
+          "id": "p8ESE0UMGdJsRvZv",
+          "name": "Smartie Agents"
         }
       }
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://cold-email-dashboard.vercel.app/api/cost-events",
+        "url": "https://cold-email-dashboard.vercel.app/api/events",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "x-webhook-token",
-              "value": "6de5a8d03ad6348f4110782372a82f1bb7c6ef43a8ce8810bf0459e73"
+              "value": "6de5a8d03ad6348f4110782372a82f1bb7c6ef43a8ce8810bf0459e73abaeb61"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
             }
           ]
         },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "Opt Out Event",
-              "value": "={\n  \"contact_email\": {{ $('Opted-Out').item.json.email_address }},\n  \"campaign\": \"Ohio\",\n  \"event_type\": \"opt_out\",\n  \"event_ts\": {{ new Date().toISOString() }},\n  \"idempotency_key\": {{ `optout_${$execution.id}_${$('Opted-Out').item.json.email_address}` }},\n  \"n8n_execution_id\": {{ $execution.id }}\n}"
-            }
-          ]
-        },
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contact_email\": \"{{ $('Opted-Out').item.json.email_address }}\",\n  \"campaign\": \"Ohio\",\n  \"event_type\": \"opt_out\",\n  \"event_ts\": \"{{ new Date().toISOString() }}\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
+      "typeVersion": 4.2,
       "position": [
-        1280,
+        1272,
         336
       ],
-      "id": "ca61cac2-28cf-46a3-b6ad-42a59e18091d",
-      "name": "HTTP Request"
+      "id": "track-optout",
+      "name": "Track Opt-Out",
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
@@ -572,14 +571,14 @@
       "main": [
         [
           {
-            "node": "HTTP Request",
+            "node": "Track Opt-Out",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "HTTP Request": {
+    "Track Opt-Out": {
       "main": [
         [
           {
@@ -596,7 +595,7 @@
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "5c686c36-879a-43b0-ad96-a93c3428f473",
+  "versionId": "9074e9d4-4a8b-47bf-83b1-40ca12486383",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "fb0f3042150127121074617aaee31b106c313805cbc452132240d35f72eba898"

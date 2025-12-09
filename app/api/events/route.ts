@@ -17,10 +17,8 @@ const eventSchema = z.object({
   subject: z.string().max(500).optional(),
   body: z.string().max(50000).optional(),
   workspace_id: z.string().max(100).optional(),
+  idempotency_key: z.string().max(200),
   metadata: z.record(z.unknown()).optional(),
-  // Phase 10: Idempotency fields
-  idempotency_key: z.string().max(200).optional(),
-  n8n_execution_id: z.string().max(200).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -68,54 +66,109 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Phase 10: Generate idempotency key if not provided
-  const idempotencyKey = validation.data.idempotency_key || 
-    validation.data.n8n_execution_id || 
-    crypto.randomUUID();
+  const {
+    contact_email,
+    campaign,
+    step,
+    event_type,
+    provider,
+    provider_message_id,
+    event_ts,
+    subject,
+    body: email_body,
+    workspace_id,
+    idempotency_key,
+    metadata,
+  } = validation.data;
+
+  const workspaceId = workspace_id || DEFAULT_WORKSPACE_ID;
+  const campaignName = campaign || 'Default Campaign';
+  const eventTs = event_ts ? new Date(event_ts).toISOString() : new Date().toISOString();
 
   try {
-    // Phase 10: Fast path - Insert into webhook queue (2-5ms)
-    // Database trigger will process asynchronously into email_events table
-    const { error: queueError } = await supabaseAdmin
-      .from('webhook_queue')
-      .insert({
-        idempotency_key: idempotencyKey,
-        event_source: 'n8n',
-        event_type: 'email_event',
-        raw_payload: validation.data,
-        status: 'pending',
-      });
+    // Upsert contact
+    const { data: contact, error: contactError } = await supabaseAdmin
+      .from('contacts')
+      .upsert(
+        { 
+          workspace_id: workspaceId, 
+          email: contact_email 
+        },
+        { onConflict: 'workspace_id,email' }
+      )
+      .select('id')
+      .single();
 
-    if (queueError) {
-      // Handle duplicate idempotency_key (idempotent behavior)
-      if (queueError.code === '23505') {
-        return NextResponse.json(
-          { 
-            ok: true, 
-            queued: true,
-            deduped: true, 
-            idempotency_key: idempotencyKey 
-          }, 
-          { headers: rateLimitHeaders(rateLimit) }
-        );
-      }
-      
-      console.error('Webhook queue insert error:', queueError);
-      return NextResponse.json(
-        { error: 'Failed to queue event', details: queueError.message }, 
-        { status: 500 }
-      );
+    if (contactError && !contactError.message.includes('duplicate')) {
+      console.error('Contact upsert error:', contactError);
     }
 
-    // Success - Event queued for processing
-    return NextResponse.json(
-      { 
-        ok: true, 
-        queued: true,
-        idempotency_key: idempotencyKey 
-      }, 
-      { headers: rateLimitHeaders(rateLimit) }
-    );
+    const contactId = contact?.id || null;
+
+    // For 'sent' events, also upsert the email record
+    if (event_type === 'sent' && step) {
+      const { error: emailError } = await supabaseAdmin
+        .from('emails')
+        .upsert({
+          contact_id: contactId,
+          workspace_id: workspaceId,
+          step: step,
+          subject: subject || null,
+          body: email_body || null,
+          provider: provider || 'gmail',
+          provider_message_id: provider_message_id || null,
+          sent_at: eventTs,
+        }, { onConflict: 'contact_id,campaign_id,step' });
+
+      if (emailError) {
+        console.error('Email upsert error:', emailError);
+      }
+    }
+
+    // Idempotency: short-circuit if this key already exists for workspace
+    if (idempotency_key) {
+      const { data: existing } = await supabaseAdmin
+        .from('email_events')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .eq('metadata->>idempotency_key', idempotency_key)
+        .limit(1);
+      if (existing && existing.length > 0) {
+        return NextResponse.json({ ok: true, deduped: true }, { headers: rateLimitHeaders(rateLimit) });
+      }
+    }
+
+    // Generate unique event key for deduplication
+    const eventKey = idempotency_key || `${provider || 'unknown'}:${provider_message_id || contact_email}:${event_type}:${step || 0}`;
+
+    // Insert event
+    const { error: eventError } = await supabaseAdmin
+      .from('email_events')
+      .insert({
+        workspace_id: workspaceId,
+        contact_id: contactId,
+        contact_email,
+        campaign_name: campaignName,
+        step: step || null,
+        event_type,
+        event_ts: eventTs,
+        provider: provider || null,
+        provider_message_id: provider_message_id || null,
+        event_key: eventKey,
+        metadata: { ...(metadata || {}), idempotency_key },
+      });
+
+    if (eventError) {
+      // Check if duplicate (idempotent)
+      if (eventError.message?.toLowerCase().includes('duplicate') || 
+          eventError.code === '23505') {
+        return NextResponse.json({ ok: true, deduped: true }, { headers: rateLimitHeaders(rateLimit) });
+      }
+      console.error('Event insert error:', eventError);
+      return NextResponse.json({ error: eventError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true }, { headers: rateLimitHeaders(rateLimit) });
   } catch (error) {
     console.error('Events API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

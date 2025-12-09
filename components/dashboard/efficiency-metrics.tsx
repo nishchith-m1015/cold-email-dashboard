@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn, formatCurrency } from '@/lib/utils';
-import { DollarSign, Users, Target } from 'lucide-react';
+import { DollarSign, Users, Target, Info } from 'lucide-react';
 
 interface EfficiencyMetricsProps {
   costPerReply: number;
@@ -46,6 +46,7 @@ function EfficiencyMetricsComponent({
       value: formatCurrency(costPerReply),
       sublabel: 'Reply ROI',
       valueColor: 'text-accent-success',
+      tooltip: null,
     },
     {
       icon: Target,
@@ -53,6 +54,9 @@ function EfficiencyMetricsComponent({
       value: monthlyProjection !== null ? formatCurrency(monthlyProjection) : 'N/A',
       sublabel: monthlyProjection !== null ? 'Based on current pace' : 'Select current month',
       valueColor: 'text-accent-primary',
+      tooltip: monthlyProjection !== null 
+        ? 'Calculated as: (Cost Month-to-Date ÷ Days Passed) × Days in Month. Only shown when viewing the current month.'
+        : 'Monthly projection is only available when viewing the current month date range.',
     },
     {
       icon: Users,
@@ -60,6 +64,7 @@ function EfficiencyMetricsComponent({
       value: totalContacts.toLocaleString(),
       sublabel: 'Total in sequence',
       valueColor: 'text-text-primary',
+      tooltip: null,
     },
   ];
 
@@ -84,7 +89,7 @@ function EfficiencyMetricsComponent({
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="flex-1 rounded-xl border border-border bg-surface-elevated/50 p-4 flex flex-row items-center"
+                className="relative flex-1 rounded-xl border border-border bg-surface-elevated/50 p-4 flex flex-row items-center group"
               >
                 {/* Icon on Left */}
                 <div className={cn(
@@ -97,10 +102,24 @@ function EfficiencyMetricsComponent({
                 </div>
                 
                 {/* Text on Right */}
-                <div className="ml-4 flex flex-col items-start">
-                  <p className="text-xs font-medium text-text-secondary">
-                    {metric.label}
-                  </p>
+                <div className="ml-4 flex flex-col items-start flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-medium text-text-secondary">
+                      {metric.label}
+                    </p>
+                    {metric.tooltip && (
+                      <div className="relative">
+                        <Info className="h-3.5 w-3.5 text-text-secondary hover:text-accent-primary transition-colors cursor-help" />
+                        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-72 p-3 bg-surface border border-border rounded-lg shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                          <p className="text-xs text-text-primary leading-relaxed">
+                            {metric.tooltip}
+                          </p>
+                          {/* Arrow */}
+                          <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-border" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <p className={cn('text-xl font-bold', metric.valueColor)}>
                     {metric.value}
                   </p>

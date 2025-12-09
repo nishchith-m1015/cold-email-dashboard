@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, memo } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   useReactTable,
@@ -27,7 +27,7 @@ interface CampaignTableProps {
 
 const columnHelper = createColumnHelper<CampaignStats>();
 
-function CampaignTableComponent({ data, loading = false, className }: CampaignTableProps) {
+export function CampaignTable({ data, loading = false, className }: CampaignTableProps) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'sends', desc: true }
   ]);
@@ -251,7 +251,3 @@ function CampaignTableComponent({ data, loading = false, className }: CampaignTa
   );
 }
 
-// Memoize to prevent re-renders when parent updates but data hasn't changed
-export const CampaignTable = memo(CampaignTableComponent);
-
-CampaignTable.displayName = 'CampaignTable';

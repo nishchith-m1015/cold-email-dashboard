@@ -3,9 +3,6 @@ import './globals.css';
 import { LayoutWrapper } from '@/components/layout/layout-wrapper';
 import { ClerkThemeProvider } from '@/components/providers/clerk-theme-provider';
 
-// Force dynamic rendering since Header uses useSearchParams
-export const dynamic = 'force-dynamic';
-
 export const metadata: Metadata = {
   title: 'Cold Email Analytics Dashboard',
   description: 'Real-time analytics for your cold email campaigns',

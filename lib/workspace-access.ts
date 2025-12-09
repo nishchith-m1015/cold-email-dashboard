@@ -221,20 +221,44 @@ export async function createWorkspace(
   }
 
   // Generate slug from name if not provided
-  const workspaceSlug = slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  const baseSlug = slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
   try {
-    // Create workspace (let Postgres generate UUID)
-    const { data: workspace, error: wsError } = await supabaseAdmin
-      .from('workspaces')
-      .insert({
-        name,
-        slug: workspaceSlug,
-        plan: 'free',
-        settings: {},
-      })
-      .select()
-      .single();
+    // Try to create workspace; if slug conflict, append a short suffix and retry
+    let workspaceSlug = baseSlug || 'workspace';
+    let workspace = null;
+    let wsError = null as any;
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data, error } = await supabaseAdmin
+        .from('workspaces')
+        .insert({
+          name,
+          slug: workspaceSlug,
+          plan: 'free',
+          settings: {},
+        })
+        .select()
+        .single();
+
+      if (!error) {
+        workspace = data;
+        wsError = null;
+        break;
+      }
+
+      // If slug unique constraint violated, retry with a suffix
+      if (error.code === '23505') {
+        const suffix = Math.random().toString(36).slice(2, 6);
+        workspaceSlug = `${baseSlug || 'workspace'}-${suffix}`;
+        wsError = error;
+        continue;
+      }
+
+      // Other errors -> stop
+      wsError = error;
+      break;
+    }
 
     if (wsError) {
       console.error('Workspace creation error:', wsError);

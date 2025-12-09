@@ -18,10 +18,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1360,
-        4176
+        -928,
+        1968
       ],
-      "id": "d28862f1-0408-4797-b5ba-c847716d9e0e",
+      "id": "e79ee611-50a8-48b1-b6f9-fe9fe8b8b2ea",
       "name": "Edit Fields2"
     },
     {
@@ -53,10 +53,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1792,
-        3952
+        -496,
+        1744
       ],
-      "id": "5aa9c996-15c1-4729-86d0-a29574ef4be3",
+      "id": "e7cc9a05-4130-46c6-8f0d-93520bc502de",
       "name": "If2"
     },
     {
@@ -68,10 +68,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.1,
       "position": [
-        1600,
-        3952
+        -688,
+        1744
       ],
-      "id": "f30923d9-9051-4534-bcd4-8e7c527ed31a",
+      "id": "c47561ee-f459-4d2c-a03e-8984121b5574",
       "name": "Merge2"
     },
     {
@@ -85,10 +85,10 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        1184,
-        4176
+        -1104,
+        1968
       ],
-      "id": "37b94831-8125-4572-bfc0-5f3e08d6deb2",
+      "id": "1ba7b1b7-9153-4590-a150-318a79e807c4",
       "name": "Replied?2",
       "webhookId": "6cdae860-913e-4fa7-97af-e49f0cdcd11d",
       "alwaysOutputData": true,
@@ -511,10 +511,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        2368,
-        3936
+        80,
+        1728
       ],
-      "id": "5bfe6c47-c281-4a14-acbf-0a4e9796ddf1",
+      "id": "f1a42bf6-de0d-480e-b3c5-3c89fe92e40c",
       "name": "Replied = Yes2",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -939,10 +939,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        2688,
-        4304
+        48,
+        2080
       ],
-      "id": "817ab44c-5f07-46eb-91a4-4a49537a36ef",
+      "id": "02cb503d-18ac-44d6-80fb-ba55c0089fbd",
       "name": "Google Sheets10",
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -959,10 +959,10 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        2896,
-        4304
+        240,
+        2080
       ],
-      "id": "cc146f54-a2e6-4b9d-ab02-230f23e102cf",
+      "id": "aea31c92-e716-4b3b-8693-79494634c9fb",
       "name": "Wait4",
       "webhookId": "5fcbde9f-0750-405b-8ff7-8bce2e4a16ef"
     },
@@ -994,10 +994,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2272,
-        4304
+        -160,
+        2080
       ],
-      "id": "4827ef89-16bd-4269-bbbb-10816b0a6b85",
+      "id": "98b34fa3-4e7b-4a8e-ad47-25b19f45202e",
       "name": "HTTP Request4",
       "credentials": {
         "gmailOAuth2": {
@@ -1008,15 +1008,47 @@
     },
     {
       "parameters": {
-        "jsCode": "const UNSUB_BASE = 'https://n8n-deployment-hlnal.ondigitalocean.app/webhook/Unsubscribe';\n// --------------------------------\nconst row = items[0]?.json || {};\nconst keys = Object.keys(row);\n// normalize keys (trim whitespace) while preserving values\nconst clean = {};\nfor (const k of keys) clean[k.trim()] = row[k];\n// helper to try multiple candidate keys in order\nconst pick = (...candidates) => {\n  for (const c of candidates) {\n    if (c in clean && clean[c] != null && `${clean[c]}`.trim() !== '') return `${clean[c]}`.trim();\n  }\n  return '';\n};\n// pull fields with robust fallbacks\nconst recipientEmail = pick('email_address', 'Email Address', 'Email address', 'email');\nconst senderEmail    = pick('sender_email', 'From', 'from');\nconst token          = pick('Token', 'token', 'Tkn', 'tkn');\n// subjects & body\nconst subj1 = pick('email_1_subject', 'Email 1 Subject', 'Subject', 'subject');\nconst subj2 = pick('email_2_subject', 'Email 2 Subject') || (subj1 ? `Re: ${subj1}` : 'Following up');\nconst body2 = pick('email_2_body', 'email_2_Body', 'EmailBody', 'Body') || 'Thank you for your time.';\nconst threadId = pick('Thread ID', 'ThreadID', 'threadId'); // optional; OK if empty\n// basic validation (prevents accidental blasts with empty critical fields)\nif (!recipientEmail) throw new Error('Missing \"email_address\" (recipient).');\nif (!senderEmail)    throw new Error('Missing \"sender_email\".');\n// unsubscribe link\nconst unsubUrl = `${UNSUB_BASE}?tkn=${encodeURIComponent(token || '')}`;\nconst htmlBody = `${body2}<br><br><a href=\"${unsubUrl}\">Click Here to Unsubscribe</a>`;\n// build RFC 2822 message (RAW) with HTML\nconst headers = [\n  `Subject: ${subj2}`,\n  `From: ${senderEmail}`,\n  `To: ${recipientEmail}`,\n  'MIME-Version: 1.0',\n  'Content-Type: text/html; charset=\"UTF-8\"',\n];\nconst emailContent = `${headers.join('\\n')}\\n\\n${htmlBody}`;\n// base64url encode\nconst raw = Buffer.from(emailContent)\n  .toString('base64')\n  .replace(/\\+/g, '-')\n  .replace(/\\//g, '_')\n  .replace(/=+$/, '');\n// output for Gmail node (Message → Send with RAW)\nreturn [\n  {\n    json: {\n      raw,\n      // include threadId only if you actually have one\n      ...(threadId ? { threadId } : {}),\n      // optional extras if you want to log/debug downstream\n      to: recipientEmail,\n      subject: subj2,\n      // Store original body for tracking injection\n      email_2_body: body2,\n    },\n  },\n];"
+        "method": "POST",
+        "url": "https://cold-email-dashboard.vercel.app/api/events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-token",
+              "value": "6de5a8d03ad6348f4110782372a82f1bb7c6ef43a8ce8810bf0459e73abaeb61"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contact_email\": \"{{ $('Google Sheets8').item.json.email_address }}\",\n  \"campaign\": \"Ohio\",\n  \"step\": 2,\n  \"event_type\": \"sent\",\n  \"provider\": \"gmail\",\n  \"provider_message_id\": \"{{ $json.id }}\",\n  \"event_ts\": \"{{ new Date().toISOString() }}\",\n  \"subject\": \"Re: {{ $('Google Sheets8').item.json.email_1_subject }}\",\n  \"body\": \"{{ $('Code4').item.json.raw }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        2080
+      ],
+      "id": "track-email-2",
+      "name": "Track Email 2 Sent",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const UNSUB_BASE = 'https://n8n-deployment-hlnal.ondigitalocean.app/webhook/Unsubscribe';\n// --------------------------------\nconst row = items[0]?.json || {};\nconst keys = Object.keys(row);\n// normalize keys (trim whitespace) while preserving values\nconst clean = {};\nfor (const k of keys) clean[k.trim()] = row[k];\n// helper to try multiple candidate keys in order\nconst pick = (...candidates) => {\n  for (const c of candidates) {\n    if (c in clean && clean[c] != null && `${clean[c]}`.trim() !== '') return `${clean[c]}`.trim();\n  }\n  return '';\n};\n// pull fields with robust fallbacks\nconst recipientEmail = pick('email_address', 'Email Address', 'Email address', 'email');\nconst senderEmail    = pick('sender_email', 'From', 'from');\nconst token          = pick('Token', 'token', 'Tkn', 'tkn');\n// subjects & body\nconst subj1 = pick('email_1_subject', 'Email 1 Subject', 'Subject', 'subject');\nconst subj2 = pick('email_2_subject', 'Email 2 Subject') || (subj1 ? `Re: ${subj1}` : 'Following up');\nconst body2 = pick('email_2_body', 'email_2_Body', 'EmailBody', 'Body') || 'Thank you for your time.';\nconst threadId = pick('Thread ID', 'ThreadID', 'threadId'); // optional; OK if empty\n// basic validation (prevents accidental blasts with empty critical fields)\nif (!recipientEmail) throw new Error('Missing \"email_address\" (recipient).');\nif (!senderEmail)    throw new Error('Missing \"sender_email\".');\n// unsubscribe link\nconst unsubUrl = `${UNSUB_BASE}?tkn=${encodeURIComponent(token || '')}`;\nconst htmlBody = `${body2}<br><br><a href=\"${unsubUrl}\">Click Here to Unsubscribe</a>`;\n// build RFC 2822 message (RAW) with HTML\nconst headers = [\n  `Subject: ${subj2}`,\n  `From: ${senderEmail}`,\n  `To: ${recipientEmail}`,\n  'MIME-Version: 1.0',\n  'Content-Type: text/html; charset=\"UTF-8\"',\n];\nconst emailContent = `${headers.join('\\n')}\\n\\n${htmlBody}`;\n// base64url encode\nconst raw = Buffer.from(emailContent)\n  .toString('base64')\n  .replace(/\\+/g, '-')\n  .replace(/\\//g, '_')\n  .replace(/=+$/, '');\n// output for Gmail node (Message → Send with RAW)\nreturn [\n  {\n    json: {\n      raw,\n      // include threadId only if you actually have one\n      ...(threadId ? { threadId } : {}),\n      // optional extras if you want to log/debug downstream\n      to: recipientEmail,\n      subject: subj2,\n    },\n  },\n];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1904,
-        4304
+        -384,
+        2080
       ],
-      "id": "414adf8b-f0ab-4b04-9cc7-961698479937",
+      "id": "e0d8bb65-ac7c-483d-b2d7-427bbbfb596a",
       "name": "Code4"
     },
     {
@@ -1033,10 +1065,10 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        192,
-        3936
+        -2096,
+        1728
       ],
-      "id": "77671012-148b-4b40-85ec-edb07ffec926",
+      "id": "0581be8a-f135-4269-8f38-cb2ecdfaf93c",
       "name": "Schedule Trigger2"
     },
     {
@@ -1080,10 +1112,10 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        368,
-        3936
+        -1920,
+        1728
       ],
-      "id": "2e2ab843-b3d8-460b-a5c5-e8a2e0f39194",
+      "id": "922cb5e6-a05a-4da2-b24a-8d3a2ff91151",
       "name": "Google Sheets8",
       "alwaysOutputData": false,
       "credentials": {
@@ -1097,16 +1129,16 @@
       "parameters": {
         "content": "## Email 2\n",
         "height": 720,
-        "width": 3024,
+        "width": 2688,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        32,
-        3824
+        -2256,
+        1616
       ],
       "typeVersion": 1,
-      "id": "9a678c3d-93ac-4181-8192-d25f549d9f86",
+      "id": "1c0c16d3-9f82-4fae-b1f7-100ae89c9861",
       "name": "Sticky Note8"
     },
     {
@@ -1116,10 +1148,10 @@
       "type": "n8n-nodes-base.limit",
       "typeVersion": 1,
       "position": [
-        784,
-        3920
+        -1504,
+        1712
       ],
-      "id": "eeed787b-3b1c-4140-bcb4-099226dc5d05",
+      "id": "f24e8384-5b5e-4a9a-8382-238dc566481c",
       "name": "Limit"
     },
     {
@@ -1159,10 +1191,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        544,
-        3936
+        -1744,
+        1728
       ],
-      "id": "494d66ef-2243-4730-a72f-915a7046bd98",
+      "id": "5f7a4d0b-21d8-41ec-94e1-11018ad0b8fe",
       "name": "If"
     },
     {
@@ -1172,56 +1204,11 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        1040,
-        3920
+        -1248,
+        1712
       ],
-      "id": "68bb300c-3630-4fbf-9a8e-5bfbc895411e",
+      "id": "a4ae8a32-5cf8-4a3b-a084-388dd39069d7",
       "name": "Loop Over Items4"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://cold-email-dashboard.vercel.app/api/events",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "x-webhook-token",
-              "value": "6de5a8d03ad6348f4110782372a82f1bb7c6ef43a8ce8810bf0459e73abaeb61"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"contact_email\": \"{{ $('Google Sheets8').item.json.email_address }}\",\n  \"campaign\": \"Ohio\",\n  \"step\": 2,\n  \"event_type\": \"sent\",\n  \"provider\": \"gmail\",\n  \"provider_message_id\": \"{{ $json.id }}\",\n  \"event_ts\": \"{{ new Date().toISOString() }}\",\n  \"subject\": \"Re: {{ $('Google Sheets8').item.json.email_1_subject }}\",\n  \"body\": \"{{ $('🔍 Inject Tracking1').item.json.tracked_body }}\",\n  \"idempotency_key\": \"email_{{ $execution.id }}_{{ $('Google Sheets8').item.json.email_address }}_step2\",\n  \"n8n_execution_id\": \"{{ $execution.id }}\"\n}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        2480,
-        4304
-      ],
-      "id": "c9ac9464-cf3c-49eb-9012-e9f6988b1ebb",
-      "name": "Track Email 2 Sent1",
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "// ============================================\n// EMAIL 2 TRACKING INJECTOR (RAW Format)\n// Injects tracking pixel into base64 raw email\n// ============================================\n\nconst DASHBOARD_URL = 'https://cold-email-dashboard.vercel.app';\n\n// Get the raw base64 email from previous Code4 node\nconst rawBase64 = $json.raw;\nconst contactEmail = $('Google Sheets8').item.json.email_address || '';\nconst campaign = 'Ohio';\nconst step = 2;\n\n// Generate unique token for deduplication\nconst token = `${contactEmail}-${step}-${Date.now()}`;\nconst encodedToken = encodeURIComponent(token);\n\n// Build tracking pixel URL\nconst trackingPixelUrl = `${DASHBOARD_URL}/api/track/open?e=${encodeURIComponent(contactEmail)}&c=${encodeURIComponent(campaign)}&s=${step}&t=${encodedToken}`;\n\n// Decode the base64url raw email\nlet decodedEmail = Buffer.from(\n  rawBase64.replace(/-/g, '+').replace(/_/g, '/'),\n  'base64'\n).toString('utf-8');\n\n// Split headers and body\nconst emailParts = decodedEmail.split('\\n\\n');\nconst headers = emailParts[0];\nconst body = emailParts.slice(1).join('\\n\\n');\n\n// Create tracking pixel HTML\nconst trackingPixel = `<img src=\"${trackingPixelUrl}\" width=\"1\" height=\"1\" style=\"display:none;width:1px;height:1px;border:0;\" alt=\"\" />`;\n\n// Inject tracking pixel into body\nlet trackedBody = body;\nif (body.includes('</body>')) {\n  trackedBody = body.replace('</body>', `${trackingPixel}</body>`);\n} else if (body.includes('</html>')) {\n  trackedBody = body.replace('</html>', `${trackingPixel}</html>`);\n} else {\n  // Simple HTML or plain text - append at end\n  trackedBody = `${body}\\n${trackingPixel}`;\n}\n\n// Reconstruct the email\nconst trackedEmailContent = `${headers}\\n\\n${trackedBody}`;\n\n// Re-encode to base64url\nconst trackedRaw = Buffer.from(trackedEmailContent)\n  .toString('base64')\n  .replace(/\\+/g, '-')\n  .replace(/\\//g, '_')\n  .replace(/=+$/, '');\n\n// Return updated item with tracked raw\nreturn [\n  {\n    json: {\n      ...$json,\n      raw: trackedRaw,\n      original_raw: rawBase64,\n      tracking_pixel_url: trackingPixelUrl,\n      tracking_token: encodedToken,\n      tracked_body: trackedBody\n    }\n  }\n];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2064,
-        4304
-      ],
-      "id": "20928737-2ee4-403e-9e63-1458fa735a24",
-      "name": "🔍 Inject Tracking1"
     }
   ],
   "pinData": {},
@@ -1303,7 +1290,18 @@
       "main": [
         [
           {
-            "node": "Track Email 2 Sent1",
+            "node": "Track Email 2 Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Track Email 2 Sent": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets10",
             "type": "main",
             "index": 0
           }
@@ -1314,7 +1312,7 @@
       "main": [
         [
           {
-            "node": "🔍 Inject Tracking1",
+            "node": "HTTP Request4",
             "type": "main",
             "index": 0
           }
@@ -1392,38 +1390,16 @@
           }
         ]
       ]
-    },
-    "Track Email 2 Sent1": {
-      "main": [
-        [
-          {
-            "node": "Google Sheets10",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "🔍 Inject Tracking1": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request4",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "timezone": "America/Los_Angeles",
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "c4b35332-256a-418a-a6bc-cdcf0bd6b6d7",
+  "versionId": "5183fd8e-5b3d-44a1-8485-6fd78f395137",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "fb0f3042150127121074617aaee31b106c313805cbc452132240d35f72eba898"

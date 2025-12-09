@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
   const campaign = searchParams.get('c') || searchParams.get('campaign') || 'Unknown';
   const step = parseInt(searchParams.get('s') || searchParams.get('step') || '1', 10);
   const token = searchParams.get('t') || searchParams.get('token'); // Unique token for deduplication
+  const workspaceId = searchParams.get('w') || searchParams.get('workspace_id') || DEFAULT_WORKSPACE_ID;
   
   // Always return the pixel immediately (non-blocking tracking)
   const response = new NextResponse(TRACKING_PIXEL, {
@@ -31,9 +32,9 @@ export async function GET(req: NextRequest) {
   });
 
   // Track the open event asynchronously (don't block pixel response)
-  if (contactEmail && supabaseAdmin) {
+  if (contactEmail && supabaseAdmin && workspaceId) {
     // Fire and forget - don't await
-    trackOpenEvent(contactEmail, campaign, step, token).catch(console.error);
+    trackOpenEvent(contactEmail, campaign, step, token, workspaceId).catch(console.error);
   }
 
   return response;
@@ -43,7 +44,8 @@ async function trackOpenEvent(
   contactEmail: string,
   campaign: string,
   step: number,
-  token: string | null
+  token: string | null,
+  workspaceId: string
 ) {
   if (!supabaseAdmin) return;
 
@@ -71,7 +73,7 @@ async function trackOpenEvent(
       .upsert(
         {
           email: contactEmail,
-          workspace_id: DEFAULT_WORKSPACE_ID,
+          workspace_id: workspaceId,
         },
         { onConflict: 'email,workspace_id' }
       )
@@ -82,7 +84,7 @@ async function trackOpenEvent(
 
     // Insert open event
     await supabaseAdmin.from('email_events').insert({
-      workspace_id: DEFAULT_WORKSPACE_ID,
+      workspace_id: workspaceId,
       contact_id: contact.id,
       contact_email: contactEmail,
       campaign_name: campaign,

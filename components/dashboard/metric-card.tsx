@@ -1,6 +1,5 @@
 'use client';
 
-import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { cn, formatNumber, formatCurrencyShort, formatCurrencyPrecise, formatPercent } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
@@ -25,6 +24,7 @@ interface MetricCardProps {
   format?: 'number' | 'currency' | 'percent';
   icon?: 'sends' | 'replies' | 'opt-outs' | 'cost' | 'bounces' | 'clicks';
   loading?: boolean;
+  isRefetching?: boolean;
   className?: string;
   delay?: number;
   tooltip?: string;
@@ -49,7 +49,7 @@ const iconColorMap = {
   'clicks': 'text-emerald-500 bg-emerald-500/10',
 };
 
-function MetricCardComponent({
+export function MetricCard({
   title,
   value,
   change,
@@ -57,6 +57,7 @@ function MetricCardComponent({
   format = 'number',
   icon = 'sends',
   loading = false,
+  isRefetching = false,
   className,
   delay = 0,
   description,
@@ -113,6 +114,9 @@ function MetricCardComponent({
         'relative overflow-hidden group hover:border-accent-primary/30 transition-all duration-300 h-full',
         className
       )}>
+        {isRefetching && (
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent-primary/60 animate-pulse" />
+        )}
         {/* Gradient glow on hover */}
         <div className="absolute inset-0 bg-gradient-to-br from-accent-primary/5 to-accent-purple/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         
@@ -129,6 +133,9 @@ function MetricCardComponent({
             >
               {formattedValue}
             </motion.p>
+            {isRefetching && (
+              <span className="text-xs text-text-secondary">Updating…</span>
+            )}
 
             {change !== undefined && (
               <div className="flex items-center gap-1.5">
@@ -179,19 +186,3 @@ function MetricCardComponent({
   );
 }
 
-// Memoize with custom comparison to prevent re-renders when props haven't changed
-export const MetricCard = memo(MetricCardComponent, (prevProps, nextProps) => {
-  // Only re-render if these critical props change
-  return (
-    prevProps.value === nextProps.value &&
-    prevProps.change === nextProps.change &&
-    prevProps.loading === nextProps.loading &&
-    prevProps.title === nextProps.title &&
-    prevProps.format === nextProps.format &&
-    prevProps.icon === nextProps.icon &&
-    prevProps.changeLabel === nextProps.changeLabel &&
-    prevProps.description === nextProps.description
-  );
-});
-
-MetricCard.displayName = 'MetricCard';

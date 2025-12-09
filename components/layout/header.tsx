@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,6 +31,7 @@ import { cn } from '@/lib/utils';
 import { WorkspaceSwitcher } from '@/components/dashboard/workspace-switcher';
 import { SignedIn, SignedOut, SignInButton, useUser, useClerk } from '@clerk/nextjs';
 import { LogOut, UserCircle } from 'lucide-react';
+import { useWorkspace } from '@/lib/workspace-context';
 
 interface HeaderProps {
   onCommandOpen?: () => void;
@@ -84,33 +85,14 @@ function useClickOutside(ref: React.RefObject<HTMLElement | null>, handler: () =
   }, [ref, handler]);
 }
 
-// Sample notifications
-const sampleNotifications = [
-  {
-    id: '1',
-    type: 'success' as const,
-    title: 'Campaign completed',
-    message: 'Ohio campaign has finished sending all emails',
-    time: '5 min ago',
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'info' as const,
-    title: 'New replies received',
-    message: '3 new replies in the last hour',
-    time: '1 hour ago',
-    read: false,
-  },
-  {
-    id: '3',
-    type: 'warning' as const,
-    title: 'High opt-out rate',
-    message: 'Campaign XYZ has 2.5% opt-out rate',
-    time: '2 hours ago',
-    read: true,
-  },
-];
+// Notification type mapping
+const notificationTypeMap: Record<string, 'success' | 'info' | 'warning' | 'error'> = {
+  'reply': 'success',
+  'opt_out': 'warning',
+  'budget_alert': 'error',
+  'campaign_complete': 'success',
+  'system': 'info',
+};
 
 const notificationIcons = {
   success: CheckCircle2,
@@ -132,10 +114,22 @@ interface CacheStats {
   entries: Array<{ key: string; expiresIn: number }>;
 }
 
+interface Notification {
+  id: string;
+  type: 'success' | 'info' | 'warning' | 'error';
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+  created_at: string;
+}
+
 export function Header({ onCommandOpen }: HeaderProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { theme, toggleTheme, mounted } = useTheme();
+  const { workspaceId } = useWorkspace();
+  const { user } = useUser();
   
   // Preserve URL params when navigating
   const currentParams = searchParams.toString();
@@ -145,7 +139,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   
-  const [notifications, setNotifications] = useState(sampleNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   // Cache states
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
@@ -154,7 +148,6 @@ export function Header({ onCommandOpen }: HeaderProps) {
 
   // Profile dropdown state
   const [showProfile, setShowProfile] = useState(false);
-  const { user } = useUser();
   const { signOut, openUserProfile } = useClerk();
 
   // Refs for click outside
@@ -167,14 +160,68 @@ export function Header({ onCommandOpen }: HeaderProps) {
   useClickOutside(profileRef, () => setShowProfile(false));
   
 
+  // Fetch notifications
+  const fetchNotifications = useCallback(async () => {
+    if (!workspaceId) return;
+
+    try {
+      const response = await fetch(`/api/notifications?workspace_id=${workspaceId}&limit=20`);
+      if (response.ok) {
+        const data = await response.json();
+        const formatted = data.notifications.map((n: any) => ({
+          id: n.id,
+          type: notificationTypeMap[n.type] || 'info',
+          title: n.title,
+          message: n.message,
+          time: formatTimeAgo(n.created_at),
+          read: !!n.read_at,
+          created_at: n.created_at,
+        }));
+        setNotifications(formatted);
+      }
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  }, [workspaceId]);
+
+  // Fetch notifications on workspace change
+  useEffect(() => {
+    if (!workspaceId || !user?.id) return;
+    fetchNotifications();
+  }, [workspaceId, user, fetchNotifications]);
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    if (!workspaceId) return;
+
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notification_ids: 'all',
+          action: 'read',
+          workspace_id: workspaceId,
+        }),
+      });
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
   };
 
-  const dismissNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+  const dismissNotification = async (id: string) => {
+    if (!workspaceId) return;
+
+    try {
+      await fetch(`/api/notifications?id=${id}&workspace_id=${workspaceId}`, {
+        method: 'DELETE',
+      });
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    } catch (error) {
+      console.error('Failed to dismiss notification:', error);
+    }
   };
 
   // Fetch cache stats when settings opens
@@ -222,6 +269,23 @@ export function Header({ onCommandOpen }: HeaderProps) {
     }
   }, [showSettings, fetchCacheStats]);
 
+  // Helper to format time ago
+  function formatTimeAgo(timestamp: string): string {
+    const now = new Date();
+    const then = new Date(timestamp);
+    const diffMs = now.getTime() - then.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
+    
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+  }
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -20 }}
@@ -260,7 +324,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
 
               {/* Navigation Tabs */}
               <nav className="hidden md:flex items-center gap-1 bg-surface-elevated rounded-lg p-1">
-                <Link href={`/${query}`} prefetch={true}>
+                <Link href={`/${query}`}>
                   <button
                     className={cn(
                       'px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200',
@@ -272,7 +336,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
                     Overview
                   </button>
                 </Link>
-                <Link href={`/analytics${query}`} prefetch={true}>
+                <Link href={`/analytics${query}`}>
                   <button
                     className={cn(
                       'px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2',

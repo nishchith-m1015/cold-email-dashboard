@@ -4,6 +4,7 @@ import { API_HEADERS } from '@/lib/utils';
 import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_READ } from '@/lib/rate-limit';
 import { cacheManager, apiCacheKey, CACHE_TTL } from '@/lib/cache';
 import { EXCLUDED_CAMPAIGNS } from '@/lib/db-queries';
+import { validateWorkspaceAccess } from '@/lib/api-workspace-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,10 +36,10 @@ async function fetchTimeseriesData(
   }
 
   // Build stats query
-  // TEMPORARY: Remove workspace_id filter until data migration is complete
   let statsQuery = supabaseAdmin
     .from('daily_stats')
     .select('day, sends, replies, opt_outs, bounces')
+    .eq('workspace_id', workspaceId)
     .gte('day', startDate)
     .lte('day', endDate)
     .order('day', { ascending: true });
@@ -61,6 +62,7 @@ async function fetchTimeseriesData(
     let clickQuery = supabaseAdmin
       .from('email_events')
       .select('created_at')
+      .eq('workspace_id', workspaceId)
       .eq('event_type', 'clicked')
       .gte('created_at', `${startDate}T00:00:00Z`)
       .lte('created_at', `${endDate}T23:59:59Z`);
@@ -184,6 +186,12 @@ export async function GET(req: NextRequest) {
   const end = searchParams.get('end');
   const campaign = searchParams.get('campaign');
   const workspaceId = getWorkspaceId(searchParams.get('workspace_id'));
+
+  // Workspace access validation (SECURITY: Prevents unauthorized data access)
+  const accessError = await validateWorkspaceAccess(req, searchParams);
+  if (accessError) {
+    return accessError;
+  }
 
   // Default to last 30 days
   const startDate = start || new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
