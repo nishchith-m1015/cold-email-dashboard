@@ -1,7 +1,14 @@
 /**
  * Jest Setup File
- * 
- * This file runs before all tests and sets u// Mock Framer Motion to avoid animation issues in tests
+ *
+ * This file runs before all tests and sets up:
+ * - Testing Library matchers
+ * - Next.js router mocks
+ * - Clerk Auth mocks
+ * - SWR mocks
+ */
+
+// Mock Framer Motion to avoid animation issues in tests
 jest.mock('framer-motion', () => {
   const React = require('react');
   return {
@@ -12,11 +19,7 @@ jest.mock('framer-motion', () => {
     },
     AnimatePresence: ({ children }: any) => children,
   };
-});esting Library matchers
- * - Next.js router mocks
- * - Clerk Auth mocks
- * - SWR mocks
- */
+});
 
 import '@testing-library/jest-dom';
 

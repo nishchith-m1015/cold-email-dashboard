@@ -168,7 +168,7 @@ export function AskAI({ className }: AskAIProps) {
     const loadStatus = async () => {
       setStatusLoading(true);
       try {
-        const res = await fetch('/api/ask/key', { method: 'GET' });
+        const res = await fetch('/api/ask-key', { method: 'GET' });
         if (res.ok) {
           const data = await res.json();
           setOpenaiConfigured(Boolean(data.openaiConfigured));
@@ -216,7 +216,7 @@ export function AskAI({ className }: AskAIProps) {
     try {
       setSaveBusy(true);
       setSaveMessage(null);
-      const res = await fetch('/api/ask/key', {
+      const res = await fetch('/api/ask-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider, apiKey: keyDraft.trim() }),
@@ -245,7 +245,7 @@ export function AskAI({ className }: AskAIProps) {
 
   const deleteKeyFromServer = async () => {
     try {
-      const res = await fetch(`/api/ask/key?provider=${provider}`, { method: 'DELETE' });
+      const res = await fetch(`/api/ask-key?provider=${provider}`, { method: 'DELETE' });
       if (res.ok) {
         if (provider === 'openai') {
           setOpenaiKey('');
@@ -265,7 +265,7 @@ export function AskAI({ className }: AskAIProps) {
     try {
       const headers: Record<string, string> = {};
       if (opts?.headerKey) headers['x-openai-key'] = opts.headerKey;
-      const res = await fetch(`/api/ask/models?provider=${provider}`, { headers });
+      const res = await fetch(`/api/ask-models?provider=${provider}`, { headers });
       if (!res.ok) {
         setModels([]);
         return;
