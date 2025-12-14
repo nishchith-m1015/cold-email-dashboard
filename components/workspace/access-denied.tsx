@@ -37,7 +37,7 @@ export function AccessDenied({ workspaceId, message }: AccessDeniedProps) {
           </h2>
 
           <p className="text-gray-600 dark:text-gray-300 mb-6">
-            {message || `You don't have permission to access ${workspaceId ? `workspace "${workspaceId}"` : 'this workspace'}.`}
+            {message || `You do not have permission to access ${workspaceId ? `workspace "${workspaceId}"` : 'this workspace'}.`}
           </p>
 
           <div className="space-y-3">
@@ -70,7 +70,7 @@ export function AccessDenied({ workspaceId, message }: AccessDeniedProps) {
             ) : (
               <>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  You don't belong to any workspaces yet.
+                  You do not belong to any workspaces yet.
                 </p>
                 <button
                   onClick={handleGoToJoin}

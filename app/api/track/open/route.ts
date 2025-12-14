@@ -37,7 +37,10 @@ export async function GET(req: NextRequest) {
   // Track the open event asynchronously (don't block pixel response)
   if (contactEmail && supabaseAdmin && workspaceId) {
     // Fire and forget - don't await
-    trackOpenEvent(contactEmail, campaign, step, token, workspaceId).catch(console.error);
+    trackOpenEvent(contactEmail, campaign, step, token, workspaceId).catch((err) => {
+      /* eslint-disable-next-line no-console */
+      console.error(err);
+    });
   }
 
   return response;
@@ -100,8 +103,10 @@ async function trackOpenEvent(
       },
     });
 
+    /* eslint-disable-next-line no-console */
     console.log(`[OPEN TRACKED] ${contactEmail} - Campaign: ${campaign}, Step: ${step}`);
   } catch (error) {
+    /* eslint-disable-next-line no-console */
     console.error('[OPEN TRACKING ERROR]', error);
   }
 }

@@ -79,7 +79,7 @@ export function SequenceDeckCard({
           <div className="text-sm text-accent-danger">
             <span className="font-semibold">Missing Name Variable</span>
             <p className="text-xs mt-1">
-              Body contains "Hey ," — first name variable may be missing.
+              Body contains &quot;Hey ,&quot; — first name variable may be missing. Expected example: &quot;Hey {'{{first_name}}'}&quot;
             </p>
           </div>
         </div>

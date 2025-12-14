@@ -4,6 +4,9 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { checkRateLimit, getClientId, rateLimitHeaders, RATE_LIMIT_STRICT, RATE_LIMIT_READ } from '@/lib/rate-limit';
 import { canWriteToWorkspace } from '@/lib/workspace-access';
 
+// PILLAR 5: Import sanitization (settings endpoint doesn't return full workspace, but enforce safe pattern)
+import { sanitizeWorkspace } from '@/lib/response-sanitizer';
+
 export const dynamic = 'force-dynamic';
 
 const API_HEADERS = {

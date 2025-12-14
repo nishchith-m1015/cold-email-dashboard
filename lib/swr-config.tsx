@@ -42,6 +42,7 @@ const swrConfig: SWRConfiguration = {
   onError: (error, key) => {
     // Log errors in development
     if (process.env.NODE_ENV === 'development') {
+      /* eslint-disable-next-line no-console */
       console.error(`SWR Error for ${key}:`, error);
     }
     
@@ -52,6 +53,7 @@ const swrConfig: SWRConfiguration = {
   // Success handler (for debugging)
   onSuccess: (data, key) => {
     if (process.env.NODE_ENV === 'development') {
+      /* eslint-disable-next-line no-console */
       console.debug(`SWR Success for ${key}:`, { dataSize: JSON.stringify(data).length });
     }
   },

@@ -8,12 +8,14 @@ const SHEET_ID = process.env.GOOGLE_SHEET_ID || '1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxE
 const getCredentials = () => {
   const credentials = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
   if (!credentials) {
+    /* eslint-disable-next-line no-console */
     console.warn('GOOGLE_SERVICE_ACCOUNT_JSON not configured');
     return null;
   }
   try {
     return JSON.parse(credentials);
   } catch (e) {
+    /* eslint-disable-next-line no-console */
     console.error('Failed to parse Google service account credentials:', e);
     return null;
   }
@@ -160,10 +162,12 @@ export async function fetchSheetData(sheetName: string = 'Ohio'): Promise<SheetD
   const cachedData = cacheManager.get<SheetDataResult>(cacheKey);
   
   if (cachedData) {
+    /* eslint-disable-next-line no-console */
     console.log(`[CACHE HIT] Loaded ${sheetName} sheet from cache`);
     return cachedData;
   }
 
+  /* eslint-disable-next-line no-console */
   console.log(`[CACHE MISS] Fetching ${sheetName} sheet from Google Sheets API...`);
   const startTime = Date.now();
 
@@ -215,6 +219,7 @@ export async function fetchSheetData(sheetName: string = 'Ohio'): Promise<SheetD
     const linkedinIndex = findColumnIndex(headers, ['linkedin', 'linkedin url', 'linkedinurl']);
     if (linkedinIndex >= 0) columnMap.linkedinUrl = linkedinIndex;
 
+    /* eslint-disable-next-line no-console */
     console.log('Column mapping:', {
       email: columnMap.email,
       firstName: columnMap.firstName,
@@ -248,10 +253,12 @@ export async function fetchSheetData(sheetName: string = 'Ohio'): Promise<SheetD
     cacheManager.set(cacheKey, result, CACHE_TTL.MEDIUM);
     
     const duration = Date.now() - startTime;
+    /* eslint-disable-next-line no-console */
     console.log(`[CACHE SET] Cached ${sheetName} sheet (${rows.length} rows) for 5 minutes. Fetch took ${duration}ms`);
 
     return result;
   } catch (error) {
+    /* eslint-disable-next-line no-console */
     console.error('Failed to fetch sheet data:', error);
     return null;
   }

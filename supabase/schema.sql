@@ -82,7 +82,7 @@ CREATE INDEX idx_email_events_campaign ON email_events(campaign_name);
 CREATE INDEX idx_email_events_type ON email_events(event_type);
 CREATE INDEX idx_email_events_created ON email_events(created_at);
 CREATE INDEX idx_email_events_email_number ON email_events(email_number);
-CREATE INDEX idx_email_events_event_ts ON email_events(event_ts);
+CREATE INDEX IF NOT EXISTS idx_email_events_event_ts ON email_events (event_ts);
 
 -- ============================================
 -- LLM USAGE TABLE (Cost Tracking)

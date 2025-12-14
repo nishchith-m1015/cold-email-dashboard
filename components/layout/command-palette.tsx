@@ -63,8 +63,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     
     if (item.href) {
       router.push(item.href);
-    } else if (item.action?.startsWith('ask:')) {
+      } else if (item.action?.startsWith('ask:')) {
       // Could trigger Ask AI with this query
+      /* eslint-disable-next-line no-console */
       console.log('Ask:', item.action.replace('ask:', ''));
     }
   };

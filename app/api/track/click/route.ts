@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
     finalUrl = decodedUrl;
   } catch {
     // If URL is malformed, redirect to a safe fallback
+    /* eslint-disable-next-line no-console */
     console.error('[CLICK TRACKING] Invalid URL:', destinationUrl);
     return NextResponse.redirect('https://smartieagents.com');
   }
@@ -87,8 +88,10 @@ async function trackClickEvent(
       },
     });
 
+    /* eslint-disable-next-line no-console */
     console.log(`[CLICK TRACKED] ${contactEmail} - Campaign: ${campaign}, Step: ${step}, Link: ${linkId}`);
   } catch (error) {
+    /* eslint-disable-next-line no-console */
     console.error('[CLICK TRACKING ERROR]', error);
   }
 }

@@ -1,5 +1,14 @@
 /**
- * Workspace Access Control Library
+ * PHASE 30 - PILLAR 3: DRACONIAN ACCESS GATE
+ * 
+ * Strict role-based access control with explicit owner/admin/member/viewer hierarchy.
+ * Admins are UNTRUSTED for key management operations.
+ * 
+ * Security Properties:
+ * - Uniform error responses (prevent enumeration)
+ * - Role-based caching (5-minute TTL)
+ * - Super Admin bypass with audit trail
+ * - Type-safe exhaustive role checks
  * 
  * Handles multi-tenant authorization:
  * - Which workspaces can a user access?
@@ -23,6 +32,7 @@ export interface WorkspaceAccess {
   canRead: boolean;
   canWrite: boolean;
   canManage: boolean;
+  canManageKeys: boolean;  // CRITICAL: Only owners can manage API keys
   canDelete: boolean;
 }
 
@@ -41,18 +51,95 @@ const ROLE_PERMISSIONS: Record<WorkspaceRole, {
   canRead: boolean;
   canWrite: boolean;
   canManage: boolean;
+  canManageKeys: boolean;  // CRITICAL: Only owners can manage API keys
   canDelete: boolean;
 }> = {
-  owner: { canRead: true, canWrite: true, canManage: true, canDelete: true },
-  admin: { canRead: true, canWrite: true, canManage: true, canDelete: false },
-  member: { canRead: true, canWrite: true, canManage: false, canDelete: false },
-  viewer: { canRead: true, canWrite: false, canManage: false, canDelete: false },
+  owner: { canRead: true, canWrite: true, canManage: true, canManageKeys: true, canDelete: true },
+  admin: { canRead: true, canWrite: true, canManage: true, canManageKeys: false, canDelete: false }, // ADMINS UNTRUSTED
+  member: { canRead: true, canWrite: true, canManage: false, canManageKeys: false, canDelete: false },
+  viewer: { canRead: true, canWrite: false, canManage: false, canManageKeys: false, canDelete: false },
 };
 
 // Super admin user IDs (can access all workspaces)
 const SUPER_ADMIN_IDS: string[] = [
   'user_36QtXCPqQu6k0CXcYM0Sn2OQsgT', // Nishchith - Owner
 ];
+
+// ============================================
+// ACCESS CACHE (5-minute TTL)
+// ============================================
+
+interface CacheEntry {
+  role: WorkspaceRole;
+  timestamp: number;
+}
+
+const accessCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCacheKey(userId: string, workspaceId: string): string {
+  return `${userId}:${workspaceId}`;
+}
+
+function getCachedRole(userId: string, workspaceId: string): WorkspaceRole | null {
+  const key = getCacheKey(userId, workspaceId);
+  const entry = accessCache.get(key);
+  
+  if (!entry) return null;
+  
+  // Check if expired
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    accessCache.delete(key);
+    return null;
+  }
+  
+  return entry.role;
+}
+
+function setCachedRole(userId: string, workspaceId: string, role: WorkspaceRole): void {
+  const key = getCacheKey(userId, workspaceId);
+  accessCache.set(key, { role, timestamp: Date.now() });
+  
+  // Probabilistic cache cleanup (10% chance)
+  if (Math.random() < 0.1) {
+    cleanupCache();
+  }
+}
+
+function cleanupCache(): void {
+  const now = Date.now();
+  for (const [key, entry] of accessCache.entries()) {
+    if (now - entry.timestamp > CACHE_TTL) {
+      accessCache.delete(key);
+    }
+  }
+}
+
+// ============================================
+// AUDIT LOGGING
+// ============================================
+
+/**
+ * Log access decisions for audit trail (JSON-formatted for structured logging)
+ */
+function logAccessDecision(
+  event: string,
+  userId: string,
+  workspaceId: string,
+  hasAccess: boolean,
+  role?: WorkspaceRole
+): void {
+  const logEntry = {
+    event,
+    userId,
+    workspaceId,
+    hasAccess,
+    role,
+    timestamp: new Date().toISOString(),
+  };
+  
+  console.log(JSON.stringify(logEntry));
+}
 
 // ============================================
 // CORE FUNCTIONS
@@ -66,7 +153,7 @@ export function isSuperAdmin(userId: string): boolean {
 }
 
 /**
- * Get workspace access for a user
+ * Get workspace access for a user (with caching and audit logging)
  */
 export async function getWorkspaceAccess(
   userId: string,
@@ -84,11 +171,24 @@ export async function getWorkspaceAccess(
 
     if (!workspace) return null;
 
+    logAccessDecision('super_admin_access', userId, workspaceId, true, 'owner');
+
     return {
       workspaceId: workspace.id,
       workspaceName: workspace.name,
       role: 'owner',
       ...ROLE_PERMISSIONS.owner,
+    };
+  }
+
+  // Check cache first
+  const cachedRole = getCachedRole(userId, workspaceId);
+  if (cachedRole) {
+    return {
+      workspaceId,
+      workspaceName: '', // Not cached, but access is valid
+      role: cachedRole,
+      ...ROLE_PERMISSIONS[cachedRole],
     };
   }
 
@@ -106,10 +206,17 @@ export async function getWorkspaceAccess(
     .eq('workspace_id', workspaceId)
     .single();
 
-  if (error || !data) return null;
+  if (error || !data) {
+    logAccessDecision('workspace_access_denied', userId, workspaceId, false);
+    return null;
+  }
 
   const workspace = data.workspaces as unknown as { id: string; name: string };
   const role = data.role as WorkspaceRole;
+
+  // Cache the role
+  setCachedRole(userId, workspaceId, role);
+  logAccessDecision('workspace_access_granted', userId, workspaceId, true, role);
 
   return {
     workspaceId: workspace.id,
@@ -202,6 +309,34 @@ export async function canManageWorkspace(
   if (isSuperAdmin(userId)) return true;
   const access = await getWorkspaceAccess(userId, workspaceId);
   return access?.canManage ?? false;
+}
+
+/**
+ * Require workspace access with specific permission
+ * Throws if user lacks permission (uniform error message)
+ * 
+ * @throws {Error} If user lacks required permission
+ */
+export async function requireWorkspaceAccess(
+  workspaceId: string,
+  permission: keyof WorkspaceAccess
+): Promise<WorkspaceAccess> {
+  const { userId } = await auth();
+  if (!userId) {
+    throw new Error('Authentication required');
+  }
+
+  const access = await getWorkspaceAccess(userId, workspaceId);
+  if (!access) {
+    throw new Error('Access denied'); // Uniform error
+  }
+
+  // Check the specific permission
+  if (!access[permission]) {
+    throw new Error('Access denied'); // Uniform error
+  }
+
+  return access;
 }
 
 // ============================================

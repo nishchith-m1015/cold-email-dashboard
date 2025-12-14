@@ -1,0 +1,33 @@
+{
+  "extends": ["next/core-web-vitals"],
+  "rules": {
+    "no-console": ["warn", {
+      "allow": ["warn", "error"]
+    }]
+  },
+  "overrides": [
+    {
+      "files": [
+        "lib/encryption.ts"
+      ],
+      "rules": {
+        "no-console": ["error"],
+        "no-alert": "error",
+        "no-debugger": "error"
+      }
+    },
+    {
+      "files": [
+        "lib/ask-key-store.ts",
+        "lib/workspace-access.ts"
+      ],
+      "rules": {
+        "no-console": ["warn", {
+          "allow": ["log", "error"]
+        }],
+        "no-alert": "error",
+        "no-debugger": "error"
+      }
+    }
+  ]
+}
