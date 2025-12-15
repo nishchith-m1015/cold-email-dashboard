@@ -1,0 +1,127 @@
+# Cold Email Dashboard - System Architecture
+
+```mermaid
+graph TD
+    subgraph "Frontend Layer"
+        UI[Next.js 14 App Router<br/>React 18 + TypeScript]
+        COMP[Components<br/>TailwindCSS + Radix UI]
+        HOOKS[Custom Hooks<br/>SWR Data Fetching]
+        CHART[Recharts<br/>Data Visualization]
+    end
+    
+    subgraph "API Layer"
+        ROUTES[API Routes<br/>/api/* endpoints]
+        AUTH[Clerk Middleware<br/>Authentication Guard]
+        VALIDATE[Zod Validation<br/>Input Sanitization]
+        CACHE[SWR Cache<br/>10s dedup + refresh]
+    end
+    
+    subgraph "Core Services"
+        DASHBOARD[Dashboard Service<br/>Analytics Aggregation]
+        SEQUENCE[Email Sequences<br/>Campaign Management]
+        AI[AI Assistant<br/>RAG + LLM Integration]
+        CONTACT[Contact Management<br/>CRUD Operations]
+    end
+    
+    subgraph "Data Layer"
+        SUPABASE[(Supabase PostgreSQL<br/>Row Level Security)]
+        
+        subgraph "Raw Tables"
+            CONTACTS[(contacts<br/>Email Database)]
+            EVENTS[(email_events<br/>Email Tracking)]
+            LLM[(llm_usage<br/>Cost Analytics)]
+        end
+        
+        subgraph "Aggregated Tables"
+            STATS[(daily_stats<br/>Pre-aggregated Metrics)]
+            USERS[(user_workspaces<br/>Multi-tenant)]
+        end
+    end
+    
+    subgraph "External Services"
+        N8N[n8n Workflows<br/>Email Automation]
+        EMAIL_PROV[Email Providers<br/>SendGrid/Mailgun/etc]
+        AI_PROVIDER[AI Providers<br/>Anthropic/OpenAI]
+        GOOGLE[Google APIs<br/>Gmail Integration]
+    end
+    
+    subgraph "Infrastructure"
+        RLS[Row Level Security<br/>Workspace Isolation]
+        TRIGGERS[Database Triggers<br/>Auto Aggregation]
+        WEBHOOKS[Webhook Queue<br/>Async Processing]
+    end
+    
+    %% Frontend Flow
+    UI --> COMP
+    COMP --> HOOKS
+    HOOKS --> CACHE
+    CACHE --> ROUTES
+    
+    %% Authentication Flow
+    UI --> AUTH
+    ROUTES --> AUTH
+    AUTH --> VALIDATE
+    
+    %% Core Service Integration
+    ROUTES --> DASHBOARD
+    ROUTES --> SEQUENCE
+    ROUTES --> AI
+    ROUTES --> CONTACT
+    
+    %% Data Flow to Database
+    DASHBOARD --> SUPABASE
+    SEQUENCE --> SUPABASE
+    AI --> SUPABASE
+    CONTACT --> SUPABASE
+    
+    %% Database Schema Flow
+    SUPABASE --> CONTACTS
+    SUPABASE --> EVENTS
+    SUPABASE --> LLM
+    SUPABASE --> STATS
+    SUPABASE --> USERS
+    
+    %% Automatic Aggregation
+    EVENTS -->|Trigger Function| STATS
+    STATS -->|Pre-aggregated| DASHBOARD
+    
+    %% External Service Integration
+    N8N --> EMAIL_PROV
+    EMAIL_PROV --> WEBHOOKS
+    WEBHOOKS --> EVENTS
+    
+    AI --> AI_PROVIDER
+    SEQUENCE --> GOOGLE
+    
+    %% Security Layer
+    RLS --> CONTACTS
+    RLS --> EVENTS
+    RLS --> LLM
+    RLS --> STATS
+    
+    %% Data Visualization
+    STATS --> CHART
+    CHART --> UI
+    
+    %% Multi-tenant Isolation
+    USERS -->|Workspace Context| RLS
+    AUTH -->|Session Context| RLS
+    
+    style UI fill:#e1f5fe
+    style SUPABASE fill:#f3e5f5
+    style RLS fill:#fff3e0
+    style DASHBOARD fill:#e8f5e8
+    style N8N fill:#fce4ec
+```
+
+## Key Architecture Insights
+
+**Multi-Tenant Design**: The system uses workspace-based isolation with RLS policies to ensure data separation between different user organizations.
+
+**Real-time Analytics**: Email events automatically trigger database functions that aggregate metrics into daily_stats table, enabling fast dashboard queries.
+
+**AI-Powered Features**: Integration with Anthropic SDK and Llamaindex for RAG-based querying of metrics and campaign data.
+
+**Email Tracking Pipeline**: n8n workflows handle email sending, with webhooks feeding real-time event data back into the system for analytics.
+
+**Performance Optimizations**: SWR caching with 10-second deduplication, pre-aggregated database views, and edge-optimized API routes.
