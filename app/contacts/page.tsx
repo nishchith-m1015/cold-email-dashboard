@@ -15,7 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
+import { DateRangePicker } from '@/components/dashboard/date-range-picker';
+import { cn, toISODate, daysAgo } from '@/lib/utils';
 import { useWorkspace } from '@/lib/workspace-context';
 
 type ContactStatus = 'not_sent' | 'contacted' | 'replied' | 'opt_out' | 'cycle_one';
@@ -107,6 +108,15 @@ export default function ContactsPage() {
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null);
   const [detail, setDetail] = useState<ContactDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  
+  // Date range state for filtering
+  const [startDate, setStartDate] = useState(() => toISODate(daysAgo(30)));
+  const [endDate, setEndDate] = useState(() => toISODate(new Date()));
+  
+  const handleDateChange = (start: string, end: string) => {
+    setStartDate(start);
+    setEndDate(end);
+  };
   const [detailError, setDetailError] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState({
@@ -139,6 +149,8 @@ export default function ContactsPage() {
         workspace_id: workspaceId,
         limit: String(PAGE_SIZE),
         cursor,
+        startDate,
+        endDate,
       });
       if (debouncedSearch) {
         params.set('search', debouncedSearch);
@@ -162,10 +174,10 @@ export default function ContactsPage() {
         setLoading(false);
       }
     },
-    [workspaceId, debouncedSearch]
+    [workspaceId, debouncedSearch, startDate, endDate]
   );
 
-  // Initial + search reload
+  // Initial + search + date range reload
   useEffect(() => {
     setContacts([]);
     setNextCursor('1');
@@ -173,7 +185,7 @@ export default function ContactsPage() {
     if (workspaceId) {
       fetchPage('1', true);
     }
-  }, [workspaceId, debouncedSearch, fetchPage]);
+  }, [workspaceId, debouncedSearch, startDate, endDate, fetchPage]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -421,6 +433,11 @@ export default function ContactsPage() {
               className="pl-9 w-72"
             />
           </div>
+          <DateRangePicker
+            startDate={startDate}
+            endDate={endDate}
+            onDateChange={handleDateChange}
+          />
           <Button onClick={() => setShowAdd(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Lead

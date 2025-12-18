@@ -6,13 +6,12 @@ import { validateWorkspaceAccess } from '@/lib/api-workspace-guard';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  // Check if Supabase is configured - if not, return Google Sheets campaign
+  // Check if Supabase is configured
   if (!supabaseAdmin) {
-    // Return Ohio campaign from Google Sheets
-    return NextResponse.json({
-      campaigns: [{ name: 'Ohio' }],
-      source: 'google_sheets',
-    }, { headers: { 'content-type': 'application/json' } });
+    return NextResponse.json(
+      { error: 'Database not configured' },
+      { status: 503 }
+    );
   }
 
   const { searchParams } = new URL(req.url);
@@ -25,40 +24,22 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Get unique campaign names from daily_stats (with exclusion filter)
-    let query = supabaseAdmin
-      .from('daily_stats')
-      .select('campaign_name')
+    // Query campaigns table with n8n integration fields
+    const { data: campaigns, error } = await supabaseAdmin
+      .from('campaigns')
+      .select('id, name, description, status, n8n_workflow_id, n8n_status, last_sync_at, version, created_at, updated_at')
       .eq('workspace_id', workspaceId)
-      .not('campaign_name', 'is', null);
-
-    // Exclude test campaigns at DB level
-    for (const excludedCampaign of EXCLUDED_CAMPAIGNS) {
-      query = query.neq('campaign_name', excludedCampaign);
-    }
-
-    const { data, error } = await query;
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Campaigns query error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Extract unique campaign names (with additional safety filter)
-    const campaignSet = new Set<string>();
-    for (const row of data || []) {
-      if (row.campaign_name && !shouldExcludeCampaign(row.campaign_name)) {
-        campaignSet.add(row.campaign_name);
-      }
-    }
-
-    const campaigns = Array.from(campaignSet)
-      .map(name => ({ name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-
-    return NextResponse.json({
-      campaigns,
-    }, { headers: { 'content-type': 'application/json' } });
+    return NextResponse.json(
+      { campaigns: campaigns || [] },
+      { headers: { 'content-type': 'application/json' } }
+    );
   } catch (error) {
     console.error('Campaigns API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

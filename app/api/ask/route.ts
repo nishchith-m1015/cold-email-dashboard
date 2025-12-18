@@ -130,19 +130,13 @@ export async function POST(req: NextRequest) {
     // Resolve provider and API key (Pillar 4: Ephemeral Runtime)
     // Keys are decrypted JIT and used immediately - no persistent storage
     const provider = body.provider === 'openrouter' ? 'openrouter' : 'openai';
-    const clientApiKey = req.headers.get('x-openai-key')?.trim(); // used for both providers
+    // Pillar 5: Anti-Leak Mesh - ONLY use vault keys or explicit header overrides.
+    // DO NOT fall back to server-side environment variables to prevent cross-tenant leakage.
+    const clientApiKey = req.headers.get('x-openai-key')?.trim();
+    const stored = await getAskKey({ userId, workspaceId, provider });
 
-    // JIT DECRYPTION: Fetch and use key immediately (ephemeral <50ms lifetime)
-    // storedKey.apiKey plaintext exists only in local scope - GC'd after assignment
-    const storedKey = await getAskKey({ userId, workspaceId, provider });
-    // Immediate use: assign to final variables (plaintext lifetime: ~5 lines / <1ms)
-    const openaiKey = provider === 'openai'
-      ? (clientApiKey || storedKey.apiKey || process.env.OPENAI_API_KEY)
-      : null;
-    const openrouterKey = provider === 'openrouter'
-      ? (clientApiKey || storedKey.apiKey || process.env.OPENROUTER_API_KEY)
-      : null;
-    // storedKey.apiKey no longer accessible - out of scope
+    const openaiKey = provider === 'openai' ? (clientApiKey || stored.apiKey) : null;
+    const openrouterKey = provider === 'openrouter' ? (clientApiKey || stored.apiKey) : null;
 
     if (provider === 'openai' && !openaiKey) {
       return NextResponse.json({

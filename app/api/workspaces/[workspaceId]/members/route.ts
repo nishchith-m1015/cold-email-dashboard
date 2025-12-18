@@ -24,7 +24,8 @@ interface RouteParams {
 /**
  * GET /api/workspaces/[workspaceId]/members
  * 
- * Get all members of a workspace
+ * Get all members of a workspace with enriched Clerk user data
+ * PHASE 34 - Enhanced to include email, name, imageUrl from Clerk
  */
 export async function GET(req: NextRequest, { params }: RouteParams) {
   const { workspaceId } = await params;
@@ -58,8 +59,8 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     );
   }
 
-  // Get members
-  const { members, error } = await getWorkspaceMembers(workspaceId);
+  // Get members from Supabase
+  const { members: memberRoles, error } = await getWorkspaceMembers(workspaceId);
 
   if (error) {
     return NextResponse.json(
@@ -68,12 +69,77 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     );
   }
 
-  return NextResponse.json({
-    members,
-    workspaceId,
-    yourRole: access.role,
-    canManage: access.canManage,
-  }, { headers: API_HEADERS });
+  // Fetch Clerk user data for rich UI display
+  try {
+    const { clerkClient } = await import('@clerk/nextjs/server');
+    const userIds = memberRoles.map(m => m.userId);
+    
+    if (userIds.length === 0) {
+      return NextResponse.json({
+        members: [],
+        totalCount: 0,
+        currentUserRole: access.role,
+        canManage: access.canManage,
+      }, { headers: API_HEADERS });
+    }
+
+    const clerkUsers = await clerkClient.users.getUserList({
+      userId: userIds,
+      limit: userIds.length,
+    });
+
+    // Merge Clerk data with roles
+    const enrichedMembers = memberRoles.map(m => {
+      const clerkUser = clerkUsers.data.find(u => u.id === m.userId);
+      
+      if (!clerkUser) {
+        return {
+          userId: m.userId,
+          role: m.role,
+          email: `ID: ${m.userId.slice(0, 12)}...`,
+          name: 'Orphaned User',
+          imageUrl: null,
+          isCurrentUser: m.userId === userId,
+          isOrphan: true,
+        };
+      }
+      
+      return {
+        userId: m.userId,
+        role: m.role,
+        email: clerkUser.emailAddresses?.[0]?.emailAddress || 'No email',
+        name: clerkUser.firstName && clerkUser.lastName
+          ? `${clerkUser.firstName} ${clerkUser.lastName}`
+          : clerkUser.username || 'Unnamed User',
+        imageUrl: clerkUser.imageUrl || null,
+        isCurrentUser: m.userId === userId,
+        isOrphan: false,
+      };
+    });
+
+    return NextResponse.json({
+      members: enrichedMembers,
+      totalCount: enrichedMembers.length,
+      currentUserRole: access.role,
+      canManage: access.canManage,
+    }, { headers: API_HEADERS });
+  } catch (clerkError) {
+    console.error('Clerk API error:', clerkError);
+    // Fallback to basic data without Clerk enrichment
+    return NextResponse.json({
+      members: memberRoles.map(m => ({
+        userId: m.userId,
+        role: m.role,
+        email: 'loading...',
+        name: null,
+        imageUrl: null,
+        isCurrentUser: m.userId === userId,
+      })),
+      totalCount: memberRoles.length,
+      currentUserRole: access.role,
+      canManage: access.canManage,
+    }, { headers: API_HEADERS });
+  }
 }
 
 /**
@@ -214,14 +280,49 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Can't change owner's role
-    const targetAccess = await getWorkspaceAccess(targetUserId, workspaceId);
-    if (targetAccess?.role === 'owner') {
+    // ------------------------------------------------------------------
+    // PHASE 34 SECURE VALIDATION
+    // ------------------------------------------------------------------
+    
+    // 1. Cannot change own role (must be done by another admin/owner)
+    if (currentUserId === targetUserId) {
       return NextResponse.json(
-        { error: 'Cannot change owner role' },
+        { error: 'You cannot change your own role. Ask another admin.' },
         { status: 400, headers: API_HEADERS }
       );
     }
+
+    // 2. Only Owners can promote someone to Owner
+    if (role === 'owner' && access.role !== 'owner') {
+      return NextResponse.json(
+        { error: 'Only Owners can promote members to Owner' },
+        { status: 403, headers: API_HEADERS }
+      );
+    }
+    
+    // 3. Only Owners can demote/change an existing Owner
+    const targetAccess = await getWorkspaceAccess(targetUserId, workspaceId);
+    if (targetAccess?.role === 'owner' && access.role !== 'owner') {
+      return NextResponse.json(
+        { error: 'Only Owners can manage other Owners' },
+        { status: 403, headers: API_HEADERS }
+      );
+    }
+
+    // 4. Last Owner Protection: Cannot demote the last owner
+    if (targetAccess?.role === 'owner' && role !== 'owner') {
+      const { members } = await getWorkspaceMembers(workspaceId);
+      const ownerCount = members.filter(m => m.role === 'owner').length;
+      
+      if (ownerCount <= 1) {
+        return NextResponse.json(
+          { error: 'Cannot demote the last owner of the workspace' },
+          { status: 400, headers: API_HEADERS }
+        );
+      }
+    }
+
+    // Default: Admins can manage Members/Viewers (checked by getWorkspaceAccess above)
 
     // Update role
     const { success, error } = await updateUserRole(workspaceId, targetUserId, role);

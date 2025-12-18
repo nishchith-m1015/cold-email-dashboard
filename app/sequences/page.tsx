@@ -7,6 +7,8 @@ import useSWR from 'swr';
 import { useWorkspace } from '@/lib/workspace-context';
 import { SequenceList } from '@/components/sequences/sequence-list';
 import { SequenceDetail } from '@/components/sequences/sequence-detail';
+import { DateRangePicker } from '@/components/dashboard/date-range-picker';
+import { toISODate, daysAgo } from '@/lib/utils';
 import type { SequenceListResponse, SequenceDetail as SequenceDetailType } from '@/lib/dashboard-types';
 import { Mail } from 'lucide-react';
 
@@ -19,10 +21,19 @@ export default function SequencesPage() {
   const { workspaceId } = useWorkspace();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [limit, setLimit] = useState<LimitOption>(50);
+  
+  // Date range state for filtering
+  const [startDate, setStartDate] = useState(() => toISODate(daysAgo(30)));
+  const [endDate, setEndDate] = useState(() => toISODate(new Date()));
+  
+  const handleDateChange = (start: string, end: string) => {
+    setStartDate(start);
+    setEndDate(end);
+  };
 
   // Fetch lightweight list for sidebar
   const listUrl = workspaceId 
-    ? `/api/sequences?workspace_id=${workspaceId}&limit=${limit}` 
+    ? `/api/sequences?workspace_id=${workspaceId}&limit=${limit}&startDate=${startDate}&endDate=${endDate}` 
     : null;
   
   const { 
@@ -79,23 +90,30 @@ export default function SequencesPage() {
             </div>
           </div>
           
-          {/* Items per page selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-text-secondary">Items per page:</span>
-            <select
-              value={limit}
-              onChange={(e) => {
-                const value = e.target.value;
-                setLimit(value === 'all' ? 'all' : Number(value) as LimitOption);
-              }}
-              className="px-3 py-1.5 text-sm bg-surface-elevated border border-border-primary rounded-md text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/50"
-            >
-              {LIMIT_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option === 'all' ? 'All' : option}
-                </option>
-              ))}
-            </select>
+          {/* Date range and items per page selectors */}
+          <div className="flex items-center gap-3">
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onDateChange={handleDateChange}
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-text-secondary">Items per page:</span>
+              <select
+                value={limit}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setLimit(value === 'all' ? 'all' : Number(value) as LimitOption);
+                }}
+                className="px-3 py-1.5 text-sm bg-surface-elevated border border-border-primary rounded-md text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/50"
+              >
+                {LIMIT_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option === 'all' ? 'All' : option}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </motion.div>

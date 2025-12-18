@@ -5,6 +5,7 @@ import { Check, ChevronDown, Building2, Plus, Shield, Crown, Users, Eye } from '
 import * as Select from '@radix-ui/react-select';
 import { cn } from '@/lib/utils';
 import { useWorkspace, type Workspace, type WorkspaceRole } from '@/lib/workspace-context';
+import { EditableText } from '@/components/ui/editable-text';
 
 interface WorkspaceSwitcherProps {
   className?: string;
@@ -38,10 +39,10 @@ export function WorkspaceSwitcher({
   showAddButton = false,
   onAddWorkspace,
 }: WorkspaceSwitcherProps) {
-  const { workspace, workspaces, switchWorkspace, isLoading, isSuperAdmin, canManage } = useWorkspace();
+  const { workspace, workspaces, switchWorkspace, renameWorkspace, isLoading, isSuperAdmin, canManage } = useWorkspace();
   const [isOpen, setIsOpen] = useState(false);
-
-  // If only one workspace, just show the name with role
+  
+  // If only one workspace, just show the name with role (and allow edit)
   if (workspaces.length <= 1 && !showAddButton) {
     return (
       <div className={cn(
@@ -49,7 +50,13 @@ export function WorkspaceSwitcher({
         className
       )}>
         <Building2 className="h-4 w-4 text-text-secondary" />
-        <span className="truncate max-w-[150px]">{workspace.name}</span>
+        <EditableText 
+          value={workspace.name}
+          onSave={async (name) => {
+            if (workspace.id) await renameWorkspace(workspace.id, name);
+          }}
+          disabled={!canManage}
+        />
         {isSuperAdmin && (
           <span className="text-xs bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded">
             Admin
@@ -68,36 +75,42 @@ export function WorkspaceSwitcher({
   };
 
   return (
-    <Select.Root
-      value={workspace.id}
-      onValueChange={handleValueChange}
-      open={isOpen}
-      onOpenChange={setIsOpen}
-    >
-      <Select.Trigger
-        className={cn(
-          'inline-flex items-center justify-between gap-2 rounded-lg px-3 py-2',
-          'bg-surface-elevated border border-border text-sm font-medium text-text-primary',
-          'hover:bg-surface-elevated/80 transition-colors min-w-[180px]',
-          'focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-background',
-          'disabled:opacity-50 disabled:pointer-events-none',
-          className
-        )}
-        disabled={isLoading}
+    <div className={cn(
+      'inline-flex items-center justify-between gap-1 rounded-lg pr-2',
+      'bg-surface-elevated border border-border text-sm font-medium text-text-primary',
+      'min-w-[180px] transition-colors hover:bg-surface-elevated/80',
+      className
+    )}>
+      <div className="flex items-center gap-2 pl-3 py-2 flex-1 min-w-0">
+        <Building2 className="h-4 w-4 text-text-secondary flex-shrink-0" />
+        <EditableText 
+          value={workspace.name}
+          onSave={async (name) => {
+            if (workspace.id) await renameWorkspace(workspace.id, name);
+          }}
+          disabled={!canManage}
+          className="truncate"
+        />
+      </div>
+
+      <Select.Root
+        value={workspace.id}
+        onValueChange={handleValueChange}
+        open={isOpen}
+        onOpenChange={setIsOpen}
       >
-        <div className="flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-text-secondary flex-shrink-0" />
-          <Select.Value placeholder="Select workspace">
-            <span className="truncate max-w-[120px]">{workspace.name}</span>
-          </Select.Value>
-        </div>
-        <Select.Icon>
-          <ChevronDown className={cn(
-            'h-4 w-4 text-text-secondary transition-transform flex-shrink-0',
-            isOpen && 'rotate-180'
-          )} />
-        </Select.Icon>
-      </Select.Trigger>
+        <Select.Trigger
+          className="p-1 hover:bg-black/5 rounded outline-none focus:ring-2 focus:ring-accent-primary"
+          aria-label="Select workspace"
+          disabled={isLoading}
+        >
+          <Select.Icon>
+            <ChevronDown className={cn(
+              'h-4 w-4 text-text-secondary transition-transform flex-shrink-0',
+              isOpen && 'rotate-180'
+            )} />
+          </Select.Icon>
+        </Select.Trigger>
 
       <Select.Portal>
         <Select.Content
@@ -163,6 +176,7 @@ export function WorkspaceSwitcher({
         </Select.Content>
       </Select.Portal>
     </Select.Root>
+  </div>
   );
 }
 

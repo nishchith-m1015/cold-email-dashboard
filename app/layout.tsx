@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { LayoutWrapper } from '@/components/layout/layout-wrapper';
 import { ClerkThemeProvider } from '@/components/providers/clerk-theme-provider';
+import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
   title: 'Cold Email Analytics Dashboard',
@@ -35,6 +36,7 @@ export default function RootLayout({
           <LayoutWrapper>
             {children}
           </LayoutWrapper>
+          <Toaster />
         </ClerkThemeProvider>
       </body>
     </html>

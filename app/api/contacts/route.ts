@@ -77,8 +77,50 @@ export async function GET(req: NextRequest) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
   const search = searchParams.get('search')?.trim();
+  const startDate = searchParams.get('startDate');
+  const endDate = searchParams.get('endDate');
 
   try {
+    // Step 1: If date filtering is requested, first get list of contact emails
+    // that have email activity within the date range
+    let activeEmails: string[] | null = null;
+    
+    if (startDate || endDate) {
+      let eventsQuery = supabaseAdmin
+        .from('email_events')
+        .select('contact_email')
+        .eq('workspace_id', workspaceId);
+      
+      if (startDate) {
+        eventsQuery = eventsQuery.gte('event_ts', `${startDate}T00:00:00`);
+      }
+      if (endDate) {
+        eventsQuery = eventsQuery.lte('event_ts', `${endDate}T23:59:59`);
+      }
+      
+      const { data: eventsData, error: eventsError } = await eventsQuery;
+      
+      if (eventsError) {
+        console.error('Email events query error:', eventsError);
+        // Fall back to no date filtering if events query fails
+      } else if (eventsData) {
+        // Get unique emails
+        activeEmails = [...new Set(eventsData.map(e => e.contact_email?.toLowerCase()).filter(Boolean) as string[])];
+        
+        // If no activity in date range, return empty result
+        if (activeEmails.length === 0) {
+          return NextResponse.json({
+            contacts: [],
+            next_cursor: null,
+            total: 0,
+          } as LeadListResponse, {
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+      }
+    }
+    
+    // Step 2: Build leads query
     let query = supabaseAdmin
       .from('leads_ohio')
       .select(
@@ -101,9 +143,14 @@ export async function GET(req: NextRequest) {
         `,
         { count: 'exact' }
       )
-      .eq('workspace_id', workspaceId)
-      .order('id', { ascending: true })
-      .range(from, to);
+      .eq('workspace_id', workspaceId);
+    
+    // Filter by active emails if date range was specified
+    if (activeEmails) {
+      query = query.in('email_address', activeEmails);
+    }
+    
+    query = query.order('id', { ascending: true }).range(from, to);
 
     if (search) {
       const term = `%${search}%`;

@@ -3,33 +3,8 @@
   "nodes": [
     {
       "parameters": {
-        "sendTo": "={{ $json.email_address }}",
-        "subject": "={{ $json.email_1_subject }}",
-        "message": "={{ $json['email_1_body'] + '<br><br><a href=\"https://n8n-deployment-hlnal.ondigitalocean.app/webhook/Unsubscribe?tkn=' + $json.Token + '\">Click Here to Unsubscribe</a>' }}",
-        "options": {
-          "appendAttribution": false
-        }
-      },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
-      "position": [
-        1264,
-        992
-      ],
-      "id": "c661b711-92da-4f22-a506-cc64dc69f606",
-      "name": "Gmail",
-      "webhookId": "7991dbd6-9db7-4a38-ab95-b4c9756b93ee",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "tUD6GQ7CnHfvUM7k",
-          "name": "Smartie Agents"
-        }
-      }
-    },
-    {
-      "parameters": {
         "method": "POST",
-        "url": "https://cold-email-dashboard.vercel.app/api/events",
+        "url": "https://cold-email-dashboard.vercel.app/api/cost-events",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -45,18 +20,43 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contact_email\": \"{{ $('Google Sheets5').item.json.email_address }}\",\n  \"campaign\": \"Ohio\",\n  \"step\": 1,\n  \"event_type\": \"sent\",\n  \"provider\": \"gmail\",\n  \"provider_message_id\": \"{{ $json.id }}\",\n  \"event_ts\": \"{{ new Date().toISOString() }}\",\n  \"subject\": \"{{ $('Google Sheets5').item.json.email_1_subject }}\",\n  \"body\": \"{{ $('Google Sheets5').item.json.email_1_body }}\"\n}",
+        "jsonBody": "={\n  \"contact_email\": \"{{ $('Google Sheets').item.json.email_address }}\",\n  \"campaign\": \"Ohio\",\n  \"step\": 1,\n  \"event_type\": \"sent\",\n  \"provider\": \"gmail\",\n  \"provider_message_id\": \"{{ $json.id }}\",\n  \"event_ts\": \"{{ new Date().toISOString() }}\",\n  \"subject\": \"{{ $('Google Sheets').item.json.email_1_subject }}\",\n  \"body\": \"{{ $('Google Sheets').item.json.email_1_body }}\",\n  \"idempotency_key\": \"email_{{ $execution.id }}_{{ $('Google Sheets').item.json.email_address }}_step1\",\n  \"n8n_execution_id\": \"{{ $execution.id }}\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1464,
-        992
+        3680,
+        2032
       ],
-      "id": "track-email-1",
+      "id": "8a2e8d0d-e417-4654-84ea-401658c98942",
       "name": "Track Email Sent",
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email_address }}",
+        "subject": "={{ $json.email_1_subject }}",
+        "message": "={{ $json.tracked_body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3488,
+        2032
+      ],
+      "id": "bb291b29-83ac-462d-8d6a-5ae18915e7c1",
+      "name": "Gmail1",
+      "webhookId": "7991dbd6-9db7-4a38-ab95-b4c9756b93ee",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tUD6GQ7CnHfvUM7k",
+          "name": "Smartie Agents"
+        }
+      }
     },
     {
       "parameters": {
@@ -65,11 +65,11 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        736,
-        992
+        2848,
+        2032
       ],
-      "id": "4611ef28-e1aa-4d40-b0a2-5c0f8b2a487d",
-      "name": "Loop Over Items"
+      "id": "a8c7507b-c84c-4eb6-b262-2834dbf7c9dc",
+      "name": "Loop Over Items1"
     },
     {
       "parameters": {
@@ -85,11 +85,11 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        144,
-        992
+        2256,
+        2032
       ],
-      "id": "27497a6b-9af1-4919-b30a-d309553fff3a",
-      "name": "Schedule Trigger1"
+      "id": "ef449e59-b4b5-46f2-9906-4adaa64e2028",
+      "name": "Schedule Trigger"
     },
     {
       "parameters": {
@@ -120,11 +120,11 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        320,
-        992
+        2512,
+        2624
       ],
-      "id": "f83e0446-e0b1-468c-822b-d29ac6181440",
-      "name": "Google Sheets5",
+      "id": "3bb176d2-c5b9-44ef-b6d7-1d6954057224",
+      "name": "Google Sheets",
       "alwaysOutputData": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -137,17 +137,17 @@
       "parameters": {
         "content": "## Email 1\n",
         "height": 608,
-        "width": 1856,
+        "width": 2064,
         "color": 4
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        80,
-        864
+        2192,
+        1904
       ],
       "typeVersion": 1,
-      "id": "22697491-9caa-4230-8478-676ed8063e44",
-      "name": "Sticky Note9"
+      "id": "9ab6cc03-42ef-4a13-940f-1b58e782a978",
+      "name": "Sticky Note"
     },
     {
       "parameters": {
@@ -177,24 +177,24 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1024,
-        1008
+        3072,
+        2048
       ],
-      "id": "bc837160-29d7-4a67-a3c3-be9d30af68d0",
-      "name": "If"
+      "id": "b69d766e-73ec-47da-9195-9306be2d722d",
+      "name": "If1"
     },
     {
       "parameters": {
-        "maxItems": 100
+        "maxItems": 125
       },
       "type": "n8n-nodes-base.limit",
       "typeVersion": 1,
       "position": [
-        512,
-        992
+        2624,
+        2032
       ],
-      "id": "a4d9d223-9134-444d-8f8d-65f396973436",
-      "name": "Limit"
+      "id": "2dd23029-5f3d-45c1-9590-b08aa3da616d",
+      "name": "Limit1"
     },
     {
       "parameters": {
@@ -424,16 +424,6 @@
               "removed": false
             },
             {
-              "id": "seniority",
-              "displayName": "seniority",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
               "id": "analyze",
               "displayName": "analyze",
               "required": false,
@@ -612,11 +602,11 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        1728,
-        1232
+        2944,
+        2624
       ],
-      "id": "b8b17f78-3c4f-459e-9303-88c3df999474",
-      "name": "Email #1 not sent",
+      "id": "7772919b-0951-4ed9-b965-6a9b6ee5eecf",
+      "name": "Email #1 not sent1",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "p8ESE0UMGdJsRvZv",
@@ -644,7 +634,7 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "linkedin_url": "={{ $('Google Sheets5').item.json.linkedin_url }}",
+            "linkedin_url": "={{ $('Select rows from a table').item.json.linkedin_url }}",
             "email_1_sent": "Yes",
             "message_id": "={{ $json.threadId }}"
           },
@@ -853,16 +843,6 @@
               "removed": false
             },
             {
-              "id": "seniority",
-              "displayName": "seniority",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
               "id": "analyze",
               "displayName": "analyze",
               "required": false,
@@ -1041,11 +1021,11 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        1520,
-        992
+        2720,
+        2624
       ],
-      "id": "c58deb53-5bae-4eac-a015-8fa940a59016",
-      "name": "Email Sent Yes",
+      "id": "92eb9084-788f-4839-b210-765f5811be27",
+      "name": "Email Sent Yes1",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "p8ESE0UMGdJsRvZv",
@@ -1060,17 +1040,966 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        1776,
-        992
+        4064,
+        2032
       ],
-      "id": "08ff7d51-8182-4f1b-bcdc-dc87357a4e90",
-      "name": "Wait",
+      "id": "0e714d2c-c37d-46e5-bb07-c04985bfcb5f",
+      "name": "Wait1",
       "webhookId": "55a02575-e3a1-4f7c-8dcd-eb9245256d57"
+    },
+    {
+      "parameters": {
+        "jsCode": "// EMAIL 1 CLICK TRACKING (NO OPEN TRACKING)\nconst DASHBOARD_URL = 'https://cold-email-dashboard.vercel.app';\nconst UNSUB_BASE = 'https://n8n-deployment-hlnal.ondigitalocean.app/webhook/Unsubscribe';\nconst WORKSPACE_ID = 'default';\n\nconst emailBody = $json.email_1_body || '';\nconst contactEmail = $json.email_address || '';\nconst token = $json.Token || '';\nconst campaign = 'Ohio';\nconst step = 1;\n\n// ✅ CLICK TRACKING: Wrap all links\nfunction wrapLink(originalUrl, linkId) {\n  return `${DASHBOARD_URL}/api/track/click?url=${encodeURIComponent(originalUrl)}&e=${encodeURIComponent(contactEmail)}&c=${encodeURIComponent(campaign)}&s=${step}&l=${encodeURIComponent(linkId || 'cta')}&w=${encodeURIComponent(WORKSPACE_ID)}`;\n}\n\nlet trackedBody = emailBody;\nconst linkRegex = /<a\\s+([^>]*?)href=[\"']([^\"']+)[\"']([^>]*?)>/gi;\nlet linkIndex = 0;\n\n// Wrap all links in email body\ntrackedBody = trackedBody.replace(linkRegex, (match, before, url, after) => {\n  if (url.startsWith('mailto:') || url.startsWith('tel:') || url.startsWith('#')) return match;\n  linkIndex++;\n  return `<a ${before}href=\"${wrapLink(url, 'link_' + linkIndex)}\"${after}>`;\n});\n\n// Add unsubscribe link with click tracking\nconst unsubUrl = `${UNSUB_BASE}?tkn=${encodeURIComponent(token)}`;\nconst trackedUnsubUrl = wrapLink(unsubUrl, 'unsubscribe');\ntrackedBody += `<br><br><a href=\"${trackedUnsubUrl}\">Click Here to Unsubscribe</a>`;\n\nreturn [{\n  json: {\n    ...$json,\n    tracked_body: trackedBody,\n    links_tracked: linkIndex + 1\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3280,
+        2032
+      ],
+      "id": "2da61d76-b371-44f7-b3d8-a698c5d91397",
+      "name": " Inject Tracking  "
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "leads_ohio",
+          "mode": "list",
+          "cachedResultName": "leads_ohio"
+        },
+        "returnAll": true,
+        "where": {
+          "values": [
+            {
+              "column": "email_1_sent",
+              "value": "FALSE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2448,
+        2032
+      ],
+      "id": "8fa8b412-7f18-4f7e-b026-cb574e10932d",
+      "name": "Select rows from a table",
+      "credentials": {
+        "postgres": {
+          "id": "QKb5WqKXZ29v15Qk",
+          "name": "Leads Ohio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "leads_ohio",
+          "mode": "list",
+          "cachedResultName": "leads_ohio"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "analyze": false,
+            "email_1_sent": true,
+            "email_2_sent": false,
+            "email_3_sent": false,
+            "replied": false,
+            "opted_out": false,
+            "email_prep": false,
+            "report_sent": false,
+            "linkedin_url": "={{ $('Select rows from a table').item.json.linkedin_url }}",
+            "message_id": "={{ $json.threadId }}"
+          },
+          "matchingColumns": [
+            "linkedin_url"
+          ],
+          "schema": [
+            {
+              "id": "first_name",
+              "displayName": "first_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "last_name",
+              "displayName": "last_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_address",
+              "displayName": "email_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "linkedin_url",
+              "displayName": "linkedin_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "state",
+              "displayName": "state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "industry",
+              "displayName": "industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "position",
+              "displayName": "position",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "city",
+              "displayName": "city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "country",
+              "displayName": "country",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "full_name",
+              "displayName": "full_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_city",
+              "displayName": "organization_city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_country",
+              "displayName": "organization_country",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_description",
+              "displayName": "organization_description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "founded_year",
+              "displayName": "founded_year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "organization_linkedin_url",
+              "displayName": "organization_linkedin_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_name",
+              "displayName": "organization_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_size",
+              "displayName": "organization_size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_specialities",
+              "displayName": "organization_specialities",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_state",
+              "displayName": "organization_state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_website",
+              "displayName": "organization_website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "analyze",
+              "displayName": "analyze",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "research_report",
+              "displayName": "research_report",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_1_subject",
+              "displayName": "email_1_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_1_body",
+              "displayName": "email_1_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_2_body",
+              "displayName": "email_2_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_3_subject",
+              "displayName": "email_3_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_3_body",
+              "displayName": "email_3_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "sender_email",
+              "displayName": "sender_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_1_sent",
+              "displayName": "email_1_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_2_sent",
+              "displayName": "email_2_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_3_sent",
+              "displayName": "email_3_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "replied",
+              "displayName": "replied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "opted_out",
+              "displayName": "opted_out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "token",
+              "displayName": "token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "email_prep",
+              "displayName": "email_prep",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "report_sent",
+              "displayName": "report_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_norm",
+              "displayName": "email_norm",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "workspace_id",
+              "displayName": "workspace_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3872,
+        2032
+      ],
+      "id": "f54cc597-0620-45b3-b38a-6039aa8d709f",
+      "name": "Insert or update rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "QKb5WqKXZ29v15Qk",
+          "name": "Leads Ohio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "leads_ohio",
+          "mode": "list",
+          "cachedResultName": "leads_ohio"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "analyze": false,
+            "email_1_sent": "={{ false }}",
+            "email_2_sent": false,
+            "email_3_sent": false,
+            "replied": false,
+            "opted_out": false,
+            "email_prep": false,
+            "report_sent": false,
+            "linkedin_url": "={{ $('Select rows from a table').item.json.linkedin_url }}",
+            "message_id": "={{ $json.threadId }}"
+          },
+          "matchingColumns": [
+            "linkedin_url"
+          ],
+          "schema": [
+            {
+              "id": "first_name",
+              "displayName": "first_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "last_name",
+              "displayName": "last_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_address",
+              "displayName": "email_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "linkedin_url",
+              "displayName": "linkedin_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "state",
+              "displayName": "state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "industry",
+              "displayName": "industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "position",
+              "displayName": "position",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "city",
+              "displayName": "city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "country",
+              "displayName": "country",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "full_name",
+              "displayName": "full_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_city",
+              "displayName": "organization_city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_country",
+              "displayName": "organization_country",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_description",
+              "displayName": "organization_description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "founded_year",
+              "displayName": "founded_year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "organization_linkedin_url",
+              "displayName": "organization_linkedin_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_name",
+              "displayName": "organization_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_size",
+              "displayName": "organization_size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_specialities",
+              "displayName": "organization_specialities",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_state",
+              "displayName": "organization_state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "organization_website",
+              "displayName": "organization_website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "analyze",
+              "displayName": "analyze",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "research_report",
+              "displayName": "research_report",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_1_subject",
+              "displayName": "email_1_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_1_body",
+              "displayName": "email_1_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_2_body",
+              "displayName": "email_2_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_3_subject",
+              "displayName": "email_3_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_3_body",
+              "displayName": "email_3_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "sender_email",
+              "displayName": "sender_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_1_sent",
+              "displayName": "email_1_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_2_sent",
+              "displayName": "email_2_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_3_sent",
+              "displayName": "email_3_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "replied",
+              "displayName": "replied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "opted_out",
+              "displayName": "opted_out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "token",
+              "displayName": "token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "email_prep",
+              "displayName": "email_prep",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "report_sent",
+              "displayName": "report_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "email_norm",
+              "displayName": "email_norm",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "workspace_id",
+              "displayName": "workspace_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3888,
+        2272
+      ],
+      "id": "f07dc6f9-3919-4e6e-95b5-4c0382045a3d",
+      "name": "Email #1 Not Sent",
+      "credentials": {
+        "postgres": {
+          "id": "QKb5WqKXZ29v15Qk",
+          "name": "Leads Ohio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Ignore the Google sheets nodes\n",
+        "height": 336,
+        "width": 640
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2480,
+        2528
+      ],
+      "id": "b1151816-a339-4ca8-8ac4-451b479b02ca",
+      "name": "Sticky Note1"
     }
   ],
   "pinData": {},
   "connections": {
-    "Gmail": {
+    "Track Email Sent": {
+      "main": [
+        [
+          {
+            "node": "Insert or update rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail1": {
       "main": [
         [
           {
@@ -1081,107 +2010,122 @@
         ]
       ]
     },
-    "Track Email Sent": {
-      "main": [
-        [
-          {
-            "node": "Email Sent Yes",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Loop Over Items": {
+    "Loop Over Items1": {
       "main": [
         [],
         [
           {
-            "node": "If",
+            "node": "If1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Schedule Trigger1": {
+    "Schedule Trigger": {
       "main": [
         [
           {
-            "node": "Google Sheets5",
+            "node": "Select rows from a table",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Google Sheets5": {
+    "Google Sheets": {
       "main": [
-        [
-          {
-            "node": "Limit",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
-    "If": {
+    "If1": {
       "main": [
         [
           {
-            "node": "Gmail",
+            "node": " Inject Tracking  ",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Email #1 not sent",
+            "node": "Email #1 Not Sent",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Limit": {
+    "Limit1": {
       "main": [
         [
           {
-            "node": "Loop Over Items",
+            "node": "Loop Over Items1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Email #1 not sent": {
+    "Email #1 not sent1": {
+      "main": [
+        []
+      ]
+    },
+    "Email Sent Yes1": {
+      "main": [
+        []
+      ]
+    },
+    "Wait1": {
       "main": [
         [
           {
-            "node": "Loop Over Items",
+            "node": "Loop Over Items1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Email Sent Yes": {
+    " Inject Tracking  ": {
       "main": [
         [
           {
-            "node": "Wait",
+            "node": "Gmail1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Wait": {
+    "Select rows from a table": {
       "main": [
         [
           {
-            "node": "Loop Over Items",
+            "node": "Limit1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert or update rows in a table": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email #1 Not Sent": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
             "type": "main",
             "index": 0
           }
@@ -1199,7 +2143,7 @@
     "timeSavedPerExecution": 5,
     "availableInMCP": false
   },
-  "versionId": "d472d330-ada6-452d-8aba-b2dc8c9f374e",
+  "versionId": "5ce663a4-58c8-477a-add0-6e53eec86e79",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "fb0f3042150127121074617aaee31b106c313805cbc452132240d35f72eba898"

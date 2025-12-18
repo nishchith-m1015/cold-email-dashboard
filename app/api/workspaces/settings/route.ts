@@ -18,6 +18,9 @@ type Payload = {
   workspace_id?: string;
   timezone?: string;
   auto_refresh_seconds?: number;
+  workspace_name?: string;
+  date_format?: 'US' | 'EU';
+  currency?: string;
 };
 
 function sanitizeAutoRefresh(value: any): number | null {
@@ -102,6 +105,9 @@ export async function PATCH(req: NextRequest) {
 
   const timezone = typeof body.timezone === 'string' && body.timezone.trim() ? body.timezone.trim() : undefined;
   const autoRefresh = sanitizeAutoRefresh(body.auto_refresh_seconds);
+  const workspaceName = typeof body.workspace_name === 'string' && body.workspace_name.trim() ? body.workspace_name.trim() : undefined;
+  const dateFormat = body.date_format === 'US' || body.date_format === 'EU' ? body.date_format : undefined;
+  const currency = typeof body.currency === 'string' && body.currency.trim() ? body.currency.trim() : undefined;
 
   const { data: existing, error: loadErr } = await supabaseAdmin
     .from('workspaces')
@@ -116,6 +122,9 @@ export async function PATCH(req: NextRequest) {
   const nextSettings = { ...(existing?.settings || {}) };
   if (timezone !== undefined) nextSettings.timezone = timezone;
   if (autoRefresh !== null) nextSettings.auto_refresh_seconds = autoRefresh;
+  if (workspaceName !== undefined) nextSettings.workspace_name = workspaceName;
+  if (dateFormat !== undefined) nextSettings.date_format = dateFormat;
+  if (currency !== undefined) nextSettings.currency = currency;
 
   const { error: updateErr } = await supabaseAdmin
     .from('workspaces')

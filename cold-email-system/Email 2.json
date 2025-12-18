@@ -18,10 +18,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -928,
-        1968
+        1360,
+        4176
       ],
-      "id": "e79ee611-50a8-48b1-b6f9-fe9fe8b8b2ea",
+      "id": "d28862f1-0408-4797-b5ba-c847716d9e0e",
       "name": "Edit Fields2"
     },
     {
@@ -53,10 +53,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -496,
-        1744
+        1792,
+        3952
       ],
-      "id": "e7cc9a05-4130-46c6-8f0d-93520bc502de",
+      "id": "5aa9c996-15c1-4729-86d0-a29574ef4be3",
       "name": "If2"
     },
     {
@@ -68,10 +68,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.1,
       "position": [
-        -688,
-        1744
+        1600,
+        3952
       ],
-      "id": "c47561ee-f459-4d2c-a03e-8984121b5574",
+      "id": "f30923d9-9051-4534-bcd4-8e7c527ed31a",
       "name": "Merge2"
     },
     {
@@ -85,10 +85,10 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -1104,
-        1968
+        1184,
+        4176
       ],
-      "id": "1ba7b1b7-9153-4590-a150-318a79e807c4",
+      "id": "37b94831-8125-4572-bfc0-5f3e08d6deb2",
       "name": "Replied?2",
       "webhookId": "6cdae860-913e-4fa7-97af-e49f0cdcd11d",
       "alwaysOutputData": true,
@@ -101,34 +101,31 @@
     },
     {
       "parameters": {
-        "operation": "appendOrUpdate",
-        "documentId": {
+        "operation": "upsert",
+        "schema": {
           "__rl": true,
-          "value": "1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8",
           "mode": "list",
-          "cachedResultName": "3547 Leads - Ohio ",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit?usp=drivesdk"
+          "value": "public"
         },
-        "sheetName": {
+        "table": {
           "__rl": true,
-          "value": "gid=0",
+          "value": "leads_ohio",
           "mode": "list",
-          "cachedResultName": "Ohio",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit#gid=0"
+          "cachedResultName": "leads_ohio"
         },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "Replied": "Yes",
-            "LinkedIn URL": "={{ $json[\"LinkedIn URL\"] }}"
+            "linkedin_url": "={{ $json.linkedin_url }}",
+            "replied": true
           },
           "matchingColumns": [
-            "LinkedIn URL"
+            "linkedin_url"
           ],
           "schema": [
             {
-              "id": "First name",
-              "displayName": "First name",
+              "id": "first_name",
+              "displayName": "first_name",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -137,8 +134,8 @@
               "removed": false
             },
             {
-              "id": "Last name",
-              "displayName": "Last name",
+              "id": "last_name",
+              "displayName": "last_name",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -147,8 +144,8 @@
               "removed": false
             },
             {
-              "id": "Email",
-              "displayName": "Email",
+              "id": "email_address",
+              "displayName": "email_address",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -157,8 +154,8 @@
               "removed": false
             },
             {
-              "id": "LinkedIn URL",
-              "displayName": "LinkedIn URL",
+              "id": "linkedin_url",
+              "displayName": "linkedin_url",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -167,8 +164,8 @@
               "removed": false
             },
             {
-              "id": "State",
-              "displayName": "State",
+              "id": "state",
+              "displayName": "state",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -177,8 +174,8 @@
               "removed": false
             },
             {
-              "id": "Industry",
-              "displayName": "Industry",
+              "id": "industry",
+              "displayName": "industry",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -187,8 +184,8 @@
               "removed": false
             },
             {
-              "id": "Position",
-              "displayName": "Position",
+              "id": "position",
+              "displayName": "position",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -197,8 +194,8 @@
               "removed": false
             },
             {
-              "id": "City",
-              "displayName": "City",
+              "id": "city",
+              "displayName": "city",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -207,8 +204,8 @@
               "removed": false
             },
             {
-              "id": "Country",
-              "displayName": "Country",
+              "id": "country",
+              "displayName": "country",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -217,8 +214,8 @@
               "removed": false
             },
             {
-              "id": "Full name",
-              "displayName": "Full name",
+              "id": "full_name",
+              "displayName": "full_name",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -227,8 +224,8 @@
               "removed": false
             },
             {
-              "id": "Organization city",
-              "displayName": "Organization city",
+              "id": "organization_city",
+              "displayName": "organization_city",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -237,8 +234,8 @@
               "removed": false
             },
             {
-              "id": "Organization country",
-              "displayName": "Organization country",
+              "id": "organization_country",
+              "displayName": "organization_country",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -247,8 +244,8 @@
               "removed": false
             },
             {
-              "id": "Organization description",
-              "displayName": "Organization description",
+              "id": "organization_description",
+              "displayName": "organization_description",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -257,8 +254,8 @@
               "removed": false
             },
             {
-              "id": "Founded year",
-              "displayName": "Founded year",
+              "id": "founded_year",
+              "displayName": "founded_year",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -267,8 +264,8 @@
               "removed": false
             },
             {
-              "id": "Organization Linkedin URL",
-              "displayName": "Organization Linkedin URL",
+              "id": "organization_linkedin_url",
+              "displayName": "organization_linkedin_url",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -277,8 +274,8 @@
               "removed": false
             },
             {
-              "id": "Organization Name",
-              "displayName": "Organization Name",
+              "id": "organization_name",
+              "displayName": "organization_name",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -287,8 +284,8 @@
               "removed": false
             },
             {
-              "id": "Organization Size",
-              "displayName": "Organization Size",
+              "id": "organization_size",
+              "displayName": "organization_size",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -297,8 +294,8 @@
               "removed": false
             },
             {
-              "id": "Organization Specialities",
-              "displayName": "Organization Specialities",
+              "id": "organization_specialities",
+              "displayName": "organization_specialities",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -307,8 +304,8 @@
               "removed": false
             },
             {
-              "id": "Organization State",
-              "displayName": "Organization State",
+              "id": "organization_state",
+              "displayName": "organization_state",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -317,8 +314,8 @@
               "removed": false
             },
             {
-              "id": "Organization Website",
-              "displayName": "Organization Website",
+              "id": "organization_website",
+              "displayName": "organization_website",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -327,8 +324,8 @@
               "removed": false
             },
             {
-              "id": "Seniority",
-              "displayName": "Seniority",
+              "id": "analyze",
+              "displayName": "analyze",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -337,8 +334,8 @@
               "removed": false
             },
             {
-              "id": "Analyse",
-              "displayName": "Analyse",
+              "id": "research_report",
+              "displayName": "research_report",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -347,17 +344,8 @@
               "removed": false
             },
             {
-              "id": "Research Report",
-              "displayName": "Research Report",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "Email #1 Subject",
-              "displayName": "Email #1 Subject",
+              "id": "email_1_subject",
+              "displayName": "email_1_subject",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -366,8 +354,8 @@
               "removed": false
             },
             {
-              "id": "Email #1 Body ",
-              "displayName": "Email #1 Body ",
+              "id": "email_1_body",
+              "displayName": "email_1_body",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -376,8 +364,8 @@
               "removed": false
             },
             {
-              "id": "Email #2 Body ",
-              "displayName": "Email #2 Body ",
+              "id": "email_2_body",
+              "displayName": "email_2_body",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -386,8 +374,8 @@
               "removed": false
             },
             {
-              "id": "Email #3 Subject",
-              "displayName": "Email #3 Subject",
+              "id": "email_3_subject",
+              "displayName": "email_3_subject",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -396,8 +384,8 @@
               "removed": false
             },
             {
-              "id": "Email #3 Body",
-              "displayName": "Email #3 Body",
+              "id": "email_3_body",
+              "displayName": "email_3_body",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -406,17 +394,8 @@
               "removed": false
             },
             {
-              "id": "Sender Email",
-              "displayName": "Sender Email",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "Email #1 Sent",
-              "displayName": "Email #1 Sent",
+              "id": "sender_email",
+              "displayName": "sender_email",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -425,8 +404,8 @@
               "removed": false
             },
             {
-              "id": "Email #2 Sent",
-              "displayName": "Email #2 Sent",
+              "id": "email_1_sent",
+              "displayName": "email_1_sent",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -435,8 +414,8 @@
               "removed": false
             },
             {
-              "id": "Email #3 Sent",
-              "displayName": "Email #3 Sent",
+              "id": "email_2_sent",
+              "displayName": "email_2_sent",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -445,17 +424,8 @@
               "removed": false
             },
             {
-              "id": "Replied",
-              "displayName": "Replied",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "Token",
-              "displayName": "Token",
+              "id": "email_3_sent",
+              "displayName": "email_3_sent",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -464,17 +434,8 @@
               "removed": false
             },
             {
-              "id": "Opted Out",
-              "displayName": "Opted Out",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "Message ID",
-              "displayName": "Message ID",
+              "id": "replied",
+              "displayName": "replied",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -483,8 +444,8 @@
               "removed": false
             },
             {
-              "id": "Report Sent",
-              "displayName": "Report Sent",
+              "id": "token",
+              "displayName": "token",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -493,8 +454,38 @@
               "removed": false
             },
             {
-              "id": "Email Prep",
-              "displayName": "Email Prep",
+              "id": "opted_out",
+              "displayName": "opted_out",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "report_sent",
+              "displayName": "report_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email_prep",
+              "displayName": "email_prep",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -508,43 +499,40 @@
         },
         "options": {}
       },
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
       "position": [
-        80,
-        1728
+        2736,
+        3936
       ],
-      "id": "f1a42bf6-de0d-480e-b3c5-3c89fe92e40c",
-      "name": "Replied = Yes2",
+      "id": "5bfe6c47-c281-4a14-acbf-0a4e9796ddf1",
+      "name": "Update Replied Status",
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "p8ESE0UMGdJsRvZv",
-          "name": "Smartie Agents"
+        "postgres": {
+          "id": "QKb5WqKXZ29v15Qk",
+          "name": "Leads Ohio"
         }
       }
     },
     {
       "parameters": {
-        "operation": "appendOrUpdate",
-        "documentId": {
+        "operation": "upsert",
+        "schema": {
           "__rl": true,
-          "value": "1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8",
           "mode": "list",
-          "cachedResultName": "3547 Leads - Ohio ",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit?usp=drivesdk"
+          "value": "public"
         },
-        "sheetName": {
+        "table": {
           "__rl": true,
-          "value": "gid=0",
+          "value": "leads_ohio",
           "mode": "list",
-          "cachedResultName": "Ohio",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit#gid=0"
+          "cachedResultName": "leads_ohio"
         },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
             "message_id": "={{ $json.threadId }}",
-            "email_2_sent": "Yes"
+            "email_2_sent": true
           },
           "matchingColumns": [
             "message_id"
@@ -936,18 +924,18 @@
         },
         "options": {}
       },
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
       "position": [
-        48,
-        2080
+        2688,
+        4304
       ],
-      "id": "02cb503d-18ac-44d6-80fb-ba55c0089fbd",
-      "name": "Google Sheets10",
+      "id": "817ab44c-5f07-46eb-91a4-4a49537a36ef",
+      "name": "Mark Email 2 Sent",
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "p8ESE0UMGdJsRvZv",
-          "name": "Smartie Agents"
+        "postgres": {
+          "id": "QKb5WqKXZ29v15Qk",
+          "name": "Leads Ohio"
         }
       },
       "onError": "continueRegularOutput"
@@ -959,10 +947,10 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        240,
-        2080
+        2896,
+        4304
       ],
-      "id": "aea31c92-e716-4b3b-8693-79494634c9fb",
+      "id": "cc146f54-a2e6-4b9d-ab02-230f23e102cf",
       "name": "Wait4",
       "webhookId": "5fcbde9f-0750-405b-8ff7-8bce2e4a16ef"
     },
@@ -994,10 +982,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -160,
-        2080
+        2272,
+        4304
       ],
-      "id": "98b34fa3-4e7b-4a8e-ad47-25b19f45202e",
+      "id": "4827ef89-16bd-4269-bbbb-10816b0a6b85",
       "name": "HTTP Request4",
       "credentials": {
         "gmailOAuth2": {
@@ -1008,47 +996,15 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://cold-email-dashboard.vercel.app/api/events",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "x-webhook-token",
-              "value": "6de5a8d03ad6348f4110782372a82f1bb7c6ef43a8ce8810bf0459e73abaeb61"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"contact_email\": \"{{ $('Google Sheets8').item.json.email_address }}\",\n  \"campaign\": \"Ohio\",\n  \"step\": 2,\n  \"event_type\": \"sent\",\n  \"provider\": \"gmail\",\n  \"provider_message_id\": \"{{ $json.id }}\",\n  \"event_ts\": \"{{ new Date().toISOString() }}\",\n  \"subject\": \"Re: {{ $('Google Sheets8').item.json.email_1_subject }}\",\n  \"body\": \"{{ $('Code4').item.json.raw }}\"\n}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        40,
-        2080
-      ],
-      "id": "track-email-2",
-      "name": "Track Email 2 Sent",
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const UNSUB_BASE = 'https://n8n-deployment-hlnal.ondigitalocean.app/webhook/Unsubscribe';\n// --------------------------------\nconst row = items[0]?.json || {};\nconst keys = Object.keys(row);\n// normalize keys (trim whitespace) while preserving values\nconst clean = {};\nfor (const k of keys) clean[k.trim()] = row[k];\n// helper to try multiple candidate keys in order\nconst pick = (...candidates) => {\n  for (const c of candidates) {\n    if (c in clean && clean[c] != null && `${clean[c]}`.trim() !== '') return `${clean[c]}`.trim();\n  }\n  return '';\n};\n// pull fields with robust fallbacks\nconst recipientEmail = pick('email_address', 'Email Address', 'Email address', 'email');\nconst senderEmail    = pick('sender_email', 'From', 'from');\nconst token          = pick('Token', 'token', 'Tkn', 'tkn');\n// subjects & body\nconst subj1 = pick('email_1_subject', 'Email 1 Subject', 'Subject', 'subject');\nconst subj2 = pick('email_2_subject', 'Email 2 Subject') || (subj1 ? `Re: ${subj1}` : 'Following up');\nconst body2 = pick('email_2_body', 'email_2_Body', 'EmailBody', 'Body') || 'Thank you for your time.';\nconst threadId = pick('Thread ID', 'ThreadID', 'threadId'); // optional; OK if empty\n// basic validation (prevents accidental blasts with empty critical fields)\nif (!recipientEmail) throw new Error('Missing \"email_address\" (recipient).');\nif (!senderEmail)    throw new Error('Missing \"sender_email\".');\n// unsubscribe link\nconst unsubUrl = `${UNSUB_BASE}?tkn=${encodeURIComponent(token || '')}`;\nconst htmlBody = `${body2}<br><br><a href=\"${unsubUrl}\">Click Here to Unsubscribe</a>`;\n// build RFC 2822 message (RAW) with HTML\nconst headers = [\n  `Subject: ${subj2}`,\n  `From: ${senderEmail}`,\n  `To: ${recipientEmail}`,\n  'MIME-Version: 1.0',\n  'Content-Type: text/html; charset=\"UTF-8\"',\n];\nconst emailContent = `${headers.join('\\n')}\\n\\n${htmlBody}`;\n// base64url encode\nconst raw = Buffer.from(emailContent)\n  .toString('base64')\n  .replace(/\\+/g, '-')\n  .replace(/\\//g, '_')\n  .replace(/=+$/, '');\n// output for Gmail node (Message → Send with RAW)\nreturn [\n  {\n    json: {\n      raw,\n      // include threadId only if you actually have one\n      ...(threadId ? { threadId } : {}),\n      // optional extras if you want to log/debug downstream\n      to: recipientEmail,\n      subject: subj2,\n    },\n  },\n];"
+        "jsCode": "const UNSUB_BASE = 'https://n8n-deployment-hlnal.ondigitalocean.app/webhook/Unsubscribe';\n// --------------------------------\nconst row = items[0]?.json || {};\nconst keys = Object.keys(row);\n// normalize keys (trim whitespace) while preserving values\nconst clean = {};\nfor (const k of keys) clean[k.trim()] = row[k];\n// helper to try multiple candidate keys in order\nconst pick = (...candidates) => {\n  for (const c of candidates) {\n    if (c in clean && clean[c] != null && `${clean[c]}`.trim() !== '') return `${clean[c]}`.trim();\n  }\n  return '';\n};\n// pull fields with robust fallbacks\nconst recipientEmail = pick('email_address', 'Email Address', 'Email address', 'email');\nconst senderEmail    = pick('sender_email', 'From', 'from');\nconst token          = pick('Token', 'token', 'Tkn', 'tkn');\n// subjects & body\nconst subj1 = pick('email_1_subject', 'Email 1 Subject', 'Subject', 'subject');\nconst subj2 = pick('email_2_subject', 'Email 2 Subject') || (subj1 ? `Re: ${subj1}` : 'Following up');\nconst body2 = pick('email_2_body', 'email_2_Body', 'EmailBody', 'Body') || 'Thank you for your time.';\nconst threadId = pick('Thread ID', 'ThreadID', 'threadId'); // optional; OK if empty\n// basic validation (prevents accidental blasts with empty critical fields)\nif (!recipientEmail) throw new Error('Missing \"email_address\" (recipient).');\nif (!senderEmail)    throw new Error('Missing \"sender_email\".');\n// unsubscribe link\nconst unsubUrl = `${UNSUB_BASE}?tkn=${encodeURIComponent(token || '')}`;\nconst htmlBody = `${body2}<br><br><a href=\"${unsubUrl}\">Click Here to Unsubscribe</a>`;\n// build RFC 2822 message (RAW) with HTML\nconst headers = [\n  `Subject: ${subj2}`,\n  `From: ${senderEmail}`,\n  `To: ${recipientEmail}`,\n  'MIME-Version: 1.0',\n  'Content-Type: text/html; charset=\"UTF-8\"',\n];\nconst emailContent = `${headers.join('\\n')}\\n\\n${htmlBody}`;\n// base64url encode\nconst raw = Buffer.from(emailContent)\n  .toString('base64')\n  .replace(/\\+/g, '-')\n  .replace(/\\//g, '_')\n  .replace(/=+$/, '');\n// output for Gmail node (Message → Send with RAW)\nreturn [\n  {\n    json: {\n      raw,\n      // include threadId only if you actually have one\n      ...(threadId ? { threadId } : {}),\n      // optional extras if you want to log/debug downstream\n      to: recipientEmail,\n      subject: subj2,\n      // Store original body for tracking injection\n      email_2_body: body2,\n    },\n  },\n];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -384,
-        2080
+        1904,
+        4304
       ],
-      "id": "e0d8bb65-ac7c-483d-b2d7-427bbbfb596a",
+      "id": "414adf8b-f0ab-4b04-9cc7-961698479937",
       "name": "Code4"
     },
     {
@@ -1065,63 +1021,61 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -2096,
-        1728
+        224,
+        3936
       ],
-      "id": "0581be8a-f135-4269-8f38-cb2ecdfaf93c",
+      "id": "77671012-148b-4b40-85ec-edb07ffec926",
       "name": "Schedule Trigger2"
     },
     {
       "parameters": {
-        "documentId": {
+        "operation": "select",
+        "schema": {
           "__rl": true,
-          "value": "1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8",
           "mode": "list",
-          "cachedResultName": "3547 Leads - Ohio ",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit?usp=drivesdk"
+          "value": "public"
         },
-        "sheetName": {
+        "table": {
           "__rl": true,
-          "value": "gid=0",
+          "value": "leads_ohio",
           "mode": "list",
-          "cachedResultName": "Ohio",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit#gid=0"
+          "cachedResultName": "leads_ohio"
         },
-        "filtersUI": {
+        "where": {
           "values": [
             {
-              "lookupColumn": "email_1_sent",
-              "lookupValue": "Yes"
+              "column": "email_1_sent",
+              "value": "TRUE"
             },
             {
-              "lookupColumn": "email_2_sent",
-              "lookupValue": "No"
+              "column": "email_2_sent",
+              "value": "FALSE"
             },
             {
-              "lookupColumn": "replied",
-              "lookupValue": "No"
+              "column": "replied",
+              "value": "FALSE"
             },
             {
-              "lookupColumn": "opted_out",
-              "lookupValue": "No"
+              "column": "opted_out",
+              "value": "FALSE"
             }
           ]
         },
         "options": {}
       },
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
       "position": [
-        -1920,
-        1728
+        384,
+        3936
       ],
-      "id": "922cb5e6-a05a-4da2-b24a-8d3a2ff91151",
-      "name": "Google Sheets8",
+      "id": "2e2ab843-b3d8-460b-a5c5-e8a2e0f39194",
+      "name": "Select Leads for Email 2",
       "alwaysOutputData": false,
       "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "p8ESE0UMGdJsRvZv",
-          "name": "Smartie Agents"
+        "postgres": {
+          "id": "QKb5WqKXZ29v15Qk",
+          "name": "Leads Ohio"
         }
       }
     },
@@ -1129,16 +1083,16 @@
       "parameters": {
         "content": "## Email 2\n",
         "height": 720,
-        "width": 2688,
+        "width": 3024,
         "color": 7
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -2256,
-        1616
+        32,
+        3824
       ],
       "typeVersion": 1,
-      "id": "1c0c16d3-9f82-4fae-b1f7-100ae89c9861",
+      "id": "9a678c3d-93ac-4181-8192-d25f549d9f86",
       "name": "Sticky Note8"
     },
     {
@@ -1148,10 +1102,10 @@
       "type": "n8n-nodes-base.limit",
       "typeVersion": 1,
       "position": [
-        -1504,
-        1712
+        784,
+        3920
       ],
-      "id": "f24e8384-5b5e-4a9a-8382-238dc566481c",
+      "id": "eeed787b-3b1c-4140-bcb4-099226dc5d05",
       "name": "Limit"
     },
     {
@@ -1191,10 +1145,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        -1744,
-        1728
+        576,
+        3936
       ],
-      "id": "5f7a4d0b-21d8-41ec-94e1-11018ad0b8fe",
+      "id": "494d66ef-2243-4730-a72f-915a7046bd98",
       "name": "If"
     },
     {
@@ -1204,11 +1158,114 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        -1248,
-        1712
+        1040,
+        3920
       ],
-      "id": "a4ae8a32-5cf8-4a3b-a084-388dd39069d7",
+      "id": "68bb300c-3630-4fbf-9a8e-5bfbc895411e",
       "name": "Loop Over Items4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://cold-email-dashboard.vercel.app/api/events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-token",
+              "value": "6de5a8d03ad6348f4110782372a82f1bb7c6ef43a8ce8810bf0459e73abaeb61"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contact_email\": \"{{ $('Select Leads for Email 2').item.json.email_address }}\",\n  \"campaign\": \"Ohio\",\n  \"step\": 2,\n  \"event_type\": \"sent\",\n  \"provider\": \"gmail\",\n  \"provider_message_id\": \"{{ $json.id }}\",\n  \"event_ts\": \"{{ new Date().toISOString() }}\",\n  \"subject\": \"Re: {{ $('Select Leads for Email 2').item.json.email_1_subject }}\",\n  \"body\": \"{{ $('🔍 Inject Tracking1').item.json.tracked_body }}\",\n  \"idempotency_key\": \"email_{{ $execution.id }}_{{ $('Select Leads for Email 2').item.json.email_address }}_step2\",\n  \"n8n_execution_id\": \"{{ $execution.id }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2480,
+        4304
+      ],
+      "id": "c9ac9464-cf3c-49eb-9012-e9f6988b1ebb",
+      "name": "Track Email 2 Sent1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// EMAIL 2 CLICK TRACKING (RAW Format)\n// Wraps links with click tracking URLs\n// NO OPEN TRACKING (removed for accuracy)\n// ============================================\n\nconst DASHBOARD_URL = 'https://cold-email-dashboard.vercel.app';\nconst WORKSPACE_ID = 'default';\n\nconst rawBase64 = $json.raw;\nconst contactEmail = $('Select Leads for Email 2').item.json.email_address || '';\nconst campaign = 'Ohio';\nconst step = 2;\n\n// Decode the base64url raw email\nlet decodedEmail = Buffer.from(\n  rawBase64.replace(/-/g, '+').replace(/_/g, '/'),\n  'base64'\n).toString('utf-8');\n\n// Split headers and body\nconst emailParts = decodedEmail.split('\\n\\n');\nconst headers = emailParts[0];\nlet body = emailParts.slice(1).join('\\n\\n');\n\n// ✅ CLICK TRACKING: Wrap all links with tracking URLs\nfunction wrapLink(originalUrl, linkId) {\n  return `${DASHBOARD_URL}/api/track/click?url=${encodeURIComponent(originalUrl)}&e=${encodeURIComponent(contactEmail)}&c=${encodeURIComponent(campaign)}&s=${step}&l=${encodeURIComponent(linkId || 'cta')}&w=${encodeURIComponent(WORKSPACE_ID)}`;\n}\n\nconst linkRegex = /<a\\s+([^>]*?)href=[\"']([^\"']+)[\"']([^>]*?)>/gi;\nlet linkIndex = 0;\n\nbody = body.replace(linkRegex, (match, before, url, after) => {\n  if (url.startsWith('mailto:') || url.startsWith('tel:') || url.startsWith('#')) return match;\n  linkIndex++;\n  return `<a ${before}href=\"${wrapLink(url, 'link_' + linkIndex)}\"${after}>`;\n});\n\n// Reconstruct the email (NO open tracking pixel)\nconst trackedEmailContent = `${headers}\\n\\n${body}`;\n\n// Re-encode to base64url\nconst trackedRaw = Buffer.from(trackedEmailContent)\n  .toString('base64')\n  .replace(/\\+/g, '-')\n  .replace(/\\//g, '_')\n  .replace(/=+$/, '');\n\n// Return updated item with tracked raw and metadata\nreturn [\n  {\n    json: {\n      ...$json,\n      raw: trackedRaw,\n      original_raw: rawBase64,\n      tracked_body: body,\n      links_tracked: linkIndex\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        4304
+      ],
+      "id": "20928737-2ee4-403e-9e63-1458fa735a24",
+      "name": "🔍 Inject Tracking1"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        96,
+        3344
+      ],
+      "id": "f47aa94e-6c13-4662-aad6-63b481a996a4",
+      "name": "Select rows from a table",
+      "credentials": {
+        "postgres": {
+          "id": "Mc3aUJrqtDTplpRV",
+          "name": "Smartie Agents Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        304,
+        3344
+      ],
+      "id": "e7e676d6-3509-4176-a0cb-0fd53c50e003",
+      "name": "Insert or update rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "Mc3aUJrqtDTplpRV",
+          "name": "Smartie Agents Postgres"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -1290,18 +1347,7 @@
       "main": [
         [
           {
-            "node": "Track Email 2 Sent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Track Email 2 Sent": {
-      "main": [
-        [
-          {
-            "node": "Google Sheets10",
+            "node": "Track Email 2 Sent1",
             "type": "main",
             "index": 0
           }
@@ -1312,7 +1358,7 @@
       "main": [
         [
           {
-            "node": "HTTP Request4",
+            "node": "🔍 Inject Tracking1",
             "type": "main",
             "index": 0
           }
@@ -1323,14 +1369,14 @@
       "main": [
         [
           {
-            "node": "Google Sheets8",
+            "node": "Select Leads for Email 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Google Sheets8": {
+    "Select Leads for Email 2": {
       "main": [
         [
           {
@@ -1390,16 +1436,43 @@
           }
         ]
       ]
+    },
+    "Track Email 2 Sent1": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔍 Inject Tracking1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table": {
+      "main": [
+        []
+      ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1",
     "timezone": "America/Los_Angeles",
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "5183fd8e-5b3d-44a1-8485-6fd78f395137",
+  "versionId": "db791141-308e-4dfa-a5a8-94e6377c5445",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "fb0f3042150127121074617aaee31b106c313805cbc452132240d35f72eba898"

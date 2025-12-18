@@ -49,13 +49,14 @@ export async function GET(req: NextRequest) {
 
   const term = buildIlike(query);
 
+  // Search campaigns table directly (not daily_stats)
   const campaignsQuery = supabaseAdmin
-    .from('daily_stats')
-    .select('campaign_name')
+    .from('campaigns')
+    .select('id, name')
     .eq('workspace_id', workspaceId)
-    .ilike('campaign_name', term)
+    .ilike('name', term)
     .limit(LIMIT)
-    .order('campaign_name', { ascending: true });
+    .order('name', { ascending: true });
 
   const contactsQuery = supabaseAdmin
     .from('contacts')
@@ -69,8 +70,8 @@ export async function GET(req: NextRequest) {
 
   const campaigns =
     campaignsRes.data?.map((c) => ({
-      id: c.campaign_name,
-      name: c.campaign_name,
+      id: c.id,
+      name: c.name,
     })) || [];
 
   const contacts =

@@ -57,19 +57,16 @@ export async function GET(req: NextRequest) {
   const provider: Provider = providerParam === 'openrouter' ? 'openrouter' : 'openai';
   const workspaceId = extractWorkspaceId(req) || DEFAULT_WORKSPACE_ID;
 
-  // Allow an explicit header override (user-provided key) for fetching models, else stored/encrypted, else env.
+  // Pillar 5: Anti-Leak Mesh - ONLY use vault keys or explicit header overrides.
+  // DO NOT fall back to server-side environment variables to prevent cross-tenant leakage.
   const headerKey = req.headers.get('x-openai-key')?.trim();
   const stored = await getAskKey({ userId, workspaceId, provider });
 
-  const apiKey =
-    headerKey ||
-    stored.apiKey ||
-    (provider === 'openai' ? process.env.OPENAI_API_KEY : process.env.OPENROUTER_API_KEY) ||
-    '';
+  const apiKey = headerKey || stored.apiKey || '';
 
   if (!apiKey) {
     return NextResponse.json(
-      { error: `No ${provider} key available. Add a key to list models.` },
+      { error: `No ${provider} key configured in vault for this workspace.` },
       { status: 400 }
     );
   }
