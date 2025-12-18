@@ -21,7 +21,10 @@ import {
 
 export function ErrorFallbackShowcase() {
   const mockError = new Error('This is a test error for visual verification');
-  const mockReset = () => console.log('Reset triggered');
+  const mockReset = () => {
+    /* eslint-disable-next-line no-console */
+    console.log('Reset triggered');
+  };
 
   return (
     <div className="space-y-8 p-8 bg-background">

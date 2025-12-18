@@ -7,36 +7,53 @@ A modern, high-performance analytics dashboard for tracking cold email campaigns
 ## 🌟 Features
 
 ### 📊 Real-Time Analytics
+
 - **Live Metrics**: Track sends, opens, clicks, replies, and opt-outs in real-time
 - **Cost Tracking**: Monitor LLM usage costs by provider and model
 - **Time Series Charts**: Visualize trends with customizable date ranges
 - **Sequence Analytics**: Break down performance by email sequence step
 
 ### 🏢 Multi-Tenant Architecture
+
 - **Workspace Support**: Isolated data per organization
 - **Role-Based Access**: Admin, Member, and Viewer roles
 - **Team Collaboration**: Invite team members with granular permissions
 - **Row Level Security**: Database-enforced data isolation
 
 ### 🚀 Performance Optimized
+
 - **Materialized Views**: 10-30x faster queries with pre-aggregated data
 - **SWR Caching**: 10-second deduplication prevents redundant requests
 - **Lazy Loading**: 30% smaller bundle size with code splitting
 - **Sub-100ms API**: Optimized database queries and caching
 
 ### 🎨 Modern UI/UX
+
 - **Beautiful Dark Theme**: Eye-friendly design with smooth animations
-- **Command Palette**: Quick navigation with ⌘K
+- **Command Palette**: Quick navigation with ⌘K and fuzzy search
+- **Interactive Onboarding**: Step-by-step guided tour for new users
 - **Responsive Design**: Works perfectly on desktop, tablet, and mobile
 - **Timezone Support**: Accurate time-based charts in any timezone
 - **Error Boundaries**: Graceful failure handling with recovery
 
+### ⚡ Client Self-Service (Phase 35 ✅)
+
+- **Global Search**: Fuzzy search across campaigns, contacts, and navigation (⌘K)
+- **Inline Editing**: Edit campaign names directly in tables with real-time save
+- **Quick Actions**: Right-click context menus with duplicate, archive, pause/resume
+- **Notification Center**: Real-time alerts with unread badges and auto-polling
+- **Bulk Operations**: Multi-select campaigns for batch pause/resume/delete
+- **Customizable Dashboard**: Drag-and-drop widgets with visibility toggles
+- **Settings Vault**: Unified settings management (workspace, timezone, security)
+
 ### 🤖 AI-Powered Insights
+
 - **Ask AI**: Natural language questions about your data
 - **Smart Suggestions**: AI-generated optimization recommendations
 - **Trend Detection**: Automatic identification of performance patterns
 
 ### 🧪 Production-Ready
+
 - **83 Unit Tests**: 88-91% code coverage with Jest
 - **9 E2E Tests**: Critical user paths verified with Playwright
 - **Error Tracking**: Comprehensive error boundaries and logging
@@ -54,14 +71,14 @@ graph TB
         W3[Reply Tracker]
         W4[Click Tracker]
     end
-    
+
     subgraph "Next.js Dashboard"
         UI[Frontend UI<br/>React + Tailwind]
         API[API Routes<br/>Edge Runtime]
         SWR[SWR Cache<br/>10s dedup]
         CTX[Dashboard Context<br/>Global State]
     end
-    
+
     subgraph "Supabase PostgreSQL"
         DB[(Raw Tables<br/>email_events<br/>llm_usage)]
         WQ[webhook_queue<br/>Async Processing]
@@ -69,31 +86,31 @@ graph TB
         MV2[mv_llm_cost<br/>Pre-aggregated]
         RLS[Row Level Security<br/>Workspace Isolation]
     end
-    
+
     subgraph "Authentication"
         CLERK[Clerk Auth<br/>Multi-tenant]
     end
-    
+
     W1 -->|POST /api/cost-events| API
     W2 -->|POST /api/events| API
     W3 -->|POST /api/events| API
     W4 -->|GET /api/track/click| API
-    
+
     API -->|INSERT| WQ
     WQ -->|Trigger Function| DB
     DB -->|REFRESH CONCURRENTLY| MV1
     DB -->|REFRESH CONCURRENTLY| MV2
-    
+
     UI -->|Fetch Data| SWR
     SWR -->|HTTP Request| API
     API -->|SELECT| MV1
     API -->|SELECT| MV2
-    
+
     CLERK -->|Protect Routes| UI
     CLERK -->|Validate Sessions| API
     RLS -->|Filter Rows| MV1
     RLS -->|Filter Rows| MV2
-    
+
     CTX -->|Global State| UI
     SWR -->|Cache| CTX
 ```
@@ -103,6 +120,7 @@ graph TB
 ## 🚀 Quick Start (5 Minutes)
 
 ### Prerequisites
+
 - Node.js 18+ and npm 9+
 - Supabase account ([free tier available](https://supabase.com))
 - Clerk account ([free tier available](https://clerk.com))
@@ -204,11 +222,13 @@ npm run test:e2e:ui           # Interactive UI mode
 ### Deploy to Vercel (Recommended)
 
 1. **Push to GitHub**:
+
    ```bash
    git push origin main
    ```
 
 2. **Import in Vercel**:
+
    - Go to [vercel.com/new](https://vercel.com/new)
    - Import your repository
    - Framework: Next.js (auto-detected)
@@ -231,6 +251,7 @@ npm run test:e2e:ui           # Interactive UI mode
 ## 🛠️ Tech Stack
 
 ### Frontend
+
 - **Framework**: Next.js 14 (App Router)
 - **Language**: TypeScript (Strict Mode)
 - **Styling**: Tailwind CSS
@@ -239,12 +260,14 @@ npm run test:e2e:ui           # Interactive UI mode
 - **Icons**: Lucide React
 
 ### Backend
+
 - **Runtime**: Vercel Edge Functions
 - **Database**: Supabase (PostgreSQL)
 - **Auth**: Clerk (Multi-tenant)
 - **Caching**: SWR
 
 ### Testing
+
 - **Unit Tests**: Jest + React Testing Library
 - **E2E Tests**: Playwright
 - **Coverage**: 85%+ target

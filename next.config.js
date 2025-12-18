@@ -2,6 +2,16 @@
 const nextConfig = {
   reactStrictMode: true,
   
+  // Allow external images (Clerk)
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'img.clerk.com',
+      },
+    ],
+  },
+  
   // Security Headers
   async headers() {
     return [

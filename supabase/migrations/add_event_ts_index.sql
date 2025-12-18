@@ -1,0 +1,3 @@
+-- Duplicate migration placeholder.
+-- The actual migration is `20251205_add_event_ts_index.sql` which creates this index.
+-- This placeholder was intentionally left to avoid accidental duplicate index creation.

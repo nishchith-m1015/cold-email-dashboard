@@ -35,6 +35,7 @@ export interface WorkspaceContextValue {
   switchWorkspace: (workspaceId: string) => void;
   refreshWorkspaces: () => Promise<void>;
   createWorkspace: (name: string) => Promise<{ success: boolean; error?: string }>;
+  renameWorkspace: (workspaceId: string, name: string) => Promise<{ success: boolean; error?: string }>;
   validateWorkspaceAccess: (workspaceId: string) => Promise<{ hasAccess: boolean; error?: string }>;
   
   // Loading state
@@ -212,6 +213,40 @@ export function WorkspaceProvider({
     }
   }, [fetchWorkspaces, setWorkspace]);
 
+  // Rename workspace
+  const renameWorkspace = useCallback(async (workspaceId: string, name: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      // Optimistic update for current workspace
+      if (workspaceId === workspace.id) {
+        setWorkspaceState(prev => ({ ...prev, name }));
+      }
+      
+      const response = await fetch(`/api/workspaces/${workspaceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        // Revert on failure (refresh)
+        if (workspaceId === workspace.id) await fetchWorkspaces();
+        return { success: false, error: data.error || 'Failed to rename workspace' };
+      }
+      
+      // Refresh to ensure everything is in sync
+      await fetchWorkspaces();
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Rename workspace error:', error);
+      // Revert
+      if (workspaceId === workspace.id) await fetchWorkspaces();
+      return { success: false, error: 'Failed to rename workspace' };
+    }
+  }, [fetchWorkspaces, workspace.id]);
+
   // Validate workspace access
   const validateWorkspaceAccess = useCallback(async (workspaceId: string): Promise<{ hasAccess: boolean; error?: string }> => {
     try {
@@ -249,6 +284,7 @@ export function WorkspaceProvider({
     switchWorkspace,
     refreshWorkspaces,
     createWorkspace,
+    renameWorkspace,
     validateWorkspaceAccess,
     isLoading,
     needsOnboarding,
@@ -269,6 +305,7 @@ export function WorkspaceProvider({
     accessDenied,
     accessError, 
     createWorkspace, 
+    renameWorkspace,
     isLoading,
     needsOnboarding,
     isSuperAdmin

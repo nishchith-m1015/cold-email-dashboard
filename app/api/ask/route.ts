@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import crypto from 'crypto';
 import { DEFAULT_WORKSPACE_ID } from '@/lib/supabase';
 import { buildRAGContext, formatContextForPrompt } from '@/lib/rag-context';
 import { extractWorkspaceId, canAccessWorkspace } from '@/lib/api-workspace-guard';
@@ -126,28 +127,26 @@ export async function POST(req: NextRequest) {
     const ragContext = await buildRAGContext(workspaceId, startDate, endDate, campaign);
     const contextPrompt = formatContextForPrompt(ragContext);
 
-    // Resolve provider and API key
+    // Resolve provider and API key (Pillar 4: Ephemeral Runtime)
+    // Keys are decrypted JIT and used immediately - no persistent storage
     const provider = body.provider === 'openrouter' ? 'openrouter' : 'openai';
-    const clientApiKey = req.headers.get('x-openai-key')?.trim(); // used for both providers
+    // Pillar 5: Anti-Leak Mesh - ONLY use vault keys or explicit header overrides.
+    // DO NOT fall back to server-side environment variables to prevent cross-tenant leakage.
+    const clientApiKey = req.headers.get('x-openai-key')?.trim();
+    const stored = await getAskKey({ userId, workspaceId, provider });
 
-    // Resolve key order: header > stored (encrypted) > env
-    const storedKey = await getAskKey({ userId, workspaceId, provider });
-    const openaiKey = provider === 'openai'
-      ? (clientApiKey || storedKey.apiKey || process.env.OPENAI_API_KEY)
-      : null;
-    const openrouterKey = provider === 'openrouter'
-      ? (clientApiKey || storedKey.apiKey || process.env.OPENROUTER_API_KEY)
-      : null;
+    const openaiKey = provider === 'openai' ? (clientApiKey || stored.apiKey) : null;
+    const openrouterKey = provider === 'openrouter' ? (clientApiKey || stored.apiKey) : null;
 
     if (provider === 'openai' && !openaiKey) {
       return NextResponse.json({
-        answer: 'AI assistant is not configured. Provide an OpenAI key or set OPENAI_API_KEY.',
+        answer: 'AI assistant is not configured. Provide an OpenAI key or configure it in settings.',
       } as AskResponse, { status: 400, headers: rateLimitHeaders(rl) });
     }
 
     if (provider === 'openrouter' && !openrouterKey) {
       return NextResponse.json({
-        answer: 'AI assistant is not configured. Provide an OpenRouter key or set OPENROUTER_API_KEY.',
+        answer: 'AI assistant is not configured. Provide an OpenRouter key or configure it in settings.',
       } as AskResponse, { status: 400, headers: rateLimitHeaders(rl) });
     }
 
@@ -285,9 +284,19 @@ User's timezone: UTC (all times in UTC)`;
     } as AskResponse, { headers: rateLimitHeaders(rl) });
 
   } catch (error) {
-    console.error('Ask API error:', error);
+    // Pillar 4: Error handling without exposing sensitive data
+    // Generate error ID for correlation (never log keys or sensitive data)
+    const errorId = crypto.randomUUID().split('-')[0];
+    console.error(JSON.stringify({
+      event: 'ask_api_error',
+      errorId,
+      timestamp: new Date().toISOString(),
+      // NO sensitive data logged
+    }));
+    
     return NextResponse.json({
       answer: 'Sorry, I encountered an unexpected error. Please try again later.',
-    } as AskResponse);
+      errorId, // For support correlation
+    } as AskResponse & { errorId: string }, { status: 500 });
   }
 }

@@ -60,8 +60,25 @@ export type TimeSeriesMetric =
 // CAMPAIGNS
 // ============================================
 
+/** Status of the n8n workflow linked to a campaign */
+export type N8nStatus = 'active' | 'inactive' | 'unknown' | 'error';
+
+/** Campaign status in the dashboard */
+export type CampaignStatus = 'active' | 'paused' | 'completed';
+
 export interface Campaign {
+  id?: string;
+  workspace_id?: string;
   name: string;
+  description?: string;
+  status?: CampaignStatus;
+  // n8n integration fields (Pillar 1)
+  n8n_workflow_id?: string;
+  n8n_status?: N8nStatus;
+  last_sync_at?: string;
+  version?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CampaignList {

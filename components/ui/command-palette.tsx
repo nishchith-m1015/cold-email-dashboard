@@ -201,8 +201,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
             {!loading && search && items.length === 0 && (
               <div className="py-8 text-center text-sm text-text-secondary">
-                No results found for "{search}"
-              </div>
+                  No results found for “{search}”
+                </div>
             )}
 
             {!loading && !search && (

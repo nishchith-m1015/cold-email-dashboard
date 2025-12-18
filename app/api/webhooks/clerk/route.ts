@@ -36,6 +36,7 @@ export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
   if (!WEBHOOK_SECRET) {
+    /* eslint-disable-next-line no-console */
     console.error('CLERK_WEBHOOK_SECRET is not set');
     return NextResponse.json(
       { error: 'Webhook secret not configured' },
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
 
   // Verify required headers
   if (!svix_id || !svix_timestamp || !svix_signature) {
+    /* eslint-disable-next-line no-console */
     console.error('Missing svix headers');
     return NextResponse.json(
       { error: 'Missing svix headers' },
@@ -74,6 +76,7 @@ export async function POST(req: Request) {
       'svix-signature': svix_signature,
     }) as ClerkWebhookEvent;
   } catch (err) {
+    /* eslint-disable-next-line no-console */
     console.error('Webhook signature verification failed:', err);
     return NextResponse.json(
       { error: 'Invalid signature' },
@@ -93,6 +96,7 @@ export async function POST(req: Request) {
         const primaryEmail = data.email_addresses.find((e) => e.id === data.email_addresses[0]?.id);
         
         if (!primaryEmail) {
+          /* eslint-disable-next-line no-console */
           console.error('No email found for user:', userId);
           return NextResponse.json(
             { error: 'User has no email address' },
@@ -118,6 +122,7 @@ export async function POST(req: Request) {
           );
 
         if (error) {
+          /* eslint-disable-next-line no-console */
           console.error('Supabase upsert error:', error);
           return NextResponse.json(
             { error: 'Failed to sync user to database' },
@@ -125,6 +130,7 @@ export async function POST(req: Request) {
           );
         }
 
+        /* eslint-disable-next-line no-console */
         console.log(`✓ User ${type === 'user.created' ? 'created' : 'updated'}: ${userId} (${primaryEmail.email_address})`);
         
         // If user was just created, check if they should be auto-added to a workspace
@@ -136,8 +142,10 @@ export async function POST(req: Request) {
             .eq('user_id', userId);
 
           if (wsError) {
+            /* eslint-disable-next-line no-console */
             console.error('Error checking user workspaces:', wsError);
           } else if (!workspaces || workspaces.length === 0) {
+            /* eslint-disable-next-line no-console */
             console.log(`New user ${userId} has no workspaces. They will see onboarding flow.`);
             // User will be redirected to /join page by frontend logic
           }
@@ -154,6 +162,7 @@ export async function POST(req: Request) {
           .eq('id', userId);
 
         if (error) {
+          /* eslint-disable-next-line no-console */
           console.error('Supabase delete error:', error);
           return NextResponse.json(
             { error: 'Failed to delete user from database' },
@@ -161,11 +170,13 @@ export async function POST(req: Request) {
           );
         }
 
+        /* eslint-disable-next-line no-console */
         console.log(`✓ User deleted: ${userId}`);
         break;
       }
 
       default: {
+        /* eslint-disable-next-line no-console */
         console.warn(`Unhandled webhook event type: ${type}`);
       }
     }

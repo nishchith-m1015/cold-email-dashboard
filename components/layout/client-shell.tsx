@@ -4,9 +4,12 @@ import { Suspense, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Header } from './header';
 import { CommandPalette } from '@/components/ui/command-palette';
+import { OnboardingTour } from '@/components/onboarding/onboarding-tour';
+import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { WorkspaceProvider, useWorkspace } from '@/lib/workspace-context';
 import { SWRProvider } from '@/lib/swr-config';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { FloatingActionButton } from '@/components/ui/floating-action-button';
 import { SignedIn, SignedOut, SignInButton, useAuth } from '@clerk/nextjs';
 import { Zap, Mail, BarChart3, Shield, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -78,6 +81,11 @@ function WorkspaceGate({ children }: { children: React.ReactNode }) {
  */
 export function ClientShell({ children }: ClientShellProps) {
   const [commandOpen, setCommandOpen] = useState(false);
+  
+  // Global keyboard shortcuts
+  useKeyboardShortcuts({
+    onCommandPalette: () => setCommandOpen(true),
+  });
 
   return (
     <SWRProvider>
@@ -96,7 +104,7 @@ export function ClientShell({ children }: ClientShellProps) {
         {/* Main content - Only show dashboard when signed in */}
         <SignedIn>
           <WorkspaceGate>
-            <main className="max-w-[1600px] mx-auto px-6 py-8">
+            <main className="max-w-[1600px] mx-auto px-6 py-8" data-tour="welcome">
               <ErrorBoundary>
                 {children}
               </ErrorBoundary>
@@ -104,6 +112,12 @@ export function ClientShell({ children }: ClientShellProps) {
 
             {/* Command palette - Only for signed-in users */}
             <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+            
+            {/* Onboarding tour for first-time users */}
+            <OnboardingTour />
+            
+            {/* Mobile Floating Action Button */}
+            <FloatingActionButton />
           </WorkspaceGate>
         </SignedIn>
 

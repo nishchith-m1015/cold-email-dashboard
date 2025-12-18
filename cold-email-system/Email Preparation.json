@@ -1,17 +1,17 @@
 {
-  "name": "Email Preparation",
+  "name": "Cold Email Preparation",
   "nodes": [
     {
       "parameters": {
         "content": "## Email Preparation\n",
-        "height": 560,
-        "width": 7168,
+        "height": 576,
+        "width": 6080,
         "color": 6
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        5504,
-        16
+        5584,
+        48
       ],
       "typeVersion": 1,
       "id": "f9436fad-5530-4fb3-8594-21701aac4728",
@@ -19,13 +19,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// ============================================\n// COST TRACKING: Relevance AI (100% ACCURATE)\n// Fetches REAL credits from Relevance AI API\n// ============================================\n\n// CONFIGURE YOUR PLAN: 'free', 'pro', or 'team'\nconst PLAN = 'pro';\n\n// Credit pricing per plan ($ per credit)\nconst PLAN_CONFIG = {\n  'free':  { monthly_price: 0,   credits_per_month: 1000,  credit_price: 0 },\n  'pro':   { monthly_price: 29,  credits_per_month: 10000, credit_price: 0.0029 },\n  'team':  { monthly_price: 349, credits_per_month: 35000, credit_price: 0.00997 }\n};\n\nconst plan = PLAN_CONFIG[PLAN];\n\nconst leadData = $('Get Email Prep1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Parse ACTUAL credits from Relevance AI history API\nlet actualCredits = 0;\nlet creditsBreakdown = [];\nlet dataSource = 'estimate';\nlet runStatus = 'unknown';\n\ntry {\n  const historyResponse = $('Fetch Relevance AI Run History1').first().json;\n  \n  if (historyResponse.results && historyResponse.results.length > 0) {\n    // Find the latest successful 'credit' type run (not 'action' type)\n    const creditRun = historyResponse.results.find(r => r.type === 'credit' && r.status === 'complete');\n    const latestRun = creditRun || historyResponse.results[0];\n    \n    runStatus = latestRun.status;\n    \n    // Get the ACTUAL cost field (this is the total credits)\n    if (latestRun.cost !== undefined && latestRun.cost !== null) {\n      actualCredits = latestRun.cost;\n      dataSource = 'api_exact';\n    }\n    \n    // Get detailed breakdown if available\n    if (latestRun.credits_used && Array.isArray(latestRun.credits_used)) {\n      creditsBreakdown = latestRun.credits_used.map(c => ({\n        name: c.name || 'unknown',\n        credits: c.credits || 0\n      }));\n    }\n  }\n} catch(e) {\n  dataSource = 'estimate_api_error';\n  actualCredits = 5; // fallback estimate\n}\n\n// Calculate USD cost\nlet cost_usd = 0;\nif (PLAN === 'free') {\n  cost_usd = 0; // Free tier - no monetary cost\n} else {\n  cost_usd = actualCredits * plan.credit_price;\n}\n\nlet costEvents = $('💰 Init Cost Tracking').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'relevance_ai',\n  model: 'linkedin_research_tool',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: Math.round(cost_usd * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'linkedin_scraping',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    plan: PLAN,\n    credits_used: actualCredits,\n    credits_breakdown: creditsBreakdown,\n    data_source: dataSource,\n    run_status: runStatus,\n    credit_price: plan.credit_price,\n    tracking_method: '100%_accurate_api'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+        "jsCode": "// COST TRACKING: Relevance AI (100% ACCURATE)\n// Fetches REAL credits from Relevance AI API\n// \n// CONFIGURE YOUR PLAN: 'free', 'pro', or 'team'\nconst PLAN = 'pro';\n\n// Credit pricing per plan ($ per credit)\nconst PLAN_CONFIG = {\n  'free':  { monthly_price: 0,   credits_per_month: 1000,  credit_price: 0 },\n  'pro':   { monthly_price: 29,  credits_per_month: 10000, credit_price: 0.0029 },\n  'team':  { monthly_price: 349, credits_per_month: 35000, credit_price: 0.00997 }\n};\n\nconst plan = PLAN_CONFIG[PLAN];\n\nconst leadData = $('Get Email Prep1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Parse ACTUAL credits from Relevance AI history API\nlet actualCredits = 0;\nlet creditsBreakdown = [];\nlet dataSource = 'estimate';\nlet runStatus = 'unknown';\n\ntry {\n  const historyResponse = $('Fetch Relevance AI Run History1').first().json;\n  \n  if (historyResponse.results && historyResponse.results.length > 0) {\n    // Find the latest successful 'credit' type run (not 'action' type)\n    const creditRun = historyResponse.results.find(r => r.type === 'credit' && r.status === 'complete');\n    const latestRun = creditRun || historyResponse.results[0];\n    \n    runStatus = latestRun.status;\n    \n    // Get the ACTUAL cost field (this is the total credits)\n    if (latestRun.cost !== undefined && latestRun.cost !== null) {\n      actualCredits = latestRun.cost;\n      dataSource = 'api_exact';\n    }\n    \n    // Get detailed breakdown if available\n    if (latestRun.credits_used && Array.isArray(latestRun.credits_used)) {\n      creditsBreakdown = latestRun.credits_used.map(c => ({\n        name: c.name || 'unknown',\n        credits: c.credits || 0\n      }));\n    }\n  }\n} catch(e) {\n  dataSource = 'estimate_api_error';\n  actualCredits = 5; // fallback estimate\n}\n\n// Calculate USD cost\nlet cost_usd = 0;\nif (PLAN === 'free') {\n  cost_usd = 0; // Free tier - no monetary cost\n} else {\n  cost_usd = actualCredits * plan.credit_price;\n}\n\nlet costEvents = $('💰 Init Cost Tracking').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'relevance_ai',\n  model: 'linkedin_research_tool',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: Math.round(cost_usd * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'linkedin_scraping',\n  idempotency_key: `cost_${$execution.id}_relevance_${leadEmail}`,\n  n8n_execution_id: $execution.id,\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    plan: PLAN,\n    credits_used: actualCredits,\n    credits_breakdown: creditsBreakdown,\n    data_source: dataSource,\n    run_status: runStatus,\n    credit_price: plan.credit_price,\n    tracking_method: '100%_accurate_api'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        7328,
-        176
+        7312,
+        192
       ],
       "id": "a5985282-f3d4-49eb-a6cc-936ed9359b2c",
       "name": "💰 Track Relevance AI"
@@ -44,7 +44,7 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        5536,
+        5616,
         256
       ],
       "id": "807bcfe0-4985-4b89-8da0-38ff844b73e7",
@@ -71,8 +71,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        6880,
-        176
+        6864,
+        192
       ],
       "id": "105babfd-9daf-4c94-adc3-be0fa4181353",
       "name": "Scrape Profiles + Posts - Relevance AI1"
@@ -84,8 +84,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        11376,
-        176
+        10336,
+        240
       ],
       "id": "408ab214-5a51-414f-b828-e91175d631ec",
       "name": "Time Zone"
@@ -97,8 +97,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        11584,
-        176
+        10544,
+        240
       ],
       "id": "0c62f87b-3f83-4c8a-a5db-85fa10a82fb0",
       "name": "Sender Email"
@@ -110,8 +110,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        11792,
-        176
+        10752,
+        240
       ],
       "id": "8c9aee3a-9ff3-4183-a020-a2936f5329a3",
       "name": "Opt Out Token"
@@ -127,7 +127,7 @@
       "typeVersion": 4.2,
       "position": [
         7552,
-        176
+        48
       ],
       "name": "Google CSE Search",
       "id": "d238006d-fcda-4fcd-aa1d-e4b54113c50c",
@@ -146,7 +146,7 @@
       "typeVersion": 2,
       "position": [
         8000,
-        176
+        48
       ],
       "name": "Parse & Select Top Results",
       "id": "d304adf9-211f-4ebe-830d-cacf680ec353"
@@ -175,7 +175,7 @@
       "typeVersion": 4.2,
       "position": [
         8224,
-        176
+        48
       ],
       "name": "Summarize (O3-mini)",
       "id": "69f3c5e6-aaa7-4481-9ace-fd5e69ea631b",
@@ -194,7 +194,7 @@
       "typeVersion": 2,
       "position": [
         8704,
-        176
+        48
       ],
       "id": "dfc94874-7622-4827-b697-9311279e5977",
       "name": "Shape CSE → OpenAI (preserve items)"
@@ -204,8 +204,8 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        6432,
-        176
+        6416,
+        192
       ],
       "id": "44aa08a4-99ca-46b5-b88b-27531f2d0291",
       "name": "Wait",
@@ -242,8 +242,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        11168,
-        176
+        10128,
+        240
       ],
       "id": "c6febba7-ce31-4a56-843c-815d8b83375c",
       "name": "Subject Curiosity Tuner"
@@ -276,8 +276,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        9168,
-        176
+        7760,
+        272
       ],
       "id": "29ddbcc2-6a9d-43c1-baa9-88d8063f8fdf",
       "name": "If"
@@ -289,8 +289,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        9840,
-        176
+        8480,
+        256
       ],
       "id": "f58e1763-10c2-4fc4-babc-670acbf816c6",
       "name": "Reviews"
@@ -304,8 +304,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        9504,
-        272
+        8096,
+        496
       ],
       "id": "82110357-d500-4167-8233-7cce7cadb3d5",
       "name": "No Reviews"
@@ -317,14 +317,14 @@
         "genericAuthType": "httpQueryAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"search\": \"={{ $json.gmaps_query || ($json.company_name || '') }}\",\n  \"maxCrawledPlacesPerSearch\": 1,\n  \"includeReviews\": true,\n  \"reviewsMaxCount\": 50,\n  \"reviewsSort\": \"newest\"\n}",
+        "jsonBody": "={\n  \"search\": {{ $json.gmaps_query || ($json.company_name || '') }},\n  \"maxCrawledPlacesPerSearch\": 1,\n  \"includeReviews\": true,\n  \"reviewsMaxCount\": 50,\n  \"reviewsSort\": \"newest\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        9392,
-        80
+        8000,
+        256
       ],
       "id": "86102d60-c687-4117-b7d7-2e8ee45007d5",
       "name": "Google Reviews (1-3 Stars)",
@@ -339,13 +339,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// Build a Google Maps search query like: \"<Company> <City> <State>\"\n\nreturn items.map(item => {\n  const p = item.json.linkedin_profile_details_data || {};\n\n  const company = String(item.json.company ?? p.company ?? '').trim();\n  const city    = String(item.json.city ?? p.city ?? '').trim();\n  const state   = String(\n    item.json.state ?? item.json.company_state ?? p.company_state ?? ''\n  ).trim();\n\n  const gmaps_query = [company, city, state].filter(Boolean).join(' ').trim();\n\n  return {\n    json: {\n      ...item.json,\n      // keep if your downstream still uses these\n      'Time Zone': item.json['Time Zone'] ?? 'T1',\n      Timezone: item.json.Timezone ?? 'Europe/London',\n\n      gmaps_query,\n      company_name: company,\n    },\n  };\n});"
+        "jsCode": "// ROBUST GOOGLE MAPS QUERY BUILDER\n// Multi-level fallback to ALWAYS produce a valid query\n// ============================================\n\nreturn items.map(item => {\n  // Get LinkedIn profile data - try multiple access paths\n  const linkedInData = \n    $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.linkedin_profile_details_data ||\n    $('Scrape Profiles + Posts - Relevance AI1').last()?.json?.output?.linkedin_profile_details_data ||\n    item.json?.linkedin_profile_details_data ||\n    {};\n\n  // Also check original lead data from the sheet/database\n  const leadData = item.json || {};\n\n  // Extract all possible location/company fields\n  const company = String(\n    leadData.company || \n    leadData.organization_name || \n    linkedInData.company || \n    ''\n  ).trim();\n\n  const city = String(\n    leadData.city || \n    leadData.organization_city || \n    linkedInData.city || \n    ''\n  ).trim();\n\n  const state = String(\n    leadData.state || \n    leadData.organization_state || \n    leadData.company_state || \n    linkedInData.company_state ||\n    linkedInData.state ||\n    ''\n  ).trim();\n\n  const country = String(\n    leadData.country || \n    leadData.organization_country || \n    linkedInData.country || \n    'United States'\n  ).trim();\n\n  // Extract domain from website URL\n  const websiteRaw = String(\n    leadData.organization_website || \n    linkedInData.company_website || \n    linkedInData.company_domain ||\n    ''\n  ).trim();\n  \n  const domain = websiteRaw\n    .replace(/^https?:\\/\\//i, '')\n    .replace(/^www\\./i, '')\n    .split('/')[0]\n    .trim();\n\n  // Build query using fallback strategy\n  let gmaps_query = '';\n  let queryStrategy = '';\n\n  // Strategy 1: Company + City + State (most precise)\n  if (company && city && state) {\n    gmaps_query = `${company} ${city} ${state}`;\n    queryStrategy = 'company_city_state';\n  }\n  // Strategy 2: Company + State only\n  else if (company && state) {\n    gmaps_query = `${company} ${state}`;\n    queryStrategy = 'company_state';\n  }\n  // Strategy 3: Company + City only\n  else if (company && city) {\n    gmaps_query = `${company} ${city}`;\n    queryStrategy = 'company_city';\n  }\n  // Strategy 4: Company + Country\n  else if (company && country) {\n    gmaps_query = `${company} ${country}`;\n    queryStrategy = 'company_country';\n  }\n  // Strategy 5: Company name only\n  else if (company) {\n    gmaps_query = company;\n    queryStrategy = 'company_only';\n  }\n  // Strategy 6: Domain name (last resort)\n  else if (domain) {\n    // Convert domain to company-like name: \"acme.com\" -> \"acme\"\n    const domainName = domain.split('.')[0];\n    gmaps_query = domainName;\n    queryStrategy = 'domain_fallback';\n  }\n  // Strategy 7: If all else fails, use a placeholder that won't crash\n  else {\n    gmaps_query = '';\n    queryStrategy = 'no_data_available';\n  }\n\n  // Log for debugging (visible in n8n execution log)\n  console.log(`[Query Builder] Strategy: ${queryStrategy}, Query: \"${gmaps_query}\"`);\n\n  return {\n    json: {\n      ...item.json,\n      gmaps_query,\n      query_strategy: queryStrategy,\n      company_name: company,\n      // Preserve timezone fields if they exist\n      'Time Zone': item.json['Time Zone'] ?? 'T1',\n      Timezone: item.json.Timezone ?? 'America/Los_Angeles',\n    },\n  };\n});"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        8944,
-        176
+        7552,
+        272
       ],
       "id": "f1f89068-f081-4de5-988c-0621dfab88c4",
       "name": "Build Google Maps Query"
@@ -770,15 +770,15 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        12224,
-        224
+        11248,
+        304
       ],
       "id": "8c8e4ad4-6f4f-4d96-b7ed-21b91f718c67",
       "name": "Google Sheets",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "2EUpgH0WFkM3Lr6E",
-          "name": "Nishchith Sheets account"
+          "id": "p8ESE0UMGdJsRvZv",
+          "name": "Smartie Agents"
         }
       }
     },
@@ -789,104 +789,63 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6656,
-        176
+        6640,
+        192
       ],
       "id": "010ddfa5-4172-49d4-84fc-a2c48db7f3a2",
       "name": "💰 Init Cost Tracking"
     },
     {
       "parameters": {
-        "jsCode": "// ============================================\n// COST TRACKING: Google Custom Search Engine\n// Pricing: $5 per 1,000 queries = $0.005/query\n// This is EXACT pricing (fixed per query)\n// ============================================\nconst COST_PER_QUERY = 0.005; // $5 per 1000 queries\n\nconst leadData = $('Get Email Prep1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\nlet costEvents = $('💰 Track Relevance AI').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'google',\n  model: 'custom_search_api',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: COST_PER_QUERY,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'company_research',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    pricing_model: 'fixed_per_query',\n    queries_made: 1\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+        "jsCode": "// ============================================\n// COST TRACKING: Google Custom Search Engine\n// Pricing: $5 per 1,000 queries = $0.005/query\n// This is EXACT pricing (fixed per query)\n// ============================================\nconst COST_PER_QUERY = 0.005; // $5 per 1000 queries\n\nconst leadData = $('Get Email Prep1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\nlet costEvents = $('💰 Track Relevance AI').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'google',\n  model: 'custom_search_api',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: COST_PER_QUERY,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'company_research',\n  idempotency_key: `cost_${$execution.id}_google_cse_${leadEmail}`,\n  n8n_execution_id: $execution.id,\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    pricing_model: 'fixed_per_query',\n    queries_made: 1\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         7776,
-        176
+        48
       ],
       "id": "7d562e65-3098-4a23-8c67-5062017e4de0",
       "name": "💰 Track Google CSE"
     },
     {
       "parameters": {
-        "jsCode": "// ============================================\n// COST TRACKING: OpenAI o3-mini (Summarize)\n// 100% ACCURATE: Uses actual token counts from API\n// Pricing: $1.10/1M input, $4.40/1M output\n// ============================================\nconst PRICING = { input: 1.10, output: 4.40 }; // per 1M tokens\n\nconst leadData = $('Get Email Prep1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Get the actual response from OpenAI\nconst openaiResponse = $('Summarize (O3-mini)').first().json;\n\n// Get ACTUAL token usage from OpenAI response\nconst usage = openaiResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\n// Determine data source accuracy\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\n\n// Calculate cost using actual tokens\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents = $('💰 Track Google CSE').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'openai',\n  model: openaiResponse.model || 'o3-mini',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'company_summarization',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+        "jsCode": "// ============================================\n// COST TRACKING: OpenAI o3-mini (Summarize)\n// 100% ACCURATE: Uses actual token counts from API\n// Pricing: $1.10/1M input, $4.40/1M output\n// ============================================\nconst PRICING = { input: 1.10, output: 4.40 }; // per 1M tokens\n\nconst leadData = $('Get Email Prep1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Get the actual response from OpenAI Summarize\nconst openaiResponse = $('Summarize (O3-mini)').first().json;\n\n// Get ACTUAL token usage from OpenAI response\nconst usage = openaiResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\n// Determine data source accuracy\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\n\n// Calculate cost using actual tokens\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents = $('💰 Track Google CSE').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'openai',\n  model: openaiResponse.model || 'o3-mini',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'company_summarization',\n  idempotency_key: `cost_${$execution.id}_summarize_${leadEmail}`,\n  n8n_execution_id: $execution.id,\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         8464,
-        176
+        48
       ],
       "id": "bea4cec9-9d1d-44cf-b4bb-b748df3e93a5",
       "name": "💰 Track Summarize Cost"
     },
     {
       "parameters": {
-        "jsCode": "// ============================================\n// COST TRACKING: Apify Google Reviews\n// ACCURATE: Uses actual Apify run data\n// Apify charges by compute units (CUs)\n// CU = Memory (GB) × Time (hours)\n// ~$0.25 per CU on paid plans\n// ============================================\n\nconst leadData = $('Get Email Prep1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Get Apify response - it may contain run info\nconst apifyResponse = $('Google Reviews (1-3 Stars)').first().json;\n\n// Count reviews scraped\nconst reviews = apifyResponse.reviews || apifyResponse.reviewsAll || [];\nconst reviewCount = Array.isArray(reviews) ? reviews.length : (Array.isArray(apifyResponse) ? apifyResponse.length : 0);\n\n// Apify Google Maps Reviews Scraper pricing estimate:\n// Typical run: 256MB memory, ~30 seconds per place\n// CU = 0.25GB × 0.0083hr (30s) = 0.002 CU per place\n// At $0.25/CU = ~$0.0005 per place + ~$0.001 per review\nconst BASE_COST_PER_PLACE = 0.0005;\nconst COST_PER_REVIEW = 0.001;\nconst cost = BASE_COST_PER_PLACE + (reviewCount * COST_PER_REVIEW);\n\nlet costEvents = $('💰 Track Summarize Cost').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'apify',\n  model: 'google-maps-reviews-scraper',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'reviews_scraping',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    reviews_scraped: reviewCount,\n    base_cost: BASE_COST_PER_PLACE,\n    per_review_cost: COST_PER_REVIEW,\n    pricing_model: 'compute_units_estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+        "jsCode": "// ============================================\n// COST TRACKING: Apify Google Reviews\n// ACCURATE: Uses actual Apify run data\n// Apify charges by compute units (CUs)\n// CU = Memory (GB) × Time (hours)\n// ~$0.25 per CU on paid plans\n// ============================================\n\nconst leadData = $('Get Email Prep1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Get the Apify response\nconst apifyResponse = $('Google Reviews (1-3 Stars)').first().json.reviews || [];\nconst reviews = Array.isArray(apifyResponse) ? apifyResponse : [];\nconst reviewCount = Array.isArray(reviews) ? reviews.length : (Array.isArray(apifyResponse) ? apifyResponse.length : 0);\n\n// Apify Google Maps Reviews Scraper pricing estimate:\n// Typical run: 256MB memory, ~30 seconds per place\n// CU = 0.25GB × 0.0083hr (30s) = 0.002 CU per place\n// At $0.25/CU = ~$0.0005 per place + ~$0.001 per review\nconst BASE_COST_PER_PLACE = 0.0005;\nconst COST_PER_REVIEW = 0.001;\nconst cost = BASE_COST_PER_PLACE + (reviewCount * COST_PER_REVIEW);\n\nlet costEvents = $('💰 Track Summarize Cost').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'apify',\n  model: 'google-maps-reviews-scraper',\n  tokens_in: 0,\n  tokens_out: 0,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'reviews_scraping',\n  idempotency_key: `cost_${$execution.id}_apify_${leadEmail}`,\n  n8n_execution_id: $execution.id,\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    reviews_scraped: reviewCount,\n    base_cost: BASE_COST_PER_PLACE,\n    per_review_cost: COST_PER_REVIEW,\n    pricing_model: 'compute_units_estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        9616,
-        80
+        8224,
+        256
       ],
       "id": "17bd11da-915f-45c6-abdb-ef8d1f733e9e",
       "name": "💰 Track Apify Cost"
     },
     {
       "parameters": {
-        "jsCode": "// ============================================\n// COST TRACKING: Anthropic Claude Sonnet 4.5\n// 100% ACCURATE: Uses actual token counts from API\n// Pricing: $3.00/1M input, $15.00/1M output\n// ============================================\nconst PRICING = { input: 3.00, output: 15.00 }; // per 1M tokens\n\nconst leadData = $('Get Email Prep1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Get the actual response from Anthropic\nconst anthropicResponse = $('Email 1,2,').first().json;\n\n// Get ACTUAL token usage from Anthropic response\nconst usage = anthropicResponse.usage || {};\nconst inputTokens = usage.input_tokens || 0;\nconst outputTokens = usage.output_tokens || 0;\nconst totalTokens = inputTokens + outputTokens;\n\n// Determine data source accuracy\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\n\n// Calculate cost using actual tokens\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents = $('💰 Track Analyze Cost1').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'anthropic',\n  model: anthropicResponse.model || 'claude-sonnet-4-5-20250929',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'email_generation',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+        "jsCode": "// ============================================\n// COST TRACKING: Anthropic Claude Sonnet 4.5\n// 100% ACCURATE: Uses actual token counts from API\n// Pricing: $3.00/1M input, $15.00/1M output\n// ============================================\nconst PRICING = { input: 3.00, output: 15.00 }; // per 1M tokens\n\nconst leadData = $('Get Email Prep1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Get the actual response from Anthropic\nconst anthropicResponse = $('Email 1,2,3').first().json;\n\n// Get ACTUAL token usage from Anthropic response\nconst usage = anthropicResponse.usage || {};\nconst inputTokens = usage.input_tokens || 0;\nconst outputTokens = usage.output_tokens || 0;\nconst totalTokens = inputTokens + outputTokens;\n\n// Determine data source accuracy\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\n\n// Calculate cost using actual tokens\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents = $('💰 Track Analyze Cost1').first().json._cost_events || [];\n\ncostEvents.push({\n  provider: 'anthropic',\n  model: anthropicResponse.model || 'claude-sonnet-4-5-20250929',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'email_generation',\n  idempotency_key: `cost_${$execution.id}_anthropic_${leadEmail}`,\n  n8n_execution_id: $execution.id,\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        10704,
-        176
+        9728,
+        240
       ],
       "id": "40f2eabf-12a5-477a-9971-629235003d74",
       "name": "💰 Track Anthropic Cost"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "anthropicApi",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: \"claude-sonnet-4-5-20250929\",\n  max_tokens: 4096,\n  messages: [\n    {\n      role: \"user\",\n      content: \"You are part of the cold email team for Smartie Agents, which is an AI Automation Agency offering AI Receptionists, full CRM automation, website chatbots, and social media handling across Facebook, Instagram, and WhatsApp.\\n\\nYour job is to create 3 emails given the following info about a new cold lead: \\n\\n1. Research: Findings about the prospect by researching them on social media and the web. \\n2. Analysis: Insights extracted from analysing the research. \\n3. Tactic: Strategy to create the cold emails. \\n\\nYour job is to create a cold email sequence of 3 emails, which will be sent 2 days apart. The tactic for each email should closely follow the instructions below, whilst the content of each email must follow the research and analysis. \\n\\n# Tactic: \\n\\n1. Email#1: \\n\\n1.1 Subject line (question + curiosity):\\n- Output an 8-12 word QUESTION that ends with \\\"?\\\" (no emojis; one \\\"?\\\" max).\\n- Tie the question to the strongest context from the Research/Analysis (a pain, metric, channel, or recent event). It must be obviously relevant.\\n- Include the prospect's first name OR company name only if it reads naturally (don't force it).\\n- Avoid spam terms (\\\"free\\\", \\\"guarantee\\\", \\\"no obligation\\\", \\\"price\\\", \\\"100%\\\", \\\"sale\\\") and avoid colons, dashes, or excess punctuation.\\n- Keep it neutral and non-salesy (no \\\"we\\\", no offers, no benefits).\\n- Examples (pattern, not templates): \\\"Are missed calls hurting your weekend open houses?\\\", \\\"Zillow leads slowing despite steady ad spend this month?\\\", \\\"Website chat gaps wasting after-hours traffic lately?\\\"\\n\\n1.2 Body\\nStructure: The email must follow this structure closely:\\na) Hook: The first 2 or 3 sentences of the email is a hook. The hook should be the personalization part of the email, capturing the prospects attention so they don't scroll. \\n\\n\\nb) Pain point: After the hook, you must outline a pain point that was analysed about the prospect. This shouldn't sound salesy, but should be directly related to their business. The goal is to capture the readers attention, not sell them a solution. \\n\\n\\nc) CTA: Say that I've worked on solving a similar problem in the past and mention the exact offer based on the problem that is the best suited for that problem they are experiencing and I would love to share what we've built over a quick 15 minute call on \" + ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][(new Date().getDay() + 2) % 7] + \" . Have a clear next step for them (for example \\\"Book a free consultation with us using this Calendly link) \\nhttps://api.leadconnectorhq.com/widget/booking/mHQelVa2sJeNj1euYoCo.\\n\\nGuidelines - The email body should:\\n- Be short (maximum 100 words).\\n- Have short paragraphs (1 or 2 sentences in each) to include white space. \\n- Use a conversational tone to keep the email casual. \\n- Be \\\"You\\\" focused, incorporating \\\"you\\\" as much as possible.\\n- Be at a 6th-grade reading level with simple language. \\n- Avoid images, attachments, videos, custom code, spammy words above, bullet points, punctuation.\\n- Not have absurd claims (it should be believable).\\n- Should always start with \\\"Hey \" + $('Scrape Profiles + Posts - Relevance AI1').last().json.linkedin_profile_details_data.first_name + \",\\\"\\n- Should be concise. \\n- Never start with formal openers like \\\"Hope you're doing well\\\" (Get right into the email every time).\\n- Be nice and inviting.\\n- End with \\\"Kind regards,<br>Nishchith<br>Smartie Agents\\\"\\n\\n2. Email#3: \\nThis email should follow the same structure and guidelines as Email#1, with the following differences: \\n- Subject must follow the same \\\"question + curiosity\\\" rules as Email #1 (8-12 words, ends with \\\"?\\\", context-tied, no spam terms).\\n- It should mention a different pain point identified. \\n- The call to action should include the following Calendly link so the prospect can book a time that suits: https://api.leadconnectorhq.com/widget/booking/TvnhKDOTdUV7rPaQqfv7\\n- Should be like you already know them from the previous conversation, so it shouldn't include any personalisation other than the prospect's name. Can start with a variation of I was thinking about {Prospect Company Name} again and...\\n\\n3. Email#2: \\nThis email will be in the same thread as email#1 and is considered a followup email (so it doesn't need a subject line).\\nThe email should be a close variant of this email: \\n\\\"Hey \" + $('Scrape Profiles + Posts - Relevance AI1').last().json.linkedin_profile_details_data.first_name + \", \\nJust pushing this back up your inbox in case you missed it. \\nLook forward to hearing from you. \\nKind regards, \\nNishchith\\\" \\n\\n# Rules - Other things to consider: \\n- Your goal is to create an engaging email that will get us a reply. Choose the best pain points and personalization opportunities from the analysis to achieve this objective. \\n- You must closely follow the guidelines provided for each email. \\n- Never come across as condescending or rude when mentioning the pain point. \\n- When using the personalization opportunities from the analysis, always mention where the info was found - usually \\\"Online\\\" or \\\"LinkedIn\\\" (look at Supporting Evidence for this).\\n\\n# Output format\\nYour output must follow this JSON format: \\n\\n{\\n  \\\"email1\\\": {\\n    \\\"subject\\\": \\\"TEXT-HERE\\\",\\n    \\\"body\\\": \\\"HTML-HERE\\\"\\n  },\\n  \\\"email2\\\": {\\n    \\\"body\\\": \\\"HTML-HERE\\\"\\n  },\\n  \\\"email3\\\": {\\n    \\\"subject\\\": \\\"HERE\\\",\\n    \\\"body\\\": \\\"HTML-HERE\\\"\\n  }\\n}\\n\\n- Don't wrap the output in```. \\n- Don't output anything else. \\n- Keep the HTML code to a minimum by using only <br> for line breaks and nothing else.\\n\\n# Task: New prospect\\nThere's a new prospect. Create the emails by considering the following details: \\n\\n1. Research: \\nFirst name: \" + $('Scrape Profiles + Posts - Relevance AI1').last().json.linkedin_profile_details_data.first_name + \"\\nCompany name: \" + $('Scrape Profiles + Posts - Relevance AI1').last().json.linkedin_profile_details_data.company + \" (ignore any legal suffixes like pty ltd or llc) \\n\\n2. Analysis: \\n\" + ($('Analyze1').last().json?.choices?.[0]?.message?.content || 'None') + \"\\n\\n3. Google Reviews (1-3 stars):\\n\" + ($json.google_reviews_summary || 'None found')\n    }\n  ]\n}) }}",
-        "options": {
-          "timeout": 120000
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        10496,
-        176
-      ],
-      "name": "Email 1,2,",
-      "id": "d15f2e8f-79b7-4af9-8227-69de8bbfd0e7",
-      "credentials": {
-        "anthropicApi": {
-          "id": "aoWKHXiRqhK3nMDW",
-          "name": "Smartie agents Anthropic account"
-        }
-      }
     },
     {
       "parameters": {
@@ -897,8 +856,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        10928,
-        176
+        9920,
+        240
       ],
       "id": "6552ac1d-bc74-4f8a-8519-11ee35ad20c1",
       "name": "Edit Email fields1",
@@ -921,7 +880,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: \"o3-mini\",\n  messages: [\n    {\n      role: \"user\",\n      content: \"# Overview\\nYou are a sales research analyst for Smartie Agents, an AI automation agency that helps real estate teams capture more leads\\n\\nSmartie Agents offers the following services:\\n- AI Receptionist: Answers calls 24/7, qualifies leads, books appointments directly into calendars\\n- CRM Automation: Automates follow-ups, lead nurturing, and pipeline management\\n- Website Chatbots: Captures and qualifies website visitors in real-time\\n- Social Media Automation: Responds to inquiries on Facebook, Instagram, WhatsApp instantly\\n\\n# Your Task\\nAnalyze research on a real estate professional to identify:\\n1. Recent, specific activities that show relevance\\n2. Operational pain points our services can solve\\n3. Business context that makes our offer timely\\nFor each prospect you must find the following: \\n\\n*1. Personalization opportunity:* Cold emails perform much better when personalized. You must analyse the research found on the prospect to identify the top personalization opportunities. The personalization can be one of the following: \\n- Referencing content they've posted [best one].\\n- Mentioning a specific achievement or news related to themselves or their business.\\n- personalized compliment or observation about the recipient's work.\\n- Mentioning unique aspects of their professional background. \\nThe references must be highly specific that couldn't be mass-generated. Adding each reference to the cold email should feel like a 1 to 1 communication, showing we've done our research on the prospect. Aim: Reader thinks \\\"Whoa, this is for me.\\\" If you can't find any good personalization opportunities, then leave this blank. Avoid company description regurgitation\\n\\n\\n*2. Pain points and solutions:* Analyse the research to identify the prospects biggest pain points. Take into consideration their role, their company details and all other research to predict what their biggest bottle necks are. Then think of these pain points in terms of Smartie Agents services - Which ones can we solve? List the 2 biggest pain points that we can help with and define the actionable solution we can offer them. Turn the actionable solution into a clear and concise offer. \\n- The solutions should be specific offerings, not broad services. So instead of saying \\\"automation\\\", you must clearly define exactly what process will be automated.\\n\\n\\n# Output Format \\nYour output must be in the following format: \\n\\n*Personalization*\\n1. Opportunity: HERE\\nSupporting Evidence: HERE\\n\\n2. Opportunity: HERE\\nSupporting Evidence: HERE\\n\\n(...add more as needed)\\n\\n---\\n\\n*Pain Points & Solutions*\\n1. Pain Point: HERE\\nSupporting Evidence: HERE\\nOffer: HERE\\n\\n2. Pain Point: HERE\\nSupporting Evidence: HERE\\nOffer: HERE\\n\\nWhere supporting evidence is where you must include specific examples and evidence from the research that support your findings. You must give enough detail in the HERE sections so the reader does not need to revisit the research to create a cold email.\\nThe opportunities should also be explained in detail, so the reader has enough context to understand the opportunity. So for example, instead of saying \\\"news A\\\", you must explain exactly what \\\"news A\\\" entitles and why it's significant. \\n\\n- Don't output anything else.\\n- Replace HERE with the relevant string.\\n- If there are no clear personalization opportunities, then replace HERE with null. \\n- Make sure your outputs are well thought out. \\n\\n# Complete the analysis for the following prospect. \\n\\nResearch: \\n\\n1. Scraped LinkedIn profile in JSON format: \\n\" + JSON.stringify($('Scrape Profiles + Posts - Relevance AI1').last().json.linkedin_profile_details_data || {}, null, 2) + \"\\n\\n2. Company research from searching the web: \\n\" + ($json?.choices?.[0]?.message?.content || 'None')\n    }\n  ]\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"o3-mini\",\n  messages: [\n    {\n      role: \"user\",\n      content: \"# Overview\\nYou are a sales research analyst for Smartie Agents, an AI automation agency that helps real estate teams capture more leads\\n\\nSmartie Agents offers the following services:\\n- AI Receptionist: Answers calls 24/7, qualifies leads, books appointments directly into calendars\\n- CRM Automation: Automates follow-ups, lead nurturing, and pipeline management\\n- Website Chatbots: Captures and qualifies website visitors in real-time\\n- Social Media Automation: Responds to inquiries on Facebook, Instagram, WhatsApp instantly\\n\\n# Your Task\\nAnalyze research on a real estate professional to identify:\\n1. Recent, specific activities that show relevance\\n2. Operational pain points our services can solve\\n3. Business context that makes our offer timely\\nFor each prospect you must find the following: \\n\\n*1. Personalization opportunity:* Cold emails perform much better when personalized. You must analyse the research found on the prospect to identify the top personalization opportunities. The personalization can be one of the following: \\n- Referencing content they've posted [best one].\\n- Mentioning a specific achievement or news related to themselves or their business.\\n- personalized compliment or observation about the recipient's work.\\n- Mentioning unique aspects of their professional background. \\nThe references must be highly specific that couldn't be mass-generated. Adding each reference to the cold email should feel like a 1 to 1 communication, showing we've done our research on the prospect. Aim: Reader thinks \\\"Whoa, this is for me.\\\" If you can't find any good personalization opportunities, then leave this blank. Avoid company description regurgitation\\n\\n\\n*2. Pain points and solutions:* Analyse the research to identify the prospects biggest pain points. Take into consideration their role, their company details and all other research to predict what their biggest bottle necks are. Then think of these pain points in terms of Smartie Agents services - Which ones can we solve? List the 2 biggest pain points that we can help with and define the actionable solution we can offer them. Turn the actionable solution into a clear and concise offer. \\n- The solutions should be specific offerings, not broad services. So instead of saying \\\"automation\\\", you must clearly define exactly what process will be automated.\\n\\n\\n# Output Format \\nYour output must be in the following format: \\n\\n*Personalization*\\n1. Opportunity: HERE\\nSupporting Evidence: HERE\\n\\n2. Opportunity: HERE\\nSupporting Evidence: HERE\\n\\n(...add more as needed)\\n\\n---\\n\\n*Pain Points & Solutions*\\n1. Pain Point: HERE\\nSupporting Evidence: HERE\\nOffer: HERE\\n\\n2. Pain Point: HERE\\nSupporting Evidence: HERE\\nOffer: HERE\\n\\nWhere supporting evidence is where you must include specific examples and evidence from the research that support your findings. You must give enough detail in the HERE sections so the reader does not need to revisit the research to create a cold email.\\nThe opportunities should also be explained in detail, so the reader has enough context to understand the opportunity. So for example, instead of saying \\\"news A\\\", you must explain exactly what \\\"news A\\\" entitles and why it's significant. \\n\\n- Don't output anything else.\\n- Replace HERE with the relevant string.\\n- If there are no clear personalization opportunities, then replace HERE with null. \\n- Make sure your outputs are well thought out. \\n\\n# Complete the analysis for the following prospect. \\n\\nResearch: \\n\\n1. Scraped LinkedIn profile in JSON format: \\n\" + JSON.stringify($('Scrape Profiles + Posts - Relevance AI1').last().json.linkedin_profile_details_data || {}, null, 2) + \"\\n\\n2. Company research from searching the web: \\n\" + ($('Summarize (O3-mini)').last().json?.choices?.[0]?.message?.content || 'None')\n    }\n  ]\n}) }}",
         "options": {
           "timeout": 120000
         }
@@ -929,8 +888,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        10064,
-        176
+        9152,
+        240
       ],
       "name": "Analyze1",
       "id": "8f50d6bc-e2be-46ef-94bc-8e222aa415dd",
@@ -943,13 +902,13 @@
     },
     {
       "parameters": {
-        "jsCode": "// ============================================\n// COST TRACKING: OpenAI o3-mini (Analyse)\n// 100% ACCURATE: Uses actual token counts from API\n// Pricing: $1.10/1M input, $4.40/1M output\n// ============================================\nconst PRICING = { input: 1.10, output: 4.40 }; // per 1M tokens\n\nconst leadData = $('Get Email Prep1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Get the actual response from OpenAI Analyse\nconst analyseResponse = $('Analyze1').first().json;\n\n// Get ACTUAL token usage from OpenAI response\nconst usage = analyseResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\n// Determine data source accuracy\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\n\n// Calculate cost using actual tokens\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents;\ntry {\n  costEvents = $('💰 Track Apify Cost').first().json._cost_events || [];\n} catch(e) {\n  costEvents = $('💰 Track Summarize Cost').first().json._cost_events || [];\n}\n\ncostEvents.push({\n  provider: 'openai',\n  model: analyseResponse.model || 'o3-mini',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'prospect_analysis',\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
+        "jsCode": "// ============================================\n// COST TRACKING: OpenAI o3-mini (Analyse)\n// 100% ACCURATE: Uses actual token counts from API\n// Pricing: $1.10/1M input, $4.40/1M output\n// ============================================\nconst PRICING = { input: 1.10, output: 4.40 }; // per 1M tokens\n\nconst leadData = $('Get Email Prep1').first().json;\nconst leadEmail = leadData.email_address || 'unknown';\nconst campaignName = leadData.state || 'Unknown';\n\n// Get the actual response from OpenAI Analyse\nconst analyseResponse = $('Analyze1').first().json;\n\n// Get ACTUAL token usage from OpenAI response\nconst usage = analyseResponse.usage || {};\nconst inputTokens = usage.prompt_tokens || usage.input_tokens || 0;\nconst outputTokens = usage.completion_tokens || usage.output_tokens || 0;\nconst totalTokens = usage.total_tokens || (inputTokens + outputTokens);\n\n// Determine data source accuracy\nconst dataSource = (inputTokens > 0 || outputTokens > 0) ? 'api_exact' : 'estimate';\n\n// Calculate cost using actual tokens\nconst cost = (inputTokens * PRICING.input / 1000000) + (outputTokens * PRICING.output / 1000000);\n\nlet costEvents;\ntry {\n  costEvents = $('💰 Track Apify Cost').first().json._cost_events || [];\n} catch(e) {\n  costEvents = $('💰 Track Summarize Cost').first().json._cost_events || [];\n}\n\ncostEvents.push({\n  provider: 'openai',\n  model: analyseResponse.model || 'o3-mini',\n  tokens_in: inputTokens,\n  tokens_out: outputTokens,\n  cost_usd: Math.round(cost * 1000000) / 1000000,\n  campaign_name: campaignName,\n  contact_email: leadEmail,\n  purpose: 'prospect_analysis',\n  idempotency_key: `cost_${$execution.id}_analyze_${leadEmail}`,\n  n8n_execution_id: $execution.id,\n  workflow_id: $workflow.id,\n  run_id: $execution.id,\n  metadata: {\n    total_tokens: totalTokens,\n    data_source: dataSource,\n    tracking_method: dataSource === 'api_exact' ? '100%_accurate_api' : 'estimate'\n  }\n});\n\nfor (const item of items) {\n  item.json._cost_events = costEvents;\n}\n\nreturn items;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        10256,
-        176
+        9344,
+        240
       ],
       "id": "80cd192a-d2b3-403c-a25c-f63ecceed122",
       "name": "💰 Track Analyze Cost1"
@@ -981,8 +940,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        12464,
-        224
+        11488,
+        304
       ],
       "id": "86329fcc-7f7c-4b4e-b786-7320dc36844c",
       "name": "Send Cost Events to Dashboard1"
@@ -1023,8 +982,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        7104,
-        176
+        7088,
+        192
       ],
       "id": "0750d85c-63bf-40e9-b53b-567993a57731",
       "name": "Fetch Relevance AI Run History1",
@@ -1189,7 +1148,7 @@
             {
               "id": "founded_year",
               "displayName": "founded_year",
-              "required": false,
+              "required": true,
               "defaultMatch": false,
               "display": true,
               "type": "number",
@@ -1452,8 +1411,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        12112,
-        64
+        11152,
+        128
       ],
       "id": "667eb49c-126a-4a2d-bf67-fee4ed8b1267",
       "name": "Update rows in a table",
@@ -1461,46 +1420,6 @@
         "postgres": {
           "id": "QKb5WqKXZ29v15Qk",
           "name": "Leads Ohio"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "documentId": {
-          "__rl": true,
-          "value": "1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8",
-          "mode": "list",
-          "cachedResultName": "3508 Leads - Ohio ",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit?usp=drivesdk"
-        },
-        "sheetName": {
-          "__rl": true,
-          "value": "gid=0",
-          "mode": "list",
-          "cachedResultName": "Ohio",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1AGG05kKt9b-OAN3YGsZ-ZVDFv9fWxEjgWHDDBE2g_C8/edit#gid=0"
-        },
-        "filtersUI": {
-          "values": [
-            {
-              "lookupColumn": "email_prep"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        12000,
-        224
-      ],
-      "id": "b7b2420e-8c27-47cb-8ce6-a47e18f145c6",
-      "name": "Get row(s) in sheet",
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "2EUpgH0WFkM3Lr6E",
-          "name": "Nishchith Sheets account"
         }
       }
     },
@@ -1522,8 +1441,8 @@
         "where": {
           "values": [
             {
-              "column": "email_prep",
-              "condition": "IS NULL"
+              "column": "email_1_sent",
+              "value": "FALSE"
             }
           ]
         },
@@ -1539,7 +1458,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        5744,
+        5808,
         256
       ],
       "id": "25e035bb-da81-4810-925c-5a7694ccabc4",
@@ -1550,6 +1469,180 @@
           "name": "Leads Ohio"
         }
       }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        8944,
+        240
+      ],
+      "id": "5bb9f8fd-2d2b-4cd6-b231-1a49908142a6",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"claude-sonnet-4-5-20250929\",\n  max_tokens: 4096,\n  messages: [\n    {\n      role: \"user\",\n      content: \"You are part of the cold email team for Smartie Agents, which is an AI Automation Agency offering AI Receptionists, full CRM automation, website chatbots, and social media handling across Facebook, Instagram, and WhatsApp.\\n\\nYour job is to create 3 emails given the following info about a new cold lead: \\n\\n1. Research: Findings about the prospect by researching them on social media and the web. \\n2. Analysis: Insights extracted from analysing the research. \\n3. Tactic: Strategy to create the cold emails. \\n\\nYour job is to create a cold email sequence of 3 emails, which will be sent 2 days apart. The tactic for each email should closely follow the instructions below, whilst the content of each email must follow the research and analysis. \\n\\n# Tactic: \\n\\n1. Email#1: \\n\\n1.1 Subject line (question + curiosity):\\n- Output an 8-12 word QUESTION that ends with \\\"?\\\" (no emojis; one \\\"?\\\" max).\\n- Tie the question to the strongest context from the Research/Analysis (a pain, metric, channel, or recent event). It must be obviously relevant.\\n- Include the prospect's first name OR company name only if it reads naturally (don't force it).\\n- Avoid spam terms (\\\"free\\\", \\\"guarantee\\\", \\\"no obligation\\\", \\\"price\\\", \\\"100%\\\", \\\"sale\\\") and avoid colons, dashes, or excess punctuation.\\n- Keep it neutral and non-salesy (no \\\"we\\\", no offers, no benefits).\\n- Examples (pattern, not templates): \\\"Are missed calls hurting your weekend open houses?\\\", \\\"Zillow leads slowing despite steady ad spend this month?\\\", \\\"Website chat gaps wasting after-hours traffic lately?\\\"\\n\\n1.2 Body\\nStructure: The email must follow this structure closely:\\na) Hook: The first 2 or 3 sentences of the email is a hook. The hook should be the personalization part of the email, capturing the prospects attention so they don't scroll. \\n\\n\\nb) Pain point: After the hook, you must outline a pain point that was analysed about the prospect. This shouldn't sound salesy, but should be directly related to their business. The goal is to capture the readers attention, not sell them a solution. \\n\\n\\nc) CTA: Say that I've worked on solving a similar problem in the past and mention the exact offer based on the problem that is the best suited for that problem they are experiencing and I would love to share what we've built over a quick 15 minute call on \" + ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][(new Date().getDay() + 2) % 7] + \" . Have a clear next step for them (for example \\\"Book a free consultation with us using this Calendly link) \\nhttps://api.leadconnectorhq.com/widget/booking/mHQelVa2sJeNj1euYoCo.\\n\\nGuidelines - The email body should:\\n- Be short (maximum 100 words).\\n- Have short paragraphs (1 or 2 sentences in each) to include white space. \\n- Use a conversational tone to keep the email casual. \\n- Be \\\"You\\\" focused, incorporating \\\"you\\\" as much as possible.\\n- Be at a 6th-grade reading level with simple language. \\n- Avoid images, attachments, videos, custom code, spammy words above, bullet points, punctuation.\\n- Not have absurd claims (it should be believable).\\n- Should always start with \\\"Hey \" + $('Scrape Profiles + Posts - Relevance AI1').last().json.linkedin_profile_details_data.first_name + \",\\\"\\n- Should be concise. \\n- Never start with formal openers like \\\"Hope you're doing well\\\" (Get right into the email every time).\\n- Be nice and inviting.\\n- End with \\\"Kind regards,<br>Nishchith<br>Smartie Agents\\\"\\n\\n2. Email#3: \\nThis email should follow the same structure and guidelines as Email#1, with the following differences: \\n- Subject must follow the same \\\"question + curiosity\\\" rules as Email #1 (8-12 words, ends with \\\"?\\\", context-tied, no spam terms).\\n- It should mention a different pain point identified. \\n- The call to action should include the following Calendly link so the prospect can book a time that suits: https://api.leadconnectorhq.com/widget/booking/TvnhKDOTdUV7rPaQqfv7\\n- Should be like you already know them from the previous conversation, so it shouldn't include any personalisation other than the prospect's name. Can start with a variation of I was thinking about {Prospect Company Name} again and...\\n\\n3. Email#2: \\nThis email will be in the same thread as email#1 and is considered a followup email (so it doesn't need a subject line).\\nThe email should be a close variant of this email: \\n\\\"Hey \" + $('Scrape Profiles + Posts - Relevance AI1').last().json.linkedin_profile_details_data.first_name + \", \\nJust pushing this back up your inbox in case you missed it. \\nLook forward to hearing from you. \\nKind regards, \\nNishchith\\\" \\n\\n# Rules - Other things to consider: \\n- Your goal is to create an engaging email that will get us a reply. Choose the best pain points and personalization opportunities from the analysis to achieve this objective. \\n- You must closely follow the guidelines provided for each email. \\n- Never come across as condescending or rude when mentioning the pain point. \\n- When using the personalization opportunities from the analysis, always mention where the info was found - usually \\\"Online\\\" or \\\"LinkedIn\\\" (look at Supporting Evidence for this).\\n\\n# Output format\\nYour output must follow this JSON format: \\n\\n{\\n  \\\"email1\\\": {\\n    \\\"subject\\\": \\\"TEXT-HERE\\\",\\n    \\\"body\\\": \\\"HTML-HERE\\\"\\n  },\\n  \\\"email2\\\": {\\n    \\\"body\\\": \\\"HTML-HERE\\\"\\n  },\\n  \\\"email3\\\": {\\n    \\\"subject\\\": \\\"HERE\\\",\\n    \\\"body\\\": \\\"HTML-HERE\\\"\\n  }\\n}\\n\\n- Don't wrap the output in```. \\n- Don't output anything else. \\n- Keep the HTML code to a minimum by using only <br> for line breaks and nothing else.\\n\\n# Task: New prospect\\nThere's a new prospect. Create the emails by considering the following details: \\n\\n1. Research: \\nFirst name: \" + $('Scrape Profiles + Posts - Relevance AI1').last().json.linkedin_profile_details_data.first_name + \"\\nCompany name: \" + $('Scrape Profiles + Posts - Relevance AI1').last().json.linkedin_profile_details_data.company + \" (ignore any legal suffixes like pty ltd or llc) \\n\\n2. Analysis: \\n\" + ($('Analyze1').last().json?.choices?.[0]?.message?.content || 'None') + \"\\n\\n3. Google Reviews (1-3 stars):\\n\" + ($('Reviews').last().json?.google_reviews_summary || 'None found')\n    }\n  ]\n}) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9536,
+        240
+      ],
+      "name": "Email 1,2,3",
+      "id": "d15f2e8f-79b7-4af9-8227-69de8bbfd0e7",
+      "credentials": {
+        "anthropicApi": {
+          "id": "aoWKHXiRqhK3nMDW",
+          "name": "Smartie agents Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1ebaec45-452a-4ad3-9e39-593dde6b4587",
+              "leftValue": "={{ $('Get Email Prep1').toString().json.email_prep }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        10992,
+        288
+      ],
+      "id": "4e4587fe-13a3-4140-963d-9c6a9ef9c3c1",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://tracee-tabernacular-brandee.ngrok-free.dev/api/cost-events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-webhook-token",
+              "value": "6de5a8d03ad6348f4110782372a82f1bb7c6ef43a8ce8810bf0459e73abaeb61"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Edit Email fields1').first().json._cost_events || []) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6384,
+        832
+      ],
+      "id": "3c2dc615-90dc-4d7c-8299-35c4e89a23bf",
+      "name": "Send Cost Events to Dashboard"
+    },
+    {
+      "parameters": {
+        "multipleMethods": true,
+        "httpMethod": [
+          "POST"
+        ],
+        "path": "c9bb22d5-3421-44f1-9cd0-b4d5b779656f",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        5872,
+        832
+      ],
+      "id": "9226755f-f199-4c4b-9833-3916cf1231e5",
+      "name": "Webhook",
+      "webhookId": "c9bb22d5-3421-44f1-9cd0-b4d5b779656f"
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6144,
+        832
+      ],
+      "id": "5984e048-7cc1-49fa-8db4-25c126a5adf8",
+      "name": "HTTP Request",
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "t3OcFp3cjv7iYP4E",
+          "name": "LinkedIn account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Ignore these nodes\n",
+        "height": 320,
+        "width": 880
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        5824,
+        704
+      ],
+      "typeVersion": 1,
+      "id": "b5a35c0c-9d83-4f82-826c-bb0417f9017f",
+      "name": "Sticky Note"
     }
   ],
   "pinData": {},
@@ -1559,6 +1652,11 @@
         [
           {
             "node": "Google CSE Search",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Google Maps Query",
             "type": "main",
             "index": 0
           }
@@ -1618,7 +1716,7 @@
             "index": 0
           },
           {
-            "node": "Get row(s) in sheet",
+            "node": "If1",
             "type": "main",
             "index": 0
           }
@@ -1662,7 +1760,7 @@
       "main": [
         [
           {
-            "node": "Build Google Maps Query",
+            "node": "Merge",
             "type": "main",
             "index": 0
           }
@@ -1736,9 +1834,9 @@
       "main": [
         [
           {
-            "node": "Analyze1",
+            "node": "Merge",
             "type": "main",
-            "index": 0
+            "index": 1
           }
         ]
       ]
@@ -1842,17 +1940,6 @@
         ]
       ]
     },
-    "Email 1,2,": {
-      "main": [
-        [
-          {
-            "node": "💰 Track Anthropic Cost",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Edit Email fields1": {
       "main": [
         [
@@ -1879,7 +1966,7 @@
       "main": [
         [
           {
-            "node": "Email 1,2,",
+            "node": "Email 1,2,3",
             "type": "main",
             "index": 0
           }
@@ -1919,17 +2006,6 @@
         ]
       ]
     },
-    "Get row(s) in sheet": {
-      "main": [
-        [
-          {
-            "node": "Google Sheets",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Get Email Prep1": {
       "main": [
         [
@@ -1939,6 +2015,56 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Analyze1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email 1,2,3": {
+      "main": [
+        [
+          {
+            "node": "💰 Track Anthropic Cost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Cost Events to Dashboard": {
+      "main": [
+        []
+      ]
+    },
+    "Webhook": {
+      "main": [
+        []
       ]
     }
   },
@@ -1951,7 +2077,7 @@
     "errorWorkflow": "CiaofBF4zkgB2bhR",
     "timeSavedPerExecution": 1
   },
-  "versionId": "9bce986f-6d2f-4581-a573-086cdfd9c24d",
+  "versionId": "f4e2ba78-54fe-4b5e-a6b4-75e2f84b5550",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "fb0f3042150127121074617aaee31b106c313805cbc452132240d35f72eba898"

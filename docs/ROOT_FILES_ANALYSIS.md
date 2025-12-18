@@ -187,3 +187,7 @@ If you decide to move Playwright configs to `e2e/`:
 
 **Conclusion**: Most root-level files are correctly placed. Only Playwright configs could benefit from being moved to `e2e/` for better organization, but it's optional.
 
+
+
+
+

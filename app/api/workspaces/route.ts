@@ -8,6 +8,7 @@ import {
   addUserToWorkspace,
 } from '@/lib/workspace-access';
 import { auth } from '@clerk/nextjs/server';
+import { sanitizeWorkspace, sanitizeWorkspaceWithRole } from '@/lib/response-sanitizer';
 
 export const dynamic = 'force-dynamic';
 
@@ -140,22 +141,30 @@ export async function GET(req: NextRequest) {
     const workspaceIds = workspaces.map(w => w.workspaceId);
     const { data: wsDetails } = await supabaseAdmin
       .from('workspaces')
-      .select('id, name, slug, plan, settings')
+      .select('id, name, slug, plan, settings, created_at, updated_at')
       .in('id', workspaceIds);
 
     const enrichedWorkspaces = workspaces.map(wa => {
       const details = wsDetails?.find(d => d.id === wa.workspaceId);
-      return {
-        id: wa.workspaceId,
-        name: details?.name || wa.workspaceName,
-        slug: details?.slug || wa.workspaceId,
-        plan: details?.plan || 'free',
-        settings: details?.settings || {},
-        role: wa.role,
-        canRead: wa.canRead,
-        canWrite: wa.canWrite,
-        canManage: wa.canManage,
-      };
+      // PILLAR 5: Sanitize workspace response to prevent secret leakage
+      return sanitizeWorkspaceWithRole(
+        {
+          id: wa.workspaceId,
+          name: details?.name || wa.workspaceName,
+          slug: details?.slug || wa.workspaceId,
+          plan: details?.plan || 'free',
+          settings: details?.settings || {},
+          created_at: details?.created_at,
+          updated_at: details?.updated_at,
+        },
+        wa.role,
+        {
+          canRead: wa.canRead,
+          canWrite: wa.canWrite,
+          canManage: wa.canManage,
+          canManageKeys: wa.canManageKeys,
+        }
+      );
     });
 
     return NextResponse.json({
@@ -230,13 +239,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // PILLAR 5: Sanitize workspace response
+    const safeWorkspace = sanitizeWorkspace({
+      ...workspace,
+      plan: 'free',
+    });
+
     return NextResponse.json({
       success: true,
       workspace: {
-        id: workspace.id,
-        name: workspace.name,
-        slug: workspace.slug,
-        plan: 'free',
+        ...safeWorkspace,
         role: 'owner',
       },
       message: `Workspace "${workspace.name}" created successfully`,

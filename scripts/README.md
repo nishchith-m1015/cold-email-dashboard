@@ -4,6 +4,76 @@ This directory contains maintenance and setup scripts for the Cold Email Dashboa
 
 ## Available Scripts
 
+### `test-click-tracking.sh` ⭐
+
+Tests the click tracking implementation by sending requests to the `/api/track/click` endpoint.
+
+**When to use:**
+- After implementing click tracking (Phase 28)
+- To verify click tracking is working correctly
+- Before deploying to production
+
+**Prerequisites:**
+- Dashboard must be deployed (Vercel or localhost)
+- `curl` and `jq` installed (for URL encoding)
+
+**Usage:**
+```bash
+chmod +x scripts/test-click-tracking.sh
+./scripts/test-click-tracking.sh
+```
+
+**Optional: Test database logging**
+```bash
+export DATABASE_URL='postgresql://user:pass@host:5432/dbname'
+./scripts/test-click-tracking.sh
+```
+
+**What it tests:**
+1. ✅ Endpoint responds (HTTP 200/302)
+2. ✅ Redirects to correct destination
+3. ✅ Rejects requests without workspace_id
+4. ⚠️ Database logging (optional, requires psql)
+
+**Expected output:**
+```
+🔍 Testing Click Tracking Implementation
+========================================
+
+📝 Test Configuration:
+  Dashboard URL: https://cold-email-dashboard.vercel.app
+  Test Email: test@example.com
+  Campaign: Ohio
+  Step: 1
+  Link ID: test_link
+  Workspace ID: default
+  Destination: https://example.com
+
+🔗 Generated Tracking URL:
+  https://cold-email-dashboard.vercel.app/api/track/click?url=...
+
+🧪 Test 1: Endpoint Response
+----------------------------
+✅ PASS: Endpoint returned HTTP 302 (redirect working)
+
+🧪 Test 2: Redirect Verification
+--------------------------------
+✅ PASS: Redirects to correct destination: https://example.com
+
+🧪 Test 3: Missing workspace_id (Should Fail)
+-------------------------------------------
+✅ PASS: Correctly rejects request without workspace_id (HTTP 400)
+
+🧪 Test 4: Database Logging (Optional)
+------------------------------------
+⏭️  SKIP: psql not available or DATABASE_URL not set
+
+========================================
+✅ Click Tracking Tests Complete!
+```
+
+---
+
 ### `backfill-clerk-users.ts`
 
 Syncs existing Clerk users to the Supabase `public.users` table.

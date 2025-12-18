@@ -35,6 +35,11 @@ import { WorkspaceSwitcher } from '@/components/dashboard/workspace-switcher';
 import { SignedIn, SignedOut, SignInButton, useUser, useClerk } from '@clerk/nextjs';
 import { LogOut, UserCircle } from 'lucide-react';
 import { useWorkspace } from '@/lib/workspace-context';
+import { SystemHealthBar } from '@/components/ui/system-health-bar';
+import { RoleBadge } from '@/components/ui/role-badge';
+import { useNotifications } from '@/hooks/use-notifications';
+import { getNotificationIcon, getNotificationColor, formatTimeAgo as formatTime } from '@/lib/notification-utils';
+import { ShareDialog } from '@/components/dashboard/share-dialog';
 
 interface HeaderProps {
   onCommandOpen?: () => void;
@@ -88,28 +93,7 @@ function useClickOutside(ref: React.RefObject<HTMLElement | null>, handler: () =
   }, [ref, handler]);
 }
 
-// Notification type mapping
-const notificationTypeMap: Record<string, 'success' | 'info' | 'warning' | 'error'> = {
-  'reply': 'success',
-  'opt_out': 'warning',
-  'budget_alert': 'error',
-  'campaign_complete': 'success',
-  'system': 'info',
-};
-
-const notificationIcons = {
-  success: CheckCircle2,
-  info: Info,
-  warning: AlertCircle,
-  error: X,
-};
-
-const notificationColors = {
-  success: 'text-accent-success',
-  info: 'text-accent-primary',
-  warning: 'text-accent-warning',
-  error: 'text-accent-danger',
-};
+// Removed - now using notification-utils.ts
 
 // Cache stats type
 interface CacheStats {
@@ -117,21 +101,13 @@ interface CacheStats {
   entries: Array<{ key: string; expiresIn: number }>;
 }
 
-interface Notification {
-  id: string;
-  type: 'success' | 'info' | 'warning' | 'error';
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-  created_at: string;
-}
+// Removed - now using types from use-notifications.ts
 
 export function Header({ onCommandOpen }: HeaderProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { theme, toggleTheme, mounted } = useTheme();
-  const { workspaceId, workspace } = useWorkspace();
+  const { workspaceId, workspace, userRole } = useWorkspace();
   const { user } = useUser();
   
   // Preserve URL params when navigating
@@ -141,8 +117,10 @@ export function Header({ onCommandOpen }: HeaderProps) {
   // Dropdown states
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  // Notifications from API
+  const { notifications, unreadCount, markAsRead, dismiss } = useNotifications();
 
   // Cache states
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
@@ -201,70 +179,9 @@ export function Header({ onCommandOpen }: HeaderProps) {
   useClickOutside(settingsRef, () => setShowSettings(false));
   useClickOutside(profileRef, () => setShowProfile(false));
   
-
-  // Fetch notifications
-  const fetchNotifications = useCallback(async () => {
-    if (!workspaceId) return;
-
-    try {
-      const response = await fetch(`/api/notifications?workspace_id=${workspaceId}&limit=20`);
-      if (response.ok) {
-        const data = await response.json();
-        const formatted = data.notifications.map((n: any) => ({
-          id: n.id,
-          type: notificationTypeMap[n.type] || 'info',
-          title: n.title,
-          message: n.message,
-          time: formatTimeAgo(n.created_at),
-          read: !!n.read_at,
-          created_at: n.created_at,
-        }));
-        setNotifications(formatted);
-      }
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-    }
-  }, [workspaceId]);
-
-  // Fetch notifications on workspace change
-  useEffect(() => {
-    if (!workspaceId || !user?.id) return;
-    fetchNotifications();
-  }, [workspaceId, user, fetchNotifications]);
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const markAllAsRead = async () => {
-    if (!workspaceId) return;
-
-    try {
-      await fetch('/api/notifications', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          notification_ids: 'all',
-          action: 'read',
-          workspace_id: workspaceId,
-        }),
-      });
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    } catch (error) {
-      console.error('Failed to mark all as read:', error);
-    }
-  };
-
-  const dismissNotification = async (id: string) => {
-    if (!workspaceId) return;
-
-    try {
-      await fetch(`/api/notifications?id=${id}&workspace_id=${workspaceId}`, {
-        method: 'DELETE',
-      });
-      setNotifications(prev => prev.filter(n => n.id !== id));
-    } catch (error) {
-      console.error('Failed to dismiss notification:', error);
-    }
-  };
+  // Notification handlers
+  const markAllAsRead = () => markAsRead('all');
+  const dismissNotification = (id: string) => dismiss(id);
 
   // Fetch cache stats when settings opens
   const fetchCacheStats = useCallback(async () => {
@@ -374,6 +291,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
   }
 
   return (
+    <>
     <motion.header
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -405,7 +323,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
             {/* Dashboard elements - Only visible when signed in */}
             <SignedIn>
               {/* Workspace Switcher */}
-              <div className="hidden lg:block border-l border-border pl-6 ml-2">
+              <div className="hidden lg:block border-l border-border pl-6 ml-2" data-tour="workspace">
                 <WorkspaceSwitcher />
               </div>
 
@@ -477,12 +395,31 @@ export function Header({ onCommandOpen }: HeaderProps) {
                 size="sm"
                 onClick={onCommandOpen}
                 className="hidden sm:flex items-center gap-2 text-text-secondary hover:text-text-primary"
+                data-tour="search"
               >
                 <Search className="h-4 w-4" />
                 <span className="text-xs">Search...</span>
                 <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-surface-elevated px-1.5 font-mono text-[10px] font-medium text-text-secondary">
                   <Command className="h-3 w-3" />K
                 </kbd>
+              </Button>
+
+              {/* System Health Status */}
+              {workspaceId && (
+                <div className="hidden xl:block">
+                  <SystemHealthBar workspaceId={workspaceId} />
+                </div>
+              )}
+
+              {/* Team Button */}
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => setShareOpen(true)}
+                className="relative"
+                title="Team & Sharing"
+              >
+                <Users className="h-5 w-5 text-text-secondary hover:text-accent-primary transition-colors" />
               </Button>
 
               {/* Theme Toggle */}
@@ -548,17 +485,23 @@ export function Header({ onCommandOpen }: HeaderProps) {
                           </div>
                         ) : (
                           notifications.map((notification) => {
-                            const Icon = notificationIcons[notification.type];
+                            const Icon = getNotificationIcon(notification.type);
+                            const iconColor = getNotificationColor(notification.type);
                             return (
                               <div
                                 key={notification.id}
                                 className={cn(
-                                  'px-4 py-3 border-b border-border last:border-0 hover:bg-surface-elevated/50 transition-colors',
-                                  !notification.read && 'bg-accent-primary/5'
+                                  'px-4 py-3 border-b border-border last:border-0 hover:bg-surface-elevated/50 transition-colors cursor-pointer',
+                                  !notification.read_at && 'bg-accent-primary/5'
                                 )}
+                                onClick={() => {
+                                  if (!notification.read_at) {
+                                    markAsRead([notification.id]);
+                                  }
+                                }}
                               >
                                 <div className="flex items-start gap-3">
-                                  <div className={cn('mt-0.5', notificationColors[notification.type])}>
+                                  <div className={cn('mt-0.5', iconColor)}>
                                     <Icon className="h-4 w-4" />
                                   </div>
                                   <div className="flex-1 min-w-0">
@@ -567,7 +510,10 @@ export function Header({ onCommandOpen }: HeaderProps) {
                                         {notification.title}
                                       </p>
                                       <button
-                                        onClick={() => dismissNotification(notification.id)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          dismissNotification(notification.id);
+                                        }}
                                         className="text-text-secondary hover:text-text-primary transition-colors"
                                       >
                                         <X className="h-3.5 w-3.5" />
@@ -576,7 +522,9 @@ export function Header({ onCommandOpen }: HeaderProps) {
                                     <p className="text-xs text-text-secondary mt-0.5 line-clamp-2">
                                       {notification.message}
                                     </p>
-                                    <p className="text-[10px] text-text-secondary mt-1">{notification.time}</p>
+                                    <p className="text-[10px] text-text-secondary mt-1">
+                                      {formatTime(notification.created_at)}
+                                    </p>
                                   </div>
                                 </div>
                               </div>
@@ -833,6 +781,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
                               {user?.primaryEmailAddress?.emailAddress || ''}
                             </p>
                           </div>
+                          {userRole && <RoleBadge role={userRole} size="sm" />}
                         </div>
                       </div>
 
@@ -868,5 +817,9 @@ export function Header({ onCommandOpen }: HeaderProps) {
         </div>
       </div>
     </motion.header>
+    
+    {/* Share Dialog */}
+    <ShareDialog open={shareOpen} onOpenChange={setShareOpen} />
+    </>
   );
 }

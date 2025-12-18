@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 31: God Mode - Architecture Viewer</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            border-bottom: 2px solid #1e293b;
+            padding-bottom: 20px;
+            margin-bottom: 40px;
+        }
+        .diagram-section {
+            background-color: #1e293b;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 60px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .diagram-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #38bdf8;
+        }
+        .mermaid {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+        }
+        .controls {
+            position: sticky;
+            top: 20px;
+            background: #334155;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            z-index: 100;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover {
+            background: #0284c7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Phase 31: God Mode - Architecture Diagrams</h1>
+        <p>Tip: Right-click any diagram and select "Open Image in New Tab" to see it in raw high-resolution for extreme zooming.</p>
+
+        <div class="diagram-section">
+            <div class="diagram-title">System Overview</div>
+            <div class="mermaid">
+                graph LR
+                    subgraph Dashboard["Next.js Dashboard"]
+                        UI["Campaign Table<br>Toggle Switch"]
+                        Hook["useCampaigns Hook"]
+                    end
+                    
+                    subgraph API["API Gateway"]
+                        Toggle["/api/campaigns/[id]/toggle"]
+                    end
+                    
+                    subgraph External["External Systems"]
+                        N8N["n8n Workflow Engine"]
+                        DB[(Supabase)]
+                    end
+                    
+                    UI --> Hook --> Toggle
+                    Toggle --> N8N
+                    Toggle --> DB
+                    N8N -.->|Webhook| Toggle
+            </div>
+        </div>
+
+        <div class="diagram-section">
+            <div class="diagram-title">Pillar 1: Data Flow</div>
+            <div class="mermaid">
+                sequenceDiagram
+                    participant User
+                    participant Dashboard
+                    participant API
+                    participant DB
+                    participant n8n
+                    
+                    User->>Dashboard: Create Campaign
+                    Dashboard->>API: POST /api/campaigns
+                    API->>DB: INSERT
+                    API->>n8n: GET /workflows
+                    n8n-->>API: Response
+                    API->>DB: UPDATE
+                    API-->>Dashboard: Success
+            </div>
+        </div>
+
+        <div class="diagram-section">
+            <div class="diagram-title">Pillar 2: n8n Transport</div>
+            <div class="mermaid">
+                sequenceDiagram
+                    participant API as Toggle API
+                    participant Client as n8nClient
+                    participant N8N as n8n REST API
+                    
+                    API->>Client: activate(workflowId)
+                    Client->>Client: Build request + auth header
+                    Client->>N8N: POST /workflows/{id}/activate
+                    alt Success
+                        N8N-->>Client: 200 {active: true}
+                        Client-->>API: {success: true, active: true}
+                    else Error
+                        N8N-->>Client: 4xx/5xx
+                        Client-->>API: {success: false, error: ...}
+                    end
+            </div>
+        </div>
+
+        <div class="diagram-section">
+            <div class="diagram-title">Pillar 3: Command Center</div>
+            <div class="mermaid">
+                sequenceDiagram
+                    participant User as Dashboard UI
+                    participant API as /api/campaigns/[id]/toggle
+                    participant Auth as Clerk Auth
+                    participant DB as Supabase
+                    participant N8N as n8n API
+                    
+                    User->>API: POST {action: 'activate'}
+                    API->>Auth: Validate JWT
+                    Auth-->>API: user_id, workspace_id
+                    API->>DB: SELECT campaign WHERE id = ? FOR UPDATE
+                    DB-->>API: campaign record
+                    API->>API: Validate ownership
+                    API->>N8N: POST /workflows/{n8n_id}/activate
+                    N8N-->>API: 200 OK
+                    API->>DB: UPDATE status = 'active'
+                    API-->>User: {success: true, status: 'active'}
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        window.onload = function() {
+            mermaid.initialize({ 
+                startOnLoad: true,
+                theme: 'dark',
+                securityLevel: 'loose',
+                fontFamily: 'sans-serif'
+            });
+        };
+    </script>
+</body>
+</html>
