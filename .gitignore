@@ -51,6 +51,7 @@ supabase/.temp/
 
 # === Archive (local backups) ===
 archive/
+docs/archive/
 
 # === Temporary / Draft files ===
 *.tmp
