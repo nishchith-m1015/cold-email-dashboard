@@ -148,13 +148,15 @@ export function WorkspaceMembersTable({ debugMode = false }: { debugMode?: boole
                 </TableCell>
                 <TableCell className="text-right">
                   {showActions && (!member.isCurrentUser || debugMode) && member.role !== 'owner' ? (
-                    <RoleSelector
-                      workspaceId={workspaceId!}
-                      userId={member.userId}
-                      currentRole={member.role}
-                      onRoleChanged={() => mutate()}
-                      disabled={!canManage} // Visual only in debug mode
-                    />
+                    <div className="flex items-center justify-end gap-2">
+                      <RoleSelector
+                        workspaceId={workspaceId!}
+                        userId={member.userId}
+                        currentRole={member.role}
+                        onRoleChanged={() => mutate()}
+                        disabled={!canManage} // Visual only in debug mode
+                      />
+                    </div>
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>
                   )}

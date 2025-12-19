@@ -28,6 +28,7 @@ interface TimezoneSelectorProps {
   selectedTimezone: string;
   onTimezoneChange: (timezone: string) => void;
   className?: string;
+  disabled?: boolean;
 }
 
 /**
@@ -48,6 +49,7 @@ export function TimezoneSelector({
   selectedTimezone,
   onTimezoneChange,
   className,
+  disabled = false,
 }: TimezoneSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [autoDetected, setAutoDetected] = useState(false);
@@ -73,16 +75,17 @@ export function TimezoneSelector({
       <Popover.Trigger asChild>
         <Button
           variant="outline"
-          className={cn('justify-start gap-2 min-w-[140px]', className)}
+          className={cn('justify-start gap-1.5 min-w-[100px] h-8 px-2.5 text-xs', className)}
+          disabled={disabled}
         >
           {isAutoDetected ? (
-            <MapPin className="h-4 w-4 text-accent-success" />
+            <MapPin className="h-3.5 w-3.5 text-accent-success" />
           ) : (
-            <Globe className="h-4 w-4 text-text-secondary" />
+            <Globe className="h-3.5 w-3.5 text-text-secondary" />
           )}
-          <span className="flex-1 text-left text-sm">{selected.offset}</span>
+          <span className="flex-1 text-left">{selected.offset}</span>
           <ChevronDown className={cn(
-            'h-4 w-4 text-text-secondary transition-transform',
+            'h-3.5 w-3.5 text-text-secondary transition-transform',
             isOpen && 'rotate-180'
           )} />
         </Button>

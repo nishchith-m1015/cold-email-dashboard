@@ -1,31 +1,61 @@
-.vercel
-node_modules
-.next
-.DS_Store
-.vercelignore
-playwright-report
-__mocks__
-__tests__
-.github 
-test-results
-flowchart LR.md
-plans
+# === Dependencies ===
+node_modules/
 
-
-# Environment files
-secret/.env.local
-secret/.env.test
-backups/.env.local.bak
-
-# Build artifacts
+# === Build artifacts ===
+.next/
+.swc/
 tsconfig.tsbuildinfo
 coverage/
+dist/
+out/
 
-# Temporary files
-supabase/.temp/
-
-# Backup files
+# === Environment files (CRITICAL - never commit) ===
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+secret/
 backups/
 
-# IDE (optional - depends on team preference)
+# === IDE / Editor ===
 .cursor/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === OS files ===
+.DS_Store
+Thumbs.db
+
+# === Vercel ===
+.vercel/
+.vercelignore
+
+# === Testing ===
+playwright-report/
+test-results/
+coverage/
+
+# === Logs ===
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# === Database / Supabase ===
+supabase/.temp/
+*.dump
+
+# === Archive (local backups) ===
+archive/
+
+# === Temporary / Draft files ===
+*.tmp
+*.bak
+
+# === Local planning (optional) ===
+plans/
+flowchart LR.md

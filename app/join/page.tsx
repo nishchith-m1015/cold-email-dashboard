@@ -13,9 +13,10 @@ const JoinTeamPageClient = NextDynamic(() => import('@/components/pages/join-pag
 
 export default function JoinTeamPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-text-secondary">Loading join flow…</div>}>
-      <JoinTeamPageClient />
-    </Suspense>
+    <div className="h-screen overflow-hidden">
+      <Suspense fallback={<div className="h-screen flex items-center justify-center text-sm text-text-secondary">Loading join flow…</div>}>
+        <JoinTeamPageClient />
+      </Suspense>
+    </div>
   );
 }
-

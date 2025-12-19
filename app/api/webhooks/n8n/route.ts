@@ -51,10 +51,11 @@ function verifySignature(body: string, signature: string | null): boolean {
     .update(body)
     .digest('hex');
 
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSig)
-  );
+  // Use Uint8Array for timingSafeEqual compatibility
+  const sigBuffer = new Uint8Array(Buffer.from(signature));
+  const expectedBuffer = new Uint8Array(Buffer.from(expectedSig));
+
+  return crypto.timingSafeEqual(sigBuffer, expectedBuffer);
 }
 
 // ============================================

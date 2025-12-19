@@ -38,24 +38,15 @@ export default function AnalyticsPageClient() {
   const { workspace } = useWorkspace();
   const [selectedProvider, setSelectedProvider] = useState<ProviderId | undefined>();
   const [timezone, setTimezone] = useState('America/Los_Angeles');
-  const [autoRefresh, setAutoRefresh] = useState<number>(30);
   const workspaceId = workspace?.id;
   
   useEffect(() => {
     const savedTz = localStorage.getItem('dashboard_timezone');
-    const savedRefresh = localStorage.getItem('dashboard_auto_refresh');
     if (workspace?.settings?.timezone && typeof workspace.settings.timezone === 'string') {
       setTimezone(workspace.settings.timezone);
       localStorage.setItem('dashboard_timezone', workspace.settings.timezone);
     } else if (savedTz) {
       setTimezone(savedTz);
-    }
-    if (typeof workspace?.settings?.auto_refresh_seconds === 'number') {
-      setAutoRefresh(Number(workspace.settings.auto_refresh_seconds));
-      localStorage.setItem('dashboard_auto_refresh', String(workspace.settings.auto_refresh_seconds));
-    } else if (savedRefresh) {
-      const val = Number(savedRefresh);
-      if (Number.isFinite(val)) setAutoRefresh(val);
     }
   }, [workspace?.settings]);
   
@@ -91,24 +82,11 @@ export default function AnalyticsPageClient() {
     campaigns,
     campaignsLoading,
     uniqueContacts,
-    refresh,
   } = dashboardData;
 
-  useEffect(() => {
-    const intervalSeconds = autoRefresh;
-    if (!intervalSeconds || intervalSeconds <= 0) return;
-    const id = setInterval(() => {
-      refresh();
-    }, intervalSeconds * 1000);
-    return () => clearInterval(id);
-  }, [autoRefresh, refresh]);
-
+  // Storage sync for timezone
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === 'dashboard_auto_refresh' && e.newValue) {
-        const val = Number(e.newValue);
-        if (Number.isFinite(val)) setAutoRefresh(val);
-      }
       if (e.key === 'dashboard_timezone' && e.newValue) {
         setTimezone(e.newValue);
       }
@@ -166,7 +144,7 @@ export default function AnalyticsPageClient() {
           </div>
         </div>
         
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <CampaignSelector
             campaigns={campaigns}
             selectedCampaign={selectedCampaign}

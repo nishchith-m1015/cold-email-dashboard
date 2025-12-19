@@ -119,63 +119,77 @@ export function StepBreakdown({
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={cn(
-                  'relative rounded-lg border p-4 overflow-hidden',
-                  stepColors[index]
-                )}
+                className="group/step relative"
               >
-                {/* Background gradient */}
-                <div className={cn(
-                  'absolute inset-0 bg-gradient-to-r opacity-50',
-                  stepBgColors[index]
-                )} />
-                
-                <div className="relative flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      'flex items-center justify-center h-8 w-8 rounded-lg',
-                      index === 0 && 'bg-accent-primary/20',
-                      index === 1 && 'bg-accent-purple/20',
-                      index === 2 && 'bg-accent-success/20'
-                    )}>
-                      <Mail className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-text-primary text-sm">
-                        {step.name}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Clock className="h-3 w-3 text-text-secondary" />
-                        <span className="text-xs text-text-secondary">
-                          Last sent: {formatTime(step.lastSentAt)}
-                        </span>
+                <div
+                  className={cn(
+                    'relative rounded-lg border p-4 overflow-hidden transition-all cursor-default',
+                    stepColors[index],
+                    'hover:shadow-md hover:scale-[1.02]'
+                  )}
+                >
+                  {/* Background gradient */}
+                  <div className={cn(
+                    'absolute inset-0 bg-gradient-to-r opacity-50',
+                    stepBgColors[index]
+                  )} />
+                  
+                  <div className="relative flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        'flex items-center justify-center h-8 w-8 rounded-lg',
+                        index === 0 && 'bg-accent-primary/20',
+                        index === 1 && 'bg-accent-purple/20',
+                        index === 2 && 'bg-accent-success/20'
+                      )}>
+                        <Mail className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-text-primary text-sm">
+                          {step.name}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Clock className="h-3 w-3 text-text-secondary" />
+                          <span className="text-xs text-text-secondary">
+                            Last sent: {formatTime(step.lastSentAt)}
+                          </span>
+                        </div>
                       </div>
                     </div>
+                    
+                    <div className="text-right">
+                      <p className="text-xl font-bold text-text-primary">
+                        {formatNumber(step.sends)}
+                      </p>
+                      <p className="text-xs text-text-secondary">
+                        {getPercentage(step.sends)}% of {totalLeads > 0 ? 'leads' : 'total'}
+                      </p>
+                    </div>
                   </div>
-                  
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-text-primary">
-                      {formatNumber(step.sends)}
-                    </p>
-                    <p className="text-xs text-text-secondary">
-                      {getPercentage(step.sends)}% of {totalLeads > 0 ? 'leads' : 'total'}
-                    </p>
-                  </div>
-                </div>
 
-                {/* Progress bar */}
-                <div className="relative mt-3 h-1.5 bg-surface-elevated rounded-full overflow-hidden">
-                  <motion.div
-                    className={cn(
-                      'absolute inset-y-0 left-0 rounded-full',
-                      index === 0 && 'bg-accent-primary',
-                      index === 1 && 'bg-accent-purple',
-                      index === 2 && 'bg-accent-success'
-                    )}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${getPercentage(step.sends)}%` }}
-                    transition={{ duration: 0.8, delay: index * 0.1 + 0.2 }}
-                  />
+                  {/* Progress bar */}
+                  <div className="relative mt-3 h-1.5 bg-surface-elevated rounded-full overflow-hidden">
+                    <motion.div
+                      className={cn(
+                        'absolute inset-y-0 left-0 rounded-full',
+                        index === 0 && 'bg-accent-primary',
+                        index === 1 && 'bg-accent-purple',
+                        index === 2 && 'bg-accent-success'
+                      )}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${getPercentage(step.sends)}%` }}
+                      transition={{ duration: 0.8, delay: index * 0.1 + 0.2 }}
+                    />
+                  </div>
+
+                  {/* Hover Tooltip - Compact */}
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover/step:opacity-100 transition-opacity pointer-events-none z-10">
+                    <div className="bg-surface border border-border rounded px-2 py-1 shadow-lg whitespace-nowrap">
+                      <p className="text-[10px] font-semibold text-text-primary">
+                        {formatNumber(step.sends)} sends · {getPercentage(step.sends)}%
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             ))}

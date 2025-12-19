@@ -117,21 +117,21 @@ export function MetricCard({
       transition={{ duration: 0.4, delay: delay * 0.1 }}
     >
       <Card className={cn(
-        'relative overflow-hidden group hover:border-accent-primary/30 transition-all duration-300 h-full',
+        'relative overflow-hidden group/card hover:border-accent-primary/30 transition-all duration-300 h-full',
         className
       )}>
         {isRefetching && (
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent-primary/60 animate-pulse" />
         )}
         {/* Gradient glow on hover */}
-        <div className="absolute inset-0 bg-gradient-to-br from-accent-primary/5 to-accent-purple/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-700/5 opacity-0 group-hover/card:opacity-100 transition-opacity duration-300" />
         
         <div className="relative flex items-start justify-between">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-text-secondary">{title}</p>
+          <div className="space-y-1 sm:space-y-2">
+            <p className="text-xs sm:text-sm font-medium text-text-secondary">{title}</p>
             
             <motion.p 
-              className="text-3xl font-bold text-text-primary tracking-tight cursor-default"
+              className="text-2xl sm:text-3xl font-bold text-text-primary tracking-tight cursor-default"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: delay * 0.1 + 0.2 }}
@@ -144,25 +144,25 @@ export function MetricCard({
             )}
 
             {change !== undefined && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-1.5">
                 {trendIsPositive && (
                   <TrendingUp className={cn(
-                    'h-4 w-4',
+                    'h-3.5 w-3.5 sm:h-4 sm:w-4',
                     isGoodTrend ? 'text-accent-success' : 'text-accent-danger'
                   )} />
                 )}
                 {trendIsNegative && (
                   <TrendingDown className={cn(
-                    'h-4 w-4',
+                    'h-3.5 w-3.5 sm:h-4 sm:w-4',
                     isBadTrend ? 'text-accent-danger' : 'text-accent-success'
                   )} />
                 )}
                 {change === 0 && (
-                  <Minus className="h-4 w-4 text-text-secondary" />
+                  <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-text-secondary" />
                 )}
                 
                 <span className={cn(
-                  'text-sm font-medium',
+                  'text-xs sm:text-sm font-medium',
                   change === 0 && 'text-text-secondary',
                   isGoodTrend && 'text-accent-success',
                   isBadTrend && 'text-accent-danger'
@@ -170,7 +170,7 @@ export function MetricCard({
                   {change > 0 ? '+' : ''}{change.toFixed(1)}{changeLabel || '%'}
                 </span>
                 
-                <span className="text-xs text-text-secondary">vs prev</span>
+                <span className="text-xs text-text-secondary hidden sm:inline">vs prev</span>
               </div>
             )}
 
@@ -181,10 +181,10 @@ export function MetricCard({
           </div>
 
           <div className={cn(
-            'flex items-center justify-center h-12 w-12 rounded-xl',
+            'flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-xl flex-shrink-0',
             iconColors
           )}>
-            <Icon className="h-6 w-6" />
+            <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
         </div>
       </Card>

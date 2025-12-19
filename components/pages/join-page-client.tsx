@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { motion } from 'framer-motion';
@@ -14,7 +14,8 @@ import {
   BarChart3,
   Loader2,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Building2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,14 @@ export default function JoinTeamPageClient() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Prevent body scroll
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   const handleJoinTeam = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,23 +113,18 @@ export default function JoinTeamPageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
+    <div className="h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4 overflow-hidden">
+      <div className="w-full max-w-3xl -translate-y-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="text-center mb-10"
         >
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="p-2 bg-accent-primary/10 rounded-xl">
-              <Zap className="h-8 w-8 text-accent-primary" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-text-primary mb-2">
+          <h1 className="text-2xl font-semibold text-white mb-2">
             Welcome, {user?.firstName || 'there'}!
           </h1>
-          <p className="text-text-secondary text-lg">
-            Choose how you want to get started with Cold Email Analytics
+          <p className="text-slate-400">
+            Choose how you want to get started
           </p>
         </motion.div>
 
@@ -128,10 +132,10 @@ export default function JoinTeamPageClient() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3"
+            className="mb-6 p-3.5 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3"
           >
-            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-            <p className="text-red-500">{error}</p>
+            <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+            <p className="text-red-500 text-sm">{error}</p>
           </motion.div>
         )}
 
@@ -139,29 +143,27 @@ export default function JoinTeamPageClient() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-3"
+            className="mb-6 p-3.5 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-3"
           >
-            <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-            <p className="text-green-500">{success}</p>
+            <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+            <p className="text-green-500 text-sm">{success}</p>
           </motion.div>
         )}
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-5">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-surface-card border border-border rounded-2xl p-8"
+            className="bg-surface-card border border-border rounded-xl p-6 hover:border-border-hover transition-colors"
           >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-accent-purple/10 rounded-xl">
-                <Users className="h-6 w-6 text-accent-purple" />
-              </div>
+            <div className="flex items-center gap-3 mb-5">
+              <Users className="h-5 w-5 text-text-secondary" />
               <div>
-                <h2 className="text-xl font-semibold text-text-primary">
+                <h2 className="text-lg font-semibold text-text-primary">
                   Join a Team
                 </h2>
-                <p className="text-sm text-text-secondary">
+                <p className="text-xs text-text-secondary">
                   Enter an invite code to access shared data
                 </p>
               </div>
@@ -169,20 +171,20 @@ export default function JoinTeamPageClient() {
 
             <form onSubmit={handleJoinTeam} className="space-y-4">
               <div>
-                <label className="block text-sm text-text-secondary mb-2">
+                <label className="block text-xs text-text-secondary mb-1.5 font-medium">
                   Team Invite Code
                 </label>
                 <div className="relative">
-                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-secondary" />
+                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-secondary" />
                   <input
                     type="text"
                     value={inviteCode}
                     onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                     placeholder="Enter code (e.g., TEAM-XXXX)"
                     className={cn(
-                      "w-full pl-10 pr-4 py-3 rounded-lg",
+                      "w-full pl-9 pr-3 py-2.5 rounded-lg text-sm",
                       "bg-surface-elevated border border-border",
-                      "text-text-primary placeholder:text-text-secondary",
+                      "text-text-primary placeholder:text-text-secondary/60",
                       "focus:outline-none focus:ring-2 focus:ring-accent-primary/50",
                       "transition-all"
                     )}
@@ -194,32 +196,31 @@ export default function JoinTeamPageClient() {
               <Button
                 type="submit"
                 disabled={isJoining || !inviteCode.trim()}
-                className="w-full gap-2"
+                className="w-full h-9 text-sm"
               >
                 {isJoining ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <ArrowRight className="h-4 w-4" />
+                  <>
+                    Join Team
+                    <ArrowRight className="h-4 w-4 ml-1" />
+                  </>
                 )}
-                Join Team
               </Button>
             </form>
 
-            <div className="mt-6 pt-6 border-t border-border">
-              <h3 className="text-sm font-medium text-text-primary mb-3">
-                What you get:
-              </h3>
+            <div className="mt-5 pt-5 border-t border-border">
               <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-sm text-text-secondary">
-                  <CheckCircle className="h-4 w-4 text-accent-success" />
-                  Access to shared campaign data
+                <li className="flex items-center gap-2 text-xs text-text-secondary">
+                  <CheckCircle className="h-3.5 w-3.5 text-accent-success" />
+                  Access shared campaign data
                 </li>
-                <li className="flex items-center gap-2 text-sm text-text-secondary">
-                  <CheckCircle className="h-4 w-4 text-accent-success" />
+                <li className="flex items-center gap-2 text-xs text-text-secondary">
+                  <CheckCircle className="h-3.5 w-3.5 text-accent-success" />
                   View analytics and metrics
                 </li>
-                <li className="flex items-center gap-2 text-sm text-text-secondary">
-                  <CheckCircle className="h-4 w-4 text-accent-success" />
+                <li className="flex items-center gap-2 text-xs text-text-secondary">
+                  <CheckCircle className="h-3.5 w-3.5 text-accent-success" />
                   Collaborate with team members
                 </li>
               </ul>
@@ -230,24 +231,22 @@ export default function JoinTeamPageClient() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-surface-card border border-border rounded-2xl p-8"
+            className="bg-surface-card border border-border rounded-xl p-6 hover:border-border-hover transition-colors"
           >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-accent-primary/10 rounded-xl">
-                <Plus className="h-6 w-6 text-accent-primary" />
-              </div>
+            <div className="flex items-center gap-3 mb-5">
+              <Building2 className="h-5 w-5 text-text-secondary" />
               <div>
-                <h2 className="text-xl font-semibold text-text-primary">
-                  Create Your Dashboard
+                <h2 className="text-lg font-semibold text-text-primary">
+                  Create Workspace
                 </h2>
-                <p className="text-sm text-text-secondary">
+                <p className="text-xs text-text-secondary">
                   Start fresh with your own workspace
                 </p>
               </div>
             </div>
 
             <div className="space-y-4">
-              <p className="text-text-secondary">
+              <p className="text-sm text-text-secondary leading-relaxed">
                 Create a new empty dashboard and start tracking your own cold email campaigns.
               </p>
 
@@ -255,32 +254,31 @@ export default function JoinTeamPageClient() {
                 onClick={handleCreateDashboard}
                 disabled={isCreating}
                 variant="outline"
-                className="w-full gap-2"
+                className="w-full h-9 text-sm"
               >
                 {isCreating ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Plus className="h-4 w-4" />
+                  <>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Create Empty Dashboard
+                  </>
                 )}
-                Create Empty Dashboard
               </Button>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-border">
-              <h3 className="text-sm font-medium text-text-primary mb-3">
-                Features included:
-              </h3>
+            <div className="mt-5 pt-5 border-t border-border">
               <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-sm text-text-secondary">
-                  <BarChart3 className="h-4 w-4 text-accent-primary" />
+                <li className="flex items-center gap-2 text-xs text-text-secondary">
+                  <BarChart3 className="h-3.5 w-3.5 text-text-secondary" />
                   Full analytics dashboard
                 </li>
-                <li className="flex items-center gap-2 text-sm text-text-secondary">
-                  <Shield className="h-4 w-4 text-accent-primary" />
+                <li className="flex items-center gap-2 text-xs text-text-secondary">
+                  <CheckCircle className="h-3.5 w-3.5 text-text-secondary" />
                   Private & secure workspace
                 </li>
-                <li className="flex items-center gap-2 text-sm text-text-secondary">
-                  <Users className="h-4 w-4 text-accent-primary" />
+                <li className="flex items-center gap-2 text-xs text-text-secondary">
+                  <Users className="h-3.5 w-3.5 text-text-secondary" />
                   Invite team members later
                 </li>
               </ul>
@@ -292,15 +290,11 @@ export default function JoinTeamPageClient() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="text-center mt-8 text-sm text-text-secondary"
+          className="text-center mt-6 text-xs text-text-secondary"
         >
           <p>Choose an option above to access the dashboard.</p>
-          <p className="mt-1 text-xs opacity-70">
-            You must join a team or create your own workspace to continue.
-          </p>
         </motion.div>
       </div>
     </div>
   );
 }
-

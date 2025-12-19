@@ -36,7 +36,7 @@ A modern, high-performance analytics dashboard for tracking cold email campaigns
 - **Timezone Support**: Accurate time-based charts in any timezone
 - **Error Boundaries**: Graceful failure handling with recovery
 
-### ⚡ Client Self-Service (Phase 35 ✅)
+### ⚡ Client Self-Service
 
 - **Global Search**: Fuzzy search across campaigns, contacts, and navigation (⌘K)
 - **Inline Editing**: Edit campaign names directly in tables with real-time save
@@ -45,6 +45,20 @@ A modern, high-performance analytics dashboard for tracking cold email campaigns
 - **Bulk Operations**: Multi-select campaigns for batch pause/resume/delete
 - **Customizable Dashboard**: Drag-and-drop widgets with visibility toggles
 - **Settings Vault**: Unified settings management (workspace, timezone, security)
+
+### 👑 Super Admin & Governance
+
+- **Admin Dashboard**: Cross-workspace oversight at `/admin`
+- **Audit Log Viewer**: Real-time activity timeline with filtering
+- **Workspace Governance**: Freeze/unfreeze controls, compliance checks
+
+### 📱 Mobile Sovereignty (Phase 38 ✅)
+
+- **Bottom Navigation**: 5-tab nav for Home, Analytics, Contacts, Sequences, Settings
+- **Mobile Drawer**: Slide-out menu with workspace switcher, theme toggle, sign-out
+- **Responsive Pages**: Card-based views, bottom sheets, mobile-optimized layouts
+- **Touch-Friendly**: FAB for quick actions, 44px tap targets, safe area handling
+- **Polish**: Animated sign-out transition, centered branding on sign-in
 
 ### 🤖 AI-Powered Insights
 
@@ -65,55 +79,184 @@ A modern, high-performance analytics dashboard for tracking cold email campaigns
 
 ```mermaid
 graph TB
-    subgraph "n8n Workflows"
-        W1[Email Preparation]
-        W2[Email Sequences 1-3]
-        W3[Reply Tracker]
-        W4[Click Tracker]
+    subgraph CLIENT["🖥️ CLIENT LAYER"]
+        subgraph Desktop["Desktop UI"]
+            HEADER[Header<br/>Nav + Search + Notifications]
+            DASH[Dashboard<br/>Widgets + Charts]
+            CONTACTS[Contacts<br/>TanStack Table]
+            SEQ[Sequences<br/>Dispatch Monitor]
+            SETTINGS[Settings<br/>General + Security]
+        end
+
+        subgraph Mobile["📱 Mobile UI"]
+            MHEADER[Mobile Header<br/>Logo + Menu]
+            MDRAWER[Slide Drawer<br/>Workspace + Theme]
+            BNAV[Bottom Nav<br/>5-Tab Bar]
+            FAB[Floating Action<br/>Quick Create]
+        end
+
+        subgraph Admin["👑 Super Admin"]
+            ADMIN[Admin Panel<br/>Cross-Workspace]
+            AUDIT[Audit Log<br/>Activity Timeline]
+            GOV[Governance<br/>Freeze Controls]
+        end
     end
 
-    subgraph "Next.js Dashboard"
-        UI[Frontend UI<br/>React + Tailwind]
-        API[API Routes<br/>Edge Runtime]
-        SWR[SWR Cache<br/>10s dedup]
-        CTX[Dashboard Context<br/>Global State]
+    subgraph STATE["📦 STATE MANAGEMENT"]
+        SWR[SWR Cache<br/>10s Dedup]
+        DCTX[Dashboard Context<br/>Filters + Dates]
+        WCTX[Workspace Context<br/>Active Workspace]
+        PERMS[Permissions Hook<br/>Role-Based UI]
     end
 
-    subgraph "Supabase PostgreSQL"
-        DB[(Raw Tables<br/>email_events<br/>llm_usage)]
-        WQ[webhook_queue<br/>Async Processing]
-        MV1[mv_daily_stats<br/>Pre-aggregated]
-        MV2[mv_llm_cost<br/>Pre-aggregated]
-        RLS[Row Level Security<br/>Workspace Isolation]
+    subgraph SECURITY["🔐 SECURITY LAYER"]
+        CLERK[Clerk Auth<br/>SSO + JWT]
+        MW[Middleware<br/>Route Protection]
+        RBAC[RBAC Engine<br/>4 Roles]
+        GUARD[API Guard<br/>Workspace Validation]
+        RATE[Rate Limiter<br/>Request Throttle]
+        SANITIZE[Sanitizer<br/>Response Cleaning]
+        ENCRYPT[Encryption<br/>AES-256-GCM]
     end
 
-    subgraph "Authentication"
-        CLERK[Clerk Auth<br/>Multi-tenant]
+    subgraph API["⚡ API LAYER - 40+ Routes"]
+        subgraph CoreAPI["Core"]
+            API_DASH[/dashboard/aggregate]
+            API_METRICS[/metrics/*<br/>summary, timeseries]
+            API_SEARCH[/search]
+        end
+
+        subgraph DataAPI["Data"]
+            API_CAMPAIGNS[/campaigns/*]
+            API_CONTACTS[/contacts/*]
+            API_SEQ[/sequences/*]
+            API_NOTIF[/notifications]
+        end
+
+        subgraph AdminAPI["Admin"]
+            API_ADMIN[/admin/*<br/>audit, freeze, users]
+            API_WS[/workspaces/*<br/>CRUD, invites, access]
+            API_SETTINGS[/workspaces/settings]
+        end
+
+        subgraph IntegrationAPI["Integration"]
+            API_EVENTS[/events<br/>Webhook Receiver]
+            API_TRACK[/track/*<br/>open, click]
+            API_ASK[/ask<br/>AI Chat]
+            API_WEBHOOKS[/webhooks/*<br/>clerk, n8n]
+        end
     end
 
-    W1 -->|POST /api/cost-events| API
-    W2 -->|POST /api/events| API
-    W3 -->|POST /api/events| API
-    W4 -->|GET /api/track/click| API
+    subgraph DATA["🗄️ DATA LAYER - Supabase"]
+        subgraph Tables["Core Tables"]
+            LEADS[(leads_ohio<br/>Master Leads)]
+            EVENTS[(email_events<br/>Timeline)]
+            LLM[(llm_usage<br/>Cost Ledger)]
+        end
 
-    API -->|INSERT| WQ
-    WQ -->|Trigger Function| DB
-    DB -->|REFRESH CONCURRENTLY| MV1
-    DB -->|REFRESH CONCURRENTLY| MV2
+        subgraph Multi["Multi-Tenant"]
+            WS[(workspaces)]
+            UW[(user_workspaces<br/>RBAC Mapping)]
+            NOTIF_T[(notifications)]
+        end
 
-    UI -->|Fetch Data| SWR
-    SWR -->|HTTP Request| API
-    API -->|SELECT| MV1
-    API -->|SELECT| MV2
+        subgraph Perf["Performance"]
+            MV1[mv_daily_stats<br/>Pre-aggregated]
+            MV2[mv_llm_cost<br/>Pre-aggregated]
+            WQ[webhook_queue<br/>Async Buffer]
+        end
 
-    CLERK -->|Protect Routes| UI
-    CLERK -->|Validate Sessions| API
-    RLS -->|Filter Rows| MV1
-    RLS -->|Filter Rows| MV2
+        subgraph Sec["Security"]
+            KEYS[(workspace_keys<br/>Encrypted)]
+            AUDIT_T[(audit_log)]
+            RLS{RLS Policies<br/>Row Isolation}
+        end
+    end
 
-    CTX -->|Global State| UI
-    SWR -->|Cache| CTX
+    subgraph EXTERNAL["🌐 EXTERNAL INTEGRATIONS"]
+        subgraph N8N["n8n Workflows"]
+            N8N_PREP[Email Prep]
+            N8N_SEQ[Sequences 1-3]
+            N8N_REPLY[Reply Tracker]
+            N8N_CLICK[Click Tracker]
+        end
+
+        subgraph LLM_EXT["LLM Providers"]
+            OPENAI[OpenAI]
+            ANTHROPIC[Anthropic]
+        end
+
+        subgraph Track["Email Tracking"]
+            PIXEL[Open Pixel]
+            REDIRECT[Click Redirect]
+        end
+    end
+
+    %% Client to State
+    Desktop --> SWR
+    Mobile --> SWR
+    Admin --> SWR
+    SWR --> DCTX
+    DCTX --> WCTX
+    WCTX --> PERMS
+
+    %% Security Flow
+    CLIENT --> MW
+    MW --> CLERK
+    CLERK --> RBAC
+    API --> GUARD
+    GUARD --> RATE
+    RATE --> SANITIZE
+
+    %% API to Data
+    CoreAPI --> MV1
+    CoreAPI --> MV2
+    DataAPI --> LEADS
+    DataAPI --> EVENTS
+    AdminAPI --> AUDIT_T
+    AdminAPI --> WS
+    IntegrationAPI --> WQ
+
+    %% Data Processing
+    WQ --> EVENTS
+    EVENTS --> MV1
+    LLM --> MV2
+    RLS --> Tables
+    RLS --> Multi
+
+    %% External Integrations
+    N8N --> API_EVENTS
+    N8N --> API_TRACK
+    API_ASK --> LLM_EXT
+    Track --> API_TRACK
+    ENCRYPT --> KEYS
+
+    %% Styling
+    classDef clientStyle fill:#1e40af,stroke:#3b82f6,color:#fff
+    classDef stateStyle fill:#7c3aed,stroke:#a78bfa,color:#fff
+    classDef securityStyle fill:#dc2626,stroke:#f87171,color:#fff
+    classDef apiStyle fill:#059669,stroke:#34d399,color:#fff
+    classDef dataStyle fill:#d97706,stroke:#fbbf24,color:#000
+    classDef externalStyle fill:#6b7280,stroke:#9ca3af,color:#fff
+
+    class Desktop,Mobile,Admin clientStyle
+    class SWR,DCTX,WCTX,PERMS stateStyle
+    class CLERK,MW,RBAC,GUARD,RATE,SANITIZE,ENCRYPT securityStyle
+    class CoreAPI,DataAPI,AdminAPI,IntegrationAPI apiStyle
+    class Tables,Multi,Perf,Sec dataStyle
+    class N8N,LLM_EXT,Track externalStyle
 ```
+
+### Architecture Legend
+
+| Layer           | Purpose                                               |
+| --------------- | ----------------------------------------------------- |
+| 🖥️ **Client**   | Desktop UI, Mobile UI (Phase 38), Admin Panel         |
+| 📦 **State**    | SWR caching, React contexts, permission hooks         |
+| 🔐 **Security** | Clerk auth, RBAC (4 roles), rate limiting, encryption |
+| ⚡ **API**      | 40+ Next.js API routes across 27 domains              |
+| 🗄️ **Data**     | Supabase PostgreSQL with RLS, materialized views      |
+| 🌐 **External** | n8n workflows, LLM providers, email tracking          |
 
 ---
 

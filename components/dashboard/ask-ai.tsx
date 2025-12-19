@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Send, Loader2, CheckCircle, Shield, ChevronDown, Square } from 'lucide-react';
+import { Sparkles, Send, Loader2, CheckCircle, Shield, ChevronDown, Square, User } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -20,8 +21,10 @@ const SUGGESTIONS = [
 
 export function AskAI({ className }: AskAIProps) {
   const [question, setQuestion] = useState('');
+  const [lastQuestion, setLastQuestion] = useState(''); // Track the asked question
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false); // Track streaming state
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [openaiKey, setOpenaiKey] = useState('');
   const [openrouterKey, setOpenrouterKey] = useState('');
@@ -43,6 +46,7 @@ export function AskAI({ className }: AskAIProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const configRef = useRef<HTMLDivElement>(null);
   const layoutEndRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null); // For auto-scroll
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -68,6 +72,7 @@ export function AskAI({ className }: AskAIProps) {
     // Guard: if no key and no env fallback, let backend decide; we still allow ask.
 
     setLoading(true);
+    setLastQuestion(queryText); // Store the question for display
     setAnswer('');
     setShowSuggestions(false);
 
@@ -87,6 +92,7 @@ export function AskAI({ className }: AskAIProps) {
       const chosenModel = customModel || model || (provider === 'openai' ? 'gpt-4o' : 'openrouter/auto');
 
       if (useStreaming) {
+        setIsStreaming(true);
         const res = await fetch('/api/ask', {
           method: 'POST',
           headers,
@@ -95,19 +101,67 @@ export function AskAI({ className }: AskAIProps) {
         });
         if (!res.body) {
           setAnswer('Streaming not supported right now. Please try again without streaming.');
+          setIsStreaming(false);
           return;
         }
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        let text = '';
+        let fullText = '';
+        let buffer = '';
+        
         while (true) {
           const { value, done } = await reader.read();
           if (done || controller.signal.aborted) break;
-          text += decoder.decode(value, { stream: true });
-          setAnswer(text);
+          
+          buffer += decoder.decode(value, { stream: true });
+          
+          // Parse SSE lines (data: {...})
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep incomplete line in buffer
+          
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data:')) continue;
+            if (trimmed === 'data: [DONE]') continue;
+            
+            try {
+              const jsonStr = trimmed.slice(5).trim(); // Remove "data:" prefix
+              if (!jsonStr) continue;
+              const parsed = JSON.parse(jsonStr);
+              // Extract content from OpenAI/OpenRouter format
+              const content = parsed.choices?.[0]?.delta?.content || 
+                             parsed.choices?.[0]?.message?.content || 
+                             parsed.content || '';
+              if (content) {
+                fullText += content;
+                setAnswer(fullText);
+              }
+            } catch {
+              // Skip unparseable lines
+            }
+          }
         }
-        text += decoder.decode();
-        setAnswer(text || 'No answer available.');
+        
+        // Process any remaining buffer
+        if (buffer.trim() && buffer.trim().startsWith('data:') && buffer.trim() !== 'data: [DONE]') {
+          try {
+            const jsonStr = buffer.trim().slice(5).trim();
+            if (jsonStr) {
+              const parsed = JSON.parse(jsonStr);
+              const content = parsed.choices?.[0]?.delta?.content || 
+                             parsed.choices?.[0]?.message?.content || 
+                             parsed.content || '';
+              if (content) {
+                fullText += content;
+              }
+            }
+          } catch {
+            // ignore
+          }
+        }
+        
+        setAnswer(fullText || 'No answer available.');
+        setIsStreaming(false);
       } else {
         const res = await fetch('/api/ask', {
           method: 'POST',
@@ -117,7 +171,13 @@ export function AskAI({ className }: AskAIProps) {
         });
         if (!res.ok) {
           const errText = await res.text();
-          setAnswer(errText || 'No answer available.');
+          // Try to parse as JSON to extract answer field
+          try {
+            const errData = JSON.parse(errText);
+            setAnswer(errData.answer || errData.error || 'Sorry, something went wrong. Please try again.');
+          } catch {
+            setAnswer(errText || 'No answer available.');
+          }
         } else {
         const data = await res.json();
         setAnswer(data.answer || 'No answer available.');
@@ -129,8 +189,10 @@ export function AskAI({ className }: AskAIProps) {
       } else {
       setAnswer('Sorry, something went wrong. Please try again.');
       }
+      setIsStreaming(false);
     } finally {
       setLoading(false);
+      setIsStreaming(false);
       abortRef.current = null;
     }
   };
@@ -307,6 +369,13 @@ export function AskAI({ className }: AskAIProps) {
     };
   }, [isSettingsOpen]);
 
+  // Auto-scroll chat to bottom when answer updates during streaming
+  useEffect(() => {
+    if (answer && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [answer]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -318,7 +387,8 @@ export function AskAI({ className }: AskAIProps) {
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-accent-primary to-accent-purple">
+              <div className="flex items-center justify-center h-8 w-8 rounded-lg overflow-hidden">
+                <Image src="/logo.png" alt="AI" width={32} height={32} className="w-full h-full object-cover" />
                 <Sparkles className="h-4 w-4 text-white" />
               </div>
               <div>
@@ -597,34 +667,81 @@ export function AskAI({ className }: AskAIProps) {
             )}
           </AnimatePresence>
 
-          {/* Answer */}
+          {/* Chat Messages Area */}
           <AnimatePresence mode="wait">
-            {(loading || answer) && (
-              <motion.div
-                key={loading ? 'loading' : 'answer'}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mt-4 rounded-xl bg-surface-elevated border border-border p-4"
-              >
-                {loading ? (
-                  <div className="flex items-center gap-3">
-                    <Loader2 className="h-5 w-5 animate-spin text-accent-primary" />
-                    <span className="text-sm text-text-secondary">Analyzing your data...</span>
-                  </div>
-                ) : (
-                  <div className="prose prose-sm prose-invert max-w-none">
-                    <div 
-                      className="text-sm text-text-primary whitespace-pre-wrap leading-relaxed"
-                      dangerouslySetInnerHTML={{ 
-                        __html: answer
-                          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                          .replace(/•/g, '<span class="text-accent-primary">•</span>')
-                      }}
-                    />
-                  </div>
+            {(loading || answer || lastQuestion) && (
+              <div className="mt-4 space-y-4">
+                {/* User Message Bubble */}
+                {lastQuestion && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex items-start gap-3 justify-end"
+                  >
+                    <div className="bg-accent-primary/10 border border-accent-primary/20 rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[85%]">
+                      <p className="text-sm text-text-primary">{lastQuestion}</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                  </motion.div>
                 )}
-              </motion.div>
+
+                {/* AI Response Bubble */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: 0.1 }}
+                  className="flex items-start gap-3"
+                >
+                  <div className="w-8 h-8 rounded-full bg-accent-purple/20 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-4 h-4 text-accent-purple" />
+                  </div>
+                  <div className="bg-surface-elevated border border-border rounded-2xl rounded-tl-sm px-4 py-2.5 max-w-[85%] min-w-[120px]">
+                    {loading && !answer ? (
+                      /* Typing Indicator - Three Dots */
+                      <div className="flex items-center gap-1.5 py-1">
+                        {[0, 1, 2].map((i) => (
+                          <motion.div
+                            key={i}
+                            animate={{ y: [0, -6, 0] }}
+                            transition={{ 
+                              duration: 0.6, 
+                              repeat: Infinity, 
+                              delay: i * 0.15,
+                              ease: "easeInOut"
+                            }}
+                            className="w-2 h-2 rounded-full bg-accent-purple/60"
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="prose prose-sm prose-invert max-w-none">
+                        <div 
+                          className="text-sm text-text-primary whitespace-pre-wrap leading-relaxed"
+                          dangerouslySetInnerHTML={{ 
+                            __html: answer
+                              .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                              .replace(/•/g, '<span class="text-accent-primary">•</span>')
+                          }}
+                        />
+                        {/* Blinking Cursor during streaming */}
+                        {isStreaming && (
+                          <motion.span
+                            animate={{ opacity: [1, 0] }}
+                            transition={{ duration: 0.5, repeat: Infinity, repeatType: "reverse" }}
+                            className="inline-block w-0.5 h-4 bg-accent-primary ml-0.5 align-middle"
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+
+                {/* Auto-scroll anchor */}
+                <div ref={messagesEndRef} />
+              </div>
             )}
           </AnimatePresence>
         </CardContent>

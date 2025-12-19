@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Fetch all workspaces with member counts
+  // Fetch all workspaces with member counts and status
   const { data: workspaces, error } = await supabaseAdmin
     .from('workspaces')
     .select(`
@@ -65,6 +65,9 @@ export async function GET(req: NextRequest) {
       slug,
       plan,
       created_at,
+      status,
+      frozen_at,
+      freeze_reason,
       user_workspaces (
         user_id,
         role
@@ -93,6 +96,9 @@ export async function GET(req: NextRequest) {
       memberCount: members.length,
       ownerUserId: owner?.user_id || null,
       createdAt: ws.created_at,
+      status: ws.status || 'active',
+      frozenAt: ws.frozen_at,
+      freezeReason: ws.freeze_reason,
     };
   });
 

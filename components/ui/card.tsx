@@ -8,8 +8,8 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      // Base styles
-      'rounded-xl border p-6 transition-all duration-200',
+      // Base styles - responsive padding for mobile
+      'rounded-xl border p-4 sm:p-6 transition-all duration-200',
       // Dark mode (default)
       'border-border bg-surface shadow-lg shadow-black/5 backdrop-blur-sm',
       // Light mode overrides via CSS

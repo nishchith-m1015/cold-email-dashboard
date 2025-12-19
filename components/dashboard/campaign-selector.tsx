@@ -36,24 +36,24 @@ export function CampaignSelector({
     >
       <Select.Trigger
         className={cn(
-          'inline-flex items-center justify-between gap-2 rounded-lg px-4 py-2.5',
-          'bg-surface-elevated border border-border text-sm font-medium text-text-primary',
-          'hover:bg-surface-elevated/80 transition-colors min-w-[180px]',
+          'inline-flex items-center justify-between gap-1.5 rounded-md px-2.5 h-8',
+          'bg-surface-elevated border border-border text-xs font-medium text-text-primary',
+          'hover:bg-surface-elevated/80 transition-colors min-w-[140px]',
           'focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-background',
           'disabled:opacity-50 disabled:pointer-events-none',
           className
         )}
         disabled={loading}
       >
-        <div className="flex items-center gap-2">
-          <Layers className="h-4 w-4 text-text-secondary" />
+        <div className="flex items-center gap-1.5">
+          <Layers className="h-3.5 w-3.5 text-text-secondary" />
           <Select.Value placeholder="All Campaigns">
             {selectedCampaign || 'All Campaigns'}
           </Select.Value>
         </div>
         <Select.Icon>
           <ChevronDown className={cn(
-            'h-4 w-4 text-text-secondary transition-transform',
+            'h-3.5 w-3.5 text-text-secondary transition-transform',
             isOpen && 'rotate-180'
           )} />
         </Select.Icon>

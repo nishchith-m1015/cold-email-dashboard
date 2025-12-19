@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -15,10 +16,8 @@ import {
   Moon,
   User,
   Users,
+  UserPlus,
   LayoutDashboard,
-  Globe,
-  Palette,
-  Clock,
   Check,
   X,
   AlertCircle,
@@ -27,7 +26,8 @@ import {
   Database,
   Trash2,
   Loader2,
-  Mail
+  Mail,
+  Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -40,6 +40,7 @@ import { RoleBadge } from '@/components/ui/role-badge';
 import { useNotifications } from '@/hooks/use-notifications';
 import { getNotificationIcon, getNotificationColor, formatTimeAgo as formatTime } from '@/lib/notification-utils';
 import { ShareDialog } from '@/components/dashboard/share-dialog';
+import { SignOutTransition } from '@/components/ui/sign-out-transition';
 
 interface HeaderProps {
   onCommandOpen?: () => void;
@@ -47,7 +48,7 @@ interface HeaderProps {
 
 // Theme hook
 function useTheme() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setThemeState] = useState<'dark' | 'light'>('dark');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -55,22 +56,28 @@ function useTheme() {
     // Check localStorage or system preference
     const stored = localStorage.getItem('theme');
     if (stored === 'light' || stored === 'dark') {
-      setTheme(stored);
+      setThemeState(stored);
       document.documentElement.classList.toggle('light', stored === 'light');
     } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-      setTheme('light');
+      setThemeState('light');
       document.documentElement.classList.add('light');
     }
   }, []);
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
+    setThemeState(newTheme);
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('light', newTheme === 'light');
   };
 
-  return { theme, toggleTheme, mounted };
+  const changeTheme = (newTheme: 'dark' | 'light') => {
+    setThemeState(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.toggle('light', newTheme === 'light');
+  };
+
+  return { theme, toggleTheme, changeTheme, mounted };
 }
 
 // Click outside hook
@@ -106,8 +113,8 @@ interface CacheStats {
 export function Header({ onCommandOpen }: HeaderProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { theme, toggleTheme, mounted } = useTheme();
-  const { workspaceId, workspace, userRole } = useWorkspace();
+  const { theme, toggleTheme, changeTheme, mounted } = useTheme();
+  const { workspaceId, workspace, userRole, isSuperAdmin } = useWorkspace();
   const { user } = useUser();
   
   // Preserve URL params when navigating
@@ -127,48 +134,19 @@ export function Header({ onCommandOpen }: HeaderProps) {
   const [isClearing, setIsClearing] = useState(false);
   const [clearStatus, setClearStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  // Preferences state
-  const [timezone, setTimezone] = useState<string>('America/Los_Angeles');
-  const [autoRefresh, setAutoRefresh] = useState<number>(30);
-  const [savingPref, setSavingPref] = useState(false);
-
-  // Initialize prefs on mount and when workspace settings change
-  useEffect(() => {
-    const savedTz = localStorage.getItem('dashboard_timezone');
-    const savedRefresh = localStorage.getItem('dashboard_auto_refresh');
-    if (workspace?.settings?.timezone && typeof workspace.settings.timezone === 'string') {
-      setTimezone(workspace.settings.timezone);
-      localStorage.setItem('dashboard_timezone', workspace.settings.timezone);
-    } else if (savedTz) {
-      setTimezone(savedTz);
-    }
-    if (typeof workspace?.settings?.auto_refresh_seconds === 'number') {
-      setAutoRefresh(Number(workspace.settings.auto_refresh_seconds));
-      localStorage.setItem('dashboard_auto_refresh', String(workspace.settings.auto_refresh_seconds));
-    } else if (savedRefresh) {
-      const val = Number(savedRefresh);
-      if (Number.isFinite(val)) setAutoRefresh(val);
-    }
-  }, [workspace?.settings]);
-
-  // Listen to storage updates to stay in sync with other controls
-  useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === 'dashboard_timezone' && e.newValue) {
-        setTimezone(e.newValue);
-      }
-      if (e.key === 'dashboard_auto_refresh' && e.newValue) {
-        const val = Number(e.newValue);
-        if (Number.isFinite(val)) setAutoRefresh(val);
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
-
   // Profile dropdown state
   const [showProfile, setShowProfile] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const { signOut, openUserProfile } = useClerk();
+
+  // Sign out handler with transition
+  const handleSignOut = () => {
+    setShowProfile(false);
+    setIsSigningOut(true);
+    setTimeout(() => {
+      signOut({ redirectUrl: '/sign-in' });
+    }, 500);
+  };
 
   // Refs for click outside
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -228,51 +206,6 @@ export function Header({ onCommandOpen }: HeaderProps) {
     }
   }, [showSettings, fetchCacheStats]);
 
-  // Load persisted prefs when settings opens
-  useEffect(() => {
-    if (!showSettings || !workspaceId) return;
-    const load = async () => {
-      try {
-        const res = await fetch(`/api/workspaces/settings?workspace_id=${workspaceId}`);
-        if (res.ok) {
-          const data = await res.json();
-          const settings = data.settings || {};
-          if (settings.timezone) {
-            setTimezone(settings.timezone);
-            localStorage.setItem('dashboard_timezone', settings.timezone);
-          }
-          if (typeof settings.auto_refresh_seconds === 'number') {
-            setAutoRefresh(settings.auto_refresh_seconds);
-            localStorage.setItem('dashboard_auto_refresh', String(settings.auto_refresh_seconds));
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load workspace settings', err);
-      }
-    };
-    load();
-  }, [showSettings, workspaceId]);
-
-  const savePrefs = useCallback(async (next: { timezone?: string; auto_refresh_seconds?: number }) => {
-    if (!workspaceId) return;
-    setSavingPref(true);
-    try {
-      const res = await fetch('/api/workspaces/settings', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ workspace_id: workspaceId, ...next }),
-      });
-      if (res.ok) {
-        if (next.timezone) localStorage.setItem('dashboard_timezone', next.timezone);
-        if (next.auto_refresh_seconds !== undefined) localStorage.setItem('dashboard_auto_refresh', String(next.auto_refresh_seconds));
-      }
-    } catch (err) {
-      console.error('Failed to save settings', err);
-    } finally {
-      setSavingPref(false);
-    }
-  }, [workspaceId]);
-
   // Helper to format time ago
   function formatTimeAgo(timestamp: string): string {
     const now = new Date();
@@ -296,360 +229,447 @@ export function Header({ onCommandOpen }: HeaderProps) {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border"
+      className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border shadow-sm hidden md:block"
     >
       <div className="max-w-[1600px] mx-auto px-6">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo & Nav */}
-          <div className="flex items-center gap-8">
-            {/* Logo - Always visible */}
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="relative">
-                <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-gradient-to-br from-accent-primary to-accent-purple shadow-lg shadow-accent-primary/20">
-                  <Zap className="h-5 w-5 text-white" />
+        {/* CSS Grid: conditional layout based on pathname */}
+        <div className={cn(
+          "items-center h-16 gap-2",
+          pathname === '/join' 
+            ? "flex justify-end" // On /join page, align profile to right
+            : "grid grid-cols-[auto_1fr_auto]" // Normal 3-column grid
+        )}>
+          {/* LEFT ZONE: Logo & Workspace - Hidden on /join page */}
+          {pathname !== '/join' && (
+            <div className="flex items-center gap-4 flex-shrink-0">
+              {/* Logo */}
+              <Link href={`/${query}`} className="flex items-center gap-2 group">
+                <div className="relative">
+                  <div className="w-8 h-8 rounded-lg overflow-hidden shadow-lg">
+                    <Image src="/logo.png" alt="Logo" width={32} height={32} className="w-full h-full object-cover" />
+                  </div>
                 </div>
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-accent-primary to-accent-purple opacity-0 blur-xl group-hover:opacity-40 transition-opacity" />
-              </div>
-              <div className="hidden sm:block">
-                <h1 className="text-lg font-bold text-text-primary tracking-tight">
-                  Cold Email
-                </h1>
-                <p className="text-[10px] text-text-secondary -mt-0.5 tracking-wide uppercase">
-                  Analytics
-                </p>
-              </div>
-            </Link>
+                <div className="text-base font-semibold text-text-primary transition-colors duration-200 group-hover:text-slate-400 hidden md:block">
+                  <p className="leading-tight">
+                    Cold Email
+                  </p>
+                  <p className="text-[10px] uppercase tracking-wider font-medium text-slate-400 opacity-70">
+                    Analytics
+                  </p>
+                </div>
+              </Link>
 
-            {/* Dashboard elements - Only visible when signed in */}
+              {/* Dashboard elements - Only visible when signed in */}
+              <SignedIn>
+                {/* Workspace Switcher */}
+                <div className="hidden lg:block border-l border-border pl-6 ml-2" data-tour="workspace">
+                  <WorkspaceSwitcher />
+                </div>
+              </SignedIn>
+            </div>
+          )}
+
+          {/* CENTER ZONE: Navigation Tabs - Centered & Compact - Hidden on /join page */}
+          {pathname !== '/join' && (
             <SignedIn>
-              {/* Workspace Switcher */}
-              <div className="hidden lg:block border-l border-border pl-6 ml-2" data-tour="workspace">
-                <WorkspaceSwitcher />
-              </div>
-
-              {/* Navigation Tabs */}
-              <nav className="hidden md:flex items-center gap-1 bg-surface-elevated rounded-lg p-1">
+              <nav className="hidden md:flex items-center justify-center w-fit mx-auto bg-surface-elevated rounded-lg p-0.5 relative">
                 <Link href={`/${query}`}>
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
                     className={cn(
-                      'px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2',
+                      'relative px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-200 flex items-center gap-1.5',
                       pathname === '/'
-                        ? 'bg-surface text-text-primary shadow-sm'
+                        ? 'text-text-primary'
                         : 'text-text-secondary hover:text-text-primary'
                     )}
                   >
-                    <LayoutDashboard className="h-4 w-4" />
-                    Overview
-                  </button>
+                    {pathname === '/' && (
+                      <motion.div
+                        layoutId="active-tab-bg"
+                        className="absolute inset-0 bg-surface shadow-sm rounded-md"
+                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-1.5">
+                      <LayoutDashboard className="h-4 w-4 hidden xl:block" />
+                      Overview
+                    </span>
+                  </motion.button>
                 </Link>
                 <Link href={`/analytics${query}`}>
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
                     className={cn(
-                      'px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2',
+                      'relative px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-200 flex items-center gap-1.5',
                       pathname === '/analytics'
-                        ? 'bg-surface text-text-primary shadow-sm'
+                        ? 'text-text-primary'
                         : 'text-text-secondary hover:text-text-primary'
                     )}
                   >
-                    <BarChart3 className="h-4 w-4" />
-                    Analytics
-                  </button>
+                    {pathname === '/analytics' && (
+                      <motion.div
+                        layoutId="active-tab-bg"
+                        className="absolute inset-0 bg-surface shadow-sm rounded-md"
+                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-1.5">
+                      <BarChart3 className="h-4 w-4 hidden xl:block" />
+                      Analytics
+                    </span>
+                  </motion.button>
                 </Link>
                 <Link href={`/contacts${query}`}>
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
                     className={cn(
-                      'px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2',
+                      'relative px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-200 flex items-center gap-1.5',
                       pathname === '/contacts'
-                        ? 'bg-surface text-text-primary shadow-sm'
+                        ? 'text-text-primary'
                         : 'text-text-secondary hover:text-text-primary'
                     )}
                   >
-                    <Users className="h-4 w-4" />
-                    Contacts
-                  </button>
+                    {pathname === '/contacts' && (
+                      <motion.div
+                        layoutId="active-tab-bg"
+                        className="absolute inset-0 bg-surface shadow-sm rounded-md"
+                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-1.5">
+                      <Users className="h-4 w-4 hidden xl:block" />
+                      Contacts
+                    </span>
+                  </motion.button>
                 </Link>
                 <Link href={`/sequences${query}`}>
-                  <button
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
                     className={cn(
-                      'px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200 flex items-center gap-2',
+                      'relative px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-200 flex items-center gap-1.5',
                       pathname === '/sequences'
-                        ? 'bg-surface text-text-primary shadow-sm'
+                        ? 'text-text-primary'
                         : 'text-text-secondary hover:text-text-primary'
                     )}
                   >
-                    <Mail className="h-4 w-4" />
-                    Sequences
-                  </button>
+                    {pathname === '/sequences' && (
+                      <motion.div
+                        layoutId="active-tab-bg"
+                        className="absolute inset-0 bg-surface shadow-sm rounded-md"
+                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-1.5">
+                      <Mail className="h-4 w-4 hidden xl:block" />
+                      Sequences
+                    </span>
+                  </motion.button>
                 </Link>
+                <Link href={`/settings${query}`}>
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                    className={cn(
+                      'relative px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-200 flex items-center gap-1.5',
+                      pathname === '/settings'
+                        ? 'text-text-primary'
+                        : 'text-text-secondary hover:text-text-primary'
+                    )}
+                  >
+                    {pathname === '/settings' && (
+                      <motion.div
+                        layoutId="active-tab-bg"
+                        className="absolute inset-0 bg-surface shadow-sm rounded-md"
+                        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-1.5">
+                      <Settings className="h-4 w-4 hidden xl:block" />
+                      Settings
+                    </span>
+                  </motion.button>
+                </Link>
+                {isSuperAdmin && (
+                  <Link href={`/admin${query}`}>
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                      className={cn(
+                        'relative px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-200 flex items-center gap-1.5',
+                        pathname === '/admin'
+                          ? 'text-text-primary'
+                          : 'text-text-secondary hover:text-text-primary'
+                      )}
+                    >
+                      {pathname === '/admin' && (
+                        <motion.div
+                          layoutId="active-tab-bg"
+                          className="absolute inset-0 bg-surface shadow-sm rounded-md"
+                          transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center gap-1.5">
+                        <Shield className="h-4 w-4 hidden xl:block" />
+                        Admin
+                      </span>
+                    </motion.button>
+                  </Link>
+                )}
               </nav>
             </SignedIn>
-          </div>
+          )}
 
-          {/* Right side */}
-          <div className="flex items-center gap-2">
-            {/* Dashboard controls - Only visible when signed in */}
-            <SignedIn>
-              {/* Search / Command */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onCommandOpen}
-                className="hidden sm:flex items-center gap-2 text-text-secondary hover:text-text-primary"
-                data-tour="search"
-              >
-                <Search className="h-4 w-4" />
-                <span className="text-xs">Search...</span>
-                <kbd className="ml-2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-surface-elevated px-1.5 font-mono text-[10px] font-medium text-text-secondary">
-                  <Command className="h-3 w-3" />K
-                </kbd>
-              </Button>
-
-              {/* System Health Status */}
-              {workspaceId && (
-                <div className="hidden xl:block">
-                  <SystemHealthBar workspaceId={workspaceId} />
-                </div>
-              )}
-
-              {/* Team Button */}
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => setShareOpen(true)}
-                className="relative"
-                title="Team & Sharing"
-              >
-                <Users className="h-5 w-5 text-text-secondary hover:text-accent-primary transition-colors" />
-              </Button>
-
-              {/* Theme Toggle */}
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={toggleTheme}
-                className="relative"
-                title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-              >
-                {mounted && (
-                  theme === 'dark' ? (
-                    <Sun className="h-5 w-5 text-text-secondary hover:text-accent-warning transition-colors" />
-                  ) : (
-                    <Moon className="h-5 w-5 text-text-secondary hover:text-accent-primary transition-colors" />
-                  )
-                )}
-              </Button>
-
-              {/* Notifications Dropdown */}
-              <div className="relative" ref={notificationsRef}>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="relative"
-                  onClick={() => {
-                    setShowNotifications(!showNotifications);
-                    setShowSettings(false);
-                  }}
+          {/* RIGHT ZONE: Controls */}
+          <div className="flex items-center gap-2 justify-end">
+            {/* Dashboard controls - Only visible when signed in and NOT on /join page */}
+            {pathname !== '/join' && (
+              <SignedIn>
+                {/* Search / Command - Compact icon button */}
+                 <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onCommandOpen}
+                  className="hidden sm:flex relative"
+                  data-tour="search"
+                  title="Search (⌘K)"
                 >
-                  <Bell className="h-5 w-5 text-text-secondary" />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-accent-danger rounded-full animate-pulse" />
-                  )}
+                  <Search className="h-5 w-5 text-text-secondary hover:text-text-primary transition-colors" />
                 </Button>
 
-                <AnimatePresence>
-                  {showNotifications && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-border bg-surface shadow-2xl overflow-hidden z-50"
-                    >
-                      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface-elevated">
-                        <h3 className="text-sm font-semibold text-text-primary">Notifications</h3>
-                        {unreadCount > 0 && (
-                          <button 
-                            onClick={markAllAsRead}
-                            className="text-xs text-accent-primary hover:text-accent-primary/80 transition-colors"
-                          >
-                            Mark all read
-                          </button>
-                        )}
-                      </div>
-                      
-                      <div className="max-h-80 overflow-y-auto">
-                        {notifications.length === 0 ? (
-                          <div className="px-4 py-8 text-center">
-                            <Bell className="h-8 w-8 mx-auto text-text-secondary mb-2 opacity-50" />
-                            <p className="text-sm text-text-secondary">No notifications</p>
-                          </div>
-                        ) : (
-                          notifications.map((notification) => {
-                            const Icon = getNotificationIcon(notification.type);
-                            const iconColor = getNotificationColor(notification.type);
-                            return (
-                              <div
-                                key={notification.id}
-                                className={cn(
-                                  'px-4 py-3 border-b border-border last:border-0 hover:bg-surface-elevated/50 transition-colors cursor-pointer',
-                                  !notification.read_at && 'bg-accent-primary/5'
-                                )}
-                                onClick={() => {
-                                  if (!notification.read_at) {
-                                    markAsRead([notification.id]);
-                                  }
-                                }}
-                              >
-                                <div className="flex items-start gap-3">
-                                  <div className={cn('mt-0.5', iconColor)}>
-                                    <Icon className="h-4 w-4" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <p className="text-sm font-medium text-text-primary truncate">
-                                        {notification.title}
-                                      </p>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          dismissNotification(notification.id);
-                                        }}
-                                        className="text-text-secondary hover:text-text-primary transition-colors"
-                                      >
-                                        <X className="h-3.5 w-3.5" />
-                                      </button>
-                                    </div>
-                                    <p className="text-xs text-text-secondary mt-0.5 line-clamp-2">
-                                      {notification.message}
-                                    </p>
-                                    <p className="text-[10px] text-text-secondary mt-1">
-                                      {formatTime(notification.created_at)}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                      
-                      <div className="px-4 py-2 border-t border-border bg-surface-elevated">
-                        <button className="w-full text-xs text-center text-accent-primary hover:text-accent-primary/80 transition-colors py-1">
-                          View all notifications
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                {/* System Health Status - Only show on xl+ screens */}
+                {workspaceId && (
+                  <div className="hidden xl:block">
+                    <SystemHealthBar workspaceId={workspaceId} />
+                  </div>
+                )}
 
-              {/* Settings Dropdown */}
-              <div className="relative" ref={settingsRef}>
+                {/* Team/Share Button */}
                 <Button 
                   variant="ghost" 
                   size="icon"
-                  onClick={() => {
-                    setShowSettings(!showSettings);
-                    setShowNotifications(false);
-                  }}
+                  onClick={() => setShareOpen(true)}
+                  className="relative"
+                  title="Invite Team Members"
                 >
-                  <Settings className={cn(
-                    'h-5 w-5 text-text-secondary transition-transform',
-                    showSettings && 'rotate-90'
-                  )} />
+                  <UserPlus className="h-5 w-5 text-text-secondary hover:text-accent-primary transition-colors" />
                 </Button>
 
+                {/* Notifications Dropdown */}
+                <div className="relative" ref={notificationsRef}>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="relative"
+                    onClick={() => {
+                      setShowNotifications(!showNotifications);
+                      setShowSettings(false);
+                    }}
+                  >
+                    <Bell className="h-5 w-5 text-text-secondary" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-accent-danger rounded-full animate-pulse" />
+                    )}
+                  </Button>
+
+                  <AnimatePresence>
+                    {showNotifications && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute right-0 top-full mt-2 w-80 rounded-xl border border-border bg-surface shadow-2xl overflow-hidden z-50"
+                      >
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface-elevated">
+                          <h3 className="text-sm font-semibold text-text-primary">Notifications</h3>
+                          {unreadCount > 0 && (
+                            <button 
+                              onClick={markAllAsRead}
+                              className="text-xs text-accent-primary hover:text-accent-primary/80 transition-colors"
+                            >
+                              Mark all read
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="max-h-80 overflow-y-auto">
+                          {notifications.length === 0 ? (
+                            <div className="px-4 py-8 text-center">
+                              <Bell className="h-8 w-8 mx-auto text-text-secondary mb-2 opacity-50" />
+                              <p className="text-sm text-text-secondary">No notifications</p>
+                            </div>
+                          ) : (
+                            notifications.map((notification) => {
+                              const Icon = getNotificationIcon(notification.type);
+                              const iconColor = getNotificationColor(notification.type);
+                              return (
+                                <div
+                                  key={notification.id}
+                                  className={cn(
+                                    'px-4 py-3 border-b border-border last:border-0 hover:bg-surface-elevated/50 transition-colors cursor-pointer',
+                                    !notification.read_at && 'bg-accent-primary/5'
+                                  )}
+                                  onClick={() => {
+                                    if (!notification.read_at) {
+                                      markAsRead([notification.id]);
+                                    }
+                                  }}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <div className={cn('mt-0.5', iconColor)}>
+                                      <Icon className="h-4 w-4" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <p className="text-sm font-medium text-text-primary truncate">
+                                          {notification.title}
+                                        </p>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            dismissNotification(notification.id);
+                                          }}
+                                          className="text-text-secondary hover:text-text-primary transition-colors"
+                                        >
+                                          <X className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
+                                      <p className="text-xs text-text-secondary mt-0.5 line-clamp-2">
+                                        {notification.message}
+                                      </p>
+                                      <p className="text-[10px] text-text-secondary mt-1">
+                                        {formatTime(notification.created_at)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                        
+                        <div className="px-4 py-2 border-t border-border bg-surface-elevated">
+                          <button className="w-full text-xs text-center text-accent-primary hover:text-accent-primary/80 transition-colors py-1">
+                            View all notifications
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </SignedIn>
+            )}
+
+            {/* User Profile - Clerk Authentication */}
+            <SignedOut>
+              <SignInButton mode="redirect">
+                <Button variant="outline" size="sm" className="gap-2">
+                  <User className="h-4 w-4" />
+                  Sign In
+                </Button>
+              </SignInButton>
+            </SignedOut>
+            <SignedIn>
+              <div className="relative" ref={profileRef}>
+                <button
+                  onClick={() => {
+                    setShowProfile(!showProfile);
+                    setShowNotifications(false);
+                    setShowSettings(false);
+                  }}
+                  className="relative h-9 w-9 rounded-full ring-2 ring-transparent hover:ring-accent-primary/50 transition-all overflow-hidden focus:outline-none focus:ring-accent-primary/50"
+                >
+                  {user?.imageUrl ? (
+                    <img 
+                      src={user.imageUrl} 
+                      alt={user.fullName || 'Profile'} 
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+                      <User className="h-5 w-5 text-white" />
+                    </div>
+                  )}
+                </button>
+
                 <AnimatePresence>
-                  {showSettings && (
+                  {showProfile && (
                     <motion.div
                       initial={{ opacity: 0, y: 8, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.96 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-border bg-surface shadow-2xl overflow-hidden z-50"
+                      className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-border bg-surface shadow-2xl overflow-hidden z-50"
                     >
-                      <div className="px-4 py-3 border-b border-border bg-surface-elevated">
-                        <h3 className="text-sm font-semibold text-text-primary">Settings</h3>
+                      {/* User Info Header */}
+                      <div className="px-4 py-4 border-b border-border bg-surface-elevated">
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 rounded-full overflow-hidden ring-2 ring-accent-primary/30">
+                            {user?.imageUrl ? (
+                              <img 
+                                src={user.imageUrl} 
+                                alt={user.fullName || 'Profile'} 
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-full w-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+                                <User className="h-6 w-6 text-white" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-text-primary truncate">
+                              {user?.fullName || 'User'}
+                            </p>
+                            <p className="text-xs text-text-secondary truncate">
+                              {user?.primaryEmailAddress?.emailAddress || ''}
+                            </p>
+                          </div>
+                          {/* Hide role badge on /join page since user hasn't selected workspace yet */}
+                          {pathname !== '/join' && userRole && <RoleBadge role={userRole} size="sm" />}
+                        </div>
                       </div>
-                      
-                      <div className="p-2">
-                        {/* Theme setting */}
-                        <button
-                          onClick={toggleTheme}
-                          className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-surface-elevated transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Palette className="h-4 w-4 text-text-secondary" />
-                            <span className="text-sm text-text-primary">Theme</span>
-                          </div>
-                          <span className="text-xs text-text-secondary capitalize">{theme}</span>
-                        </button>
 
-                        {/* Timezone setting */}
-                        <div className="w-full px-2 py-2.5 rounded-lg hover:bg-surface-elevated transition-colors">
-                          <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Globe className="h-4 w-4 text-text-secondary" />
-                            <span className="text-sm text-text-primary">Timezone</span>
-                            </div>
-                            <span className="text-xs text-text-secondary">{timezone}</span>
-                          </div>
-                          <div className="mt-2 grid grid-cols-1 gap-1">
-                            {['America/Los_Angeles', 'America/New_York', 'UTC'].map(tz => (
-                              <button
-                                key={tz}
-                                onClick={() => {
-                                  setTimezone(tz);
-                                  savePrefs({ timezone: tz });
-                                }}
-                                className={cn(
-                                  'w-full text-left px-3 py-2 rounded-md text-xs',
-                                  timezone === tz
-                                    ? 'bg-accent-primary/10 text-accent-primary'
-                                    : 'text-text-secondary hover:bg-surface'
-                                )}
-                                disabled={savingPref}
-                              >
-                                {tz}
-                        </button>
-                            ))}
+                      {/* Menu Items */}
+                      <div className="py-2">
+                        {/* Appearance / Theme Toggle */}
+                        <div className="px-3 py-2">
+                          <p className="text-xs font-medium text-text-secondary mb-2 px-1">Appearance</p>
+                          <div className="grid grid-cols-2 bg-surface-elevated rounded-lg p-1 gap-1 border border-border relative">
+                            <motion.div
+                              layoutId="theme-active-bg-profile"
+                              className={cn(
+                                "absolute inset-1 w-[calc(50%-4px)] bg-surface shadow-sm rounded-md",
+                                theme === 'dark' ? "left-[calc(50%+2px)]" : "left-1"
+                              )}
+                              transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                            />
+                            <button
+                              onClick={() => changeTheme('light')}
+                              className={cn(
+                                "relative z-10 flex items-center justify-center gap-2 py-1.5 rounded-md text-sm font-medium transition-colors",
+                                theme === 'light' ? "text-text-primary" : "text-text-secondary hover:text-text-primary"
+                              )}
+                            >
+                              <Sun className="h-4 w-4" />
+                              Light
+                            </button>
+                            <button
+                              onClick={() => changeTheme('dark')}
+                              className={cn(
+                                "relative z-10 flex items-center justify-center gap-2 py-1.5 rounded-md text-sm font-medium transition-colors",
+                                theme === 'dark' ? "text-text-primary" : "text-text-secondary hover:text-text-primary"
+                              )}
+                            >
+                              <Moon className="h-4 w-4" />
+                              Dark
+                            </button>
                           </div>
                         </div>
-
-                        {/* Refresh interval */}
-                        <div className="w-full px-2 py-2.5 rounded-lg hover:bg-surface-elevated transition-colors">
-                          <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Clock className="h-4 w-4 text-text-secondary" />
-                            <span className="text-sm text-text-primary">Auto-refresh</span>
-                            </div>
-                            <span className="text-xs text-text-secondary">
-                              {autoRefresh === 0 ? 'Off' : `${autoRefresh}s`}
-                            </span>
-                          </div>
-                          <div className="mt-2 grid grid-cols-3 gap-2">
-                            {[0, 30, 60].map(v => (
-                              <button
-                                key={v}
-                                onClick={() => {
-                                  setAutoRefresh(v);
-                                  savePrefs({ auto_refresh_seconds: v });
-                                }}
-                                className={cn(
-                                  'px-2 py-2 rounded-md text-xs text-center',
-                                  autoRefresh === v
-                                    ? 'bg-accent-primary/10 text-accent-primary'
-                                    : 'text-text-secondary hover:bg-surface'
-                                )}
-                                disabled={savingPref}
-                              >
-                                {v === 0 ? 'Off' : `${v}s`}
-                        </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="my-2 border-t border-border" />
 
                         {/* Cache Status */}
                         <div className="px-3 py-2">
@@ -680,113 +700,38 @@ export function Header({ onCommandOpen }: HeaderProps) {
                         </div>
 
                         {/* Clear Cache Button */}
-                        <button
-                          onClick={clearCache}
-                          disabled={isClearing}
-                          className={cn(
-                            "w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors",
-                            clearStatus === 'success' 
-                              ? "bg-accent-success/10 text-accent-success"
-                              : clearStatus === 'error'
-                              ? "bg-accent-danger/10 text-accent-danger"
-                              : "hover:bg-surface-elevated"
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
+                        <div className="px-2">
+                          <button
+                            onClick={clearCache}
+                            disabled={isClearing}
+                            className={cn(
+                              "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors",
+                              clearStatus === 'success' 
+                                ? "bg-accent-success/10 text-accent-success"
+                                : clearStatus === 'error'
+                                ? "bg-accent-danger/10 text-accent-danger"
+                                : "hover:bg-surface-elevated"
+                            )}
+                          >
                             {isClearing ? (
-                              <Loader2 className="h-4 w-4 text-text-secondary animate-spin" />
+                              <Loader2 className="h-4 w-4 animate-spin" />
                             ) : clearStatus === 'success' ? (
-                              <Check className="h-4 w-4 text-accent-success" />
+                              <Check className="h-4 w-4" />
                             ) : (
                               <Trash2 className="h-4 w-4 text-text-secondary" />
                             )}
-                            <span className="text-sm text-text-primary">
-                              {isClearing ? 'Clearing...' : clearStatus === 'success' ? 'Cache cleared!' : 'Clear cache & refresh'}
+                            <span className="text-sm">
+                              {isClearing ? 'Clearing...' : clearStatus === 'success' ? 'Cleared!' : 'Clear cache'}
                             </span>
-                          </div>
-                        </button>
-
-                        <p className="px-3 py-1.5 text-[10px] text-text-secondary">
-                          Clears cached data to fetch fresh data
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </SignedIn>
-
-            {/* User Profile - Clerk Authentication */}
-            <SignedOut>
-              <SignInButton mode="redirect">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <User className="h-4 w-4" />
-                  Sign In
-                </Button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <div className="relative" ref={profileRef}>
-                <button
-                  onClick={() => {
-                    setShowProfile(!showProfile);
-                    setShowNotifications(false);
-                    setShowSettings(false);
-                  }}
-                  className="relative h-9 w-9 rounded-full ring-2 ring-transparent hover:ring-accent-primary/50 transition-all overflow-hidden focus:outline-none focus:ring-accent-primary/50"
-                >
-                  {user?.imageUrl ? (
-                    <img 
-                      src={user.imageUrl} 
-                      alt={user.fullName || 'Profile'} 
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-gradient-to-br from-accent-primary to-accent-purple flex items-center justify-center">
-                      <User className="h-5 w-5 text-white" />
-                    </div>
-                  )}
-                </button>
-
-                <AnimatePresence>
-                  {showProfile && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-full mt-2 w-72 rounded-xl border border-border bg-surface shadow-2xl overflow-hidden z-50"
-                    >
-                      {/* User Info Header */}
-                      <div className="px-4 py-4 border-b border-border bg-surface-elevated">
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-full overflow-hidden ring-2 ring-accent-primary/30">
-                            {user?.imageUrl ? (
-                              <img 
-                                src={user.imageUrl} 
-                                alt={user.fullName || 'Profile'} 
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div className="h-full w-full bg-gradient-to-br from-accent-primary to-accent-purple flex items-center justify-center">
-                                <User className="h-6 w-6 text-white" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-text-primary truncate">
-                              {user?.fullName || 'User'}
-                            </p>
-                            <p className="text-xs text-text-secondary truncate">
-                              {user?.primaryEmailAddress?.emailAddress || ''}
-                            </p>
-                          </div>
-                          {userRole && <RoleBadge role={userRole} size="sm" />}
+                          </button>
+                          <p className="px-1 py-1.5 text-[10px] text-text-secondary">
+                            Clears cached data to fetch fresh data
+                          </p>
                         </div>
-                      </div>
 
-                      {/* Menu Items */}
-                      <div className="py-2">
+                        {/* Divider */}
+                        <div className="my-2 border-t border-border" />
+
                         <button
                           onClick={() => {
                             setShowProfile(false);
@@ -798,10 +743,7 @@ export function Header({ onCommandOpen }: HeaderProps) {
                           Manage Account
                         </button>
                         <button
-                          onClick={() => {
-                            setShowProfile(false);
-                            signOut({ redirectUrl: '/sign-in' });
-                          }}
+                          onClick={handleSignOut}
                           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-accent-danger hover:bg-surface-elevated transition-colors"
                         >
                           <LogOut className="h-4 w-4" />
@@ -820,6 +762,9 @@ export function Header({ onCommandOpen }: HeaderProps) {
     
     {/* Share Dialog */}
     <ShareDialog open={shareOpen} onOpenChange={setShareOpen} />
+    
+    {/* Sign Out Transition Overlay */}
+    <SignOutTransition isVisible={isSigningOut} />
     </>
   );
 }

@@ -136,12 +136,12 @@ export function DateRangePicker({
       <Popover.Trigger asChild>
         <Button
           variant="outline"
-          className={cn('justify-start gap-2 min-w-[200px]', className)}
+          className={cn('justify-start gap-1.5 min-w-[200px] h-8 px-2.5 text-xs', className)}
         >
-          <Calendar className="h-4 w-4 text-text-secondary" />
-          <span className="flex-1 text-left text-sm">{displayValue}</span>
+          <Calendar className="h-3.5 w-3.5 text-text-secondary" />
+          <span className="flex-1 text-left">{displayValue}</span>
           <ChevronDown className={cn(
-            'h-4 w-4 text-text-secondary transition-transform',
+            'h-3.5 w-3.5 text-text-secondary transition-transform',
             isOpen && 'rotate-180'
           )} />
         </Button>

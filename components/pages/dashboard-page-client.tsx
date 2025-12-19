@@ -19,15 +19,20 @@ import { DashboardSettingsPanel } from '@/components/dashboard/dashboard-setting
 import { MetricCard } from '@/components/dashboard/metric-card';
 import { TimeSeriesChart } from '@/components/dashboard/time-series-chart';
 import { CampaignTable } from '@/components/dashboard/campaign-table';
+import { CampaignCardStack } from '@/components/dashboard/campaign-card-stack';
 import { DateRangePicker } from '@/components/dashboard/date-range-picker';
+import { DateRangePickerMobile } from '@/components/dashboard/date-range-picker-mobile';
 import { CampaignSelector } from '@/components/dashboard/campaign-selector';
 import { AskAI } from '@/components/dashboard/ask-ai';
 import { StepBreakdown } from '@/components/dashboard/step-breakdown';
 import { DailySendsChart } from '@/components/dashboard/daily-sends-chart';
 import { TimezoneSelector } from '@/components/dashboard/timezone-selector';
 import { CampaignManagementTable } from '@/components/dashboard/campaign-management-table';
+import { CampaignManagementCardStack } from '@/components/dashboard/campaign-management-card-stack';
+import { MobileCollapsibleWidget } from '@/components/dashboard/mobile-collapsible-widget';
 import { NewCampaignModal } from '@/components/campaigns/new-campaign-modal';
 import { Button } from '@/components/ui/button';
+import { BarChart3, TrendingUp } from 'lucide-react';
 
 export default function DashboardPageClient() {
   const searchParams = useSearchParams();
@@ -58,25 +63,16 @@ export default function DashboardPageClient() {
   // Timezone state - default to Los Angeles, persist in localStorage
   const { workspace } = useWorkspace();
   const [timezone, setTimezone] = useState('America/Los_Angeles');
-  const [autoRefresh, setAutoRefresh] = useState<number>(30);
   const workspaceId = workspace?.id;
   
   // Load timezone from localStorage on mount
   useEffect(() => {
     const savedTz = localStorage.getItem('dashboard_timezone');
-    const savedRefresh = localStorage.getItem('dashboard_auto_refresh');
     if (workspace?.settings?.timezone && typeof workspace.settings.timezone === 'string') {
       setTimezone(workspace.settings.timezone);
       localStorage.setItem('dashboard_timezone', workspace.settings.timezone);
     } else if (savedTz) {
       setTimezone(savedTz);
-    }
-    if (typeof workspace?.settings?.auto_refresh_seconds === 'number') {
-      setAutoRefresh(Number(workspace.settings.auto_refresh_seconds));
-      localStorage.setItem('dashboard_auto_refresh', String(workspace.settings.auto_refresh_seconds));
-    } else if (savedRefresh) {
-      const val = Number(savedRefresh);
-      if (Number.isFinite(val)) setAutoRefresh(val);
     }
   }, [workspace?.settings]);
   
@@ -94,10 +90,6 @@ export default function DashboardPageClient() {
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === 'dashboard_auto_refresh' && e.newValue) {
-        const val = Number(e.newValue);
-        if (Number.isFinite(val)) setAutoRefresh(val);
-      }
       if (e.key === 'dashboard_timezone' && e.newValue) {
         setTimezone(e.newValue);
       }
@@ -112,15 +104,6 @@ export default function DashboardPageClient() {
     endDate,
     selectedCampaign,
   });
-
-  useEffect(() => {
-    const intervalSeconds = autoRefresh;
-    if (!intervalSeconds || intervalSeconds <= 0) return;
-    const id = setInterval(() => {
-      dashboardData.refresh();
-    }, intervalSeconds * 1000);
-    return () => clearInterval(id);
-  }, [autoRefresh, dashboardData]);
 
   const {
     summary,
@@ -196,7 +179,7 @@ export default function DashboardPageClient() {
     switch (widgetId) {
       case 'metrics':
         return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4" data-tour="metrics">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4" data-tour="metrics">
             <MetricCard
               title="Total Sends"
               value={summary?.sends ?? 0}
@@ -277,70 +260,107 @@ export default function DashboardPageClient() {
 
       case 'sends-optout':
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-            <TimeSeriesChart
-              title="Email Sends Over Time"
-              subtitle={dateRangeDisplay}
-              data={sendsSeries}
-              color={CHART_COLORS.sends}
-              loading={sendsLoading}
-              type="area"
-              className="h-full"
-            />
-            <TimeSeriesChart
-              title="Opt-Out Rate Over Time"
-              subtitle={dateRangeDisplay}
-              data={optOutRateSeries}
-              color={CHART_COLORS.optOuts}
-              loading={optOutRateLoading}
-              type="line"
-              valueFormatter={(v) => `${v}%`}
-              height={300}
-              className="h-full"
-            />
-          </div>
+          <MobileCollapsibleWidget
+            id="sends-optout"
+            title="Sends & Opt-Out Trends"
+            icon={<BarChart3 className="h-5 w-5" />}
+            defaultCollapsed={true}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch pt-4">
+              <TimeSeriesChart
+                title="Email Sends Over Time"
+                subtitle={dateRangeDisplay}
+                data={sendsSeries}
+                color={CHART_COLORS.sends}
+                loading={sendsLoading}
+                type="area"
+                className="h-full"
+              />
+              <TimeSeriesChart
+                title="Opt-Out Rate Over Time"
+                subtitle={dateRangeDisplay}
+                data={optOutRateSeries}
+                color={CHART_COLORS.optOuts}
+                loading={optOutRateLoading}
+                type="line"
+                valueFormatter={(v) => `${v}%`}
+                height={300}
+                className="h-full"
+              />
+            </div>
+          </MobileCollapsibleWidget>
         );
 
       case 'click-reply':
         return (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-            <TimeSeriesChart
-              title="Click Rate Over Time"
-              subtitle={dateRangeDisplay}
-              data={clickRateSeries}
-              color="#10b981"
-              loading={clickRateLoading}
-              type="line"
-              valueFormatter={(v) => `${v}%`}
-              height={300}
-              className="h-full"
-            />
-            <TimeSeriesChart
-              title="Reply Rate Over Time"
-              subtitle={dateRangeDisplay}
-              data={replyRateSeries}
-              color={CHART_COLORS.replies}
-              loading={replyRateLoading}
-              type="line"
-              valueFormatter={(v) => `${v}%`}
-              height={300}
-              className="h-full"
-            />
-          </div>
+          <MobileCollapsibleWidget
+            id="click-reply"
+            title="Click & Reply Trends"
+            icon={<TrendingUp className="h-5 w-5" />}
+            defaultCollapsed={true}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch pt-4">
+              <TimeSeriesChart
+                title="Click Rate Over Time"
+                subtitle={dateRangeDisplay}
+                data={clickRateSeries}
+                color="#10b981"
+                loading={clickRateLoading}
+                type="line"
+                valueFormatter={(v) => `${v}%`}
+                height={300}
+                className="h-full"
+              />
+              <TimeSeriesChart
+                title="Reply Rate Over Time"
+                subtitle={dateRangeDisplay}
+                data={replyRateSeries}
+                color={CHART_COLORS.replies}
+                loading={replyRateLoading}
+                type="line"
+                valueFormatter={(v) => `${v}%`}
+                height={300}
+                className="h-full"
+              />
+            </div>
+          </MobileCollapsibleWidget>
         );
 
       case 'campaign-stats':
+        // Only render if there's actual campaign data
+        if (!campaignStatsLoading && (!campaignStats || campaignStats.length === 0)) {
+          return null;
+        }
         return (
-          <CampaignTable
-            data={campaignStats}
-            loading={campaignStatsLoading}
-          />
+          <>
+            {/* Desktop: Traditional table */}
+            <div className="hidden md:block">
+              <CampaignTable
+                data={campaignStats}
+                loading={campaignStatsLoading}
+              />
+            </div>
+            {/* Mobile: Card stack */}
+            <div className="block md:hidden">
+              <CampaignCardStack
+                data={campaignStats}
+                loading={campaignStatsLoading}
+              />
+            </div>
+          </>
         );
 
       case 'campaign-management':
         return (
           <div data-tour="campaigns">
-            <CampaignManagementTable workspaceId={workspaceId} />
+            {/* Desktop: Traditional table with context menu */}
+            <div className="hidden md:block">
+              <CampaignManagementTable workspaceId={workspaceId} />
+            </div>
+            {/* Mobile: Card stack with dropdown menu */}
+            <div className="block md:hidden">
+              <CampaignManagementCardStack workspaceId={workspaceId} />
+            </div>
           </div>
         );
 
@@ -361,44 +381,70 @@ export default function DashboardPageClient() {
       >
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Dashboard</h1>
-          <p className="text-text-secondary text-sm mt-1">
+          <p className="text-text-secondary text-sm mt-1 hidden sm:block">
             Track your cold email campaign performance
           </p>
         </div>
         
-        <div className="flex items-center gap-3 flex-wrap">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSettingsPanelOpen(true)}
-            className="gap-2"
-          >
-            <Settings2 className="h-4 w-4" />
-            Customize
-          </Button>
-          <button
-            onClick={() => setShowNewCampaignModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90 transition-colors font-medium"
-            data-tour="new-campaign"
-          >
-            <Plus className="h-4 w-4" />
-            New Campaign
-          </button>
-          <CampaignSelector
-            campaigns={campaigns}
-            selectedCampaign={selectedCampaign}
-            onCampaignChange={handleCampaignChange}
-            loading={campaignsLoading}
-          />
-          <DateRangePicker
-            startDate={startDate}
-            endDate={endDate}
-            onDateChange={handleDateChange}
-          />
-          <TimezoneSelector
-            selectedTimezone={timezone}
-            onTimezoneChange={handleTimezoneChange}
-          />
+        {/* Filters: Stacked on mobile, inline on desktop */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-1.5">
+          {/* Primary Filters Row */}
+          <div className="flex items-center gap-2">
+            {/* Timezone: Hidden on mobile to save space */}
+            <div className="hidden sm:block">
+              <TimezoneSelector
+                selectedTimezone={timezone}
+                onTimezoneChange={handleTimezoneChange}
+              />
+            </div>
+            {/* Desktop: Popover picker */}
+            <div className="hidden md:block">
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onDateChange={handleDateChange}
+              />
+            </div>
+            {/* Mobile: Bottom sheet picker */}
+            <div className="flex-1 md:hidden">
+              <DateRangePickerMobile
+                startDate={startDate}
+                endDate={endDate}
+                onDateChange={handleDateChange}
+              />
+            </div>
+            <div className="flex-1 sm:flex-initial">
+              <CampaignSelector
+                campaigns={campaigns}
+                selectedCampaign={selectedCampaign}
+                onCampaignChange={handleCampaignChange}
+                loading={campaignsLoading}
+              />
+            </div>
+          </div>
+          
+          <div className="h-5 w-px bg-slate-600 dark:bg-slate-400 mx-2 hidden sm:block" />
+
+          {/* Actions - Hidden on mobile, shown in FAB instead */}
+          <div className="hidden sm:flex items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSettingsPanelOpen(true)}
+              className="gap-1.5 h-8 px-3 text-xs"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              Customize
+            </Button>
+            <button
+              onClick={() => setShowNewCampaignModal(true)}
+              className="flex items-center gap-1.5 px-2.5 h-8 bg-accent-primary text-white rounded-md hover:bg-accent-primary/90 transition-colors font-medium text-xs shadow-sm"
+              data-tour="new-campaign"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Campaign
+            </button>
+          </div>
         </div>
       </motion.div>
 
@@ -410,11 +456,17 @@ export default function DashboardPageClient() {
       >
         <SortableContext items={visibleWidgets.map(w => w.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-6">
-            {visibleWidgets.map(widget => (
-              <DashboardWidget key={widget.id} id={widget.id}>
-                {renderWidget(widget.id)}
-              </DashboardWidget>
-            ))}
+            {visibleWidgets.map(widget => {
+              const content = renderWidget(widget.id);
+              // Don't render DashboardWidget wrapper if content is null
+              if (!content) return null;
+              
+              return (
+                <DashboardWidget key={widget.id} id={widget.id}>
+                  {content}
+                </DashboardWidget>
+              );
+            })}
           </div>
         </SortableContext>
       </DndContext>

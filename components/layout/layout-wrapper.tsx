@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { ClientShell } from './client-shell';
+import { UserSyncProvider } from '@/components/providers/user-sync-provider';
 
 interface LayoutWrapperProps {
   children: React.ReactNode;
@@ -33,8 +34,12 @@ export function LayoutWrapper({ children }: LayoutWrapperProps) {
     );
   }
   
-  // All other pages get the full dashboard shell
-  return <ClientShell>{children}</ClientShell>;
+  // All other pages get the full dashboard shell with user sync
+  return (
+    <UserSyncProvider>
+      <ClientShell>{children}</ClientShell>
+    </UserSyncProvider>
+  );
 }
 
 

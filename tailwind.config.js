@@ -6,7 +6,37 @@ module.exports = {
     './components/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
+    // Mobile-first breakpoints with xs for small phones
+    screens: {
+      'xs': '320px',
+      'sm': '640px',
+      'md': '768px',
+      'lg': '1024px',
+      'xl': '1280px',
+      '2xl': '1536px',
+    },
     extend: {
+      // Safe area inset utilities for notched devices
+      spacing: {
+        'safe-top': 'env(safe-area-inset-top)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+        'safe-left': 'env(safe-area-inset-left)',
+        'safe-right': 'env(safe-area-inset-right)',
+      },
+      // Touch-friendly sizing (44px minimum per WCAG)
+      height: {
+        'touch': '44px',
+        'touch-lg': '48px',
+        'touch-xl': '56px',
+      },
+      minHeight: {
+        'touch': '44px',
+        'touch-lg': '48px',
+      },
+      minWidth: {
+        'touch': '44px',
+        'touch-lg': '48px',
+      },
       colors: {
         background: '#0a0a0b',
         surface: '#141416',

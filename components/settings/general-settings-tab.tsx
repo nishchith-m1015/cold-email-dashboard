@@ -23,7 +23,6 @@ export function GeneralSettingsTab() {
 
   const [workspaceName, setWorkspaceName] = useState('');
   const [timezone, setTimezone] = useState('America/Los_Angeles');
-  const [autoRefresh, setAutoRefresh] = useState<number>(30);
   const [dateFormat, setDateFormat] = useState<'US' | 'EU'>('US');
   const [currency, setCurrency] = useState('USD');
   const [isSaving, setIsSaving] = useState(false);
@@ -34,7 +33,6 @@ export function GeneralSettingsTab() {
     if (settings) {
       setWorkspaceName(settings.workspace_name || workspace?.name || '');
       setTimezone(settings.timezone || 'America/Los_Angeles');
-      setAutoRefresh(settings.auto_refresh_seconds ?? 30);
       setDateFormat(settings.date_format || 'US');
       setCurrency(settings.currency || 'USD');
     }
@@ -47,7 +45,6 @@ export function GeneralSettingsTab() {
     const result = await updateSettings({
       workspace_name: workspaceName,
       timezone,
-      auto_refresh_seconds: autoRefresh,
       date_format: dateFormat,
       currency,
     });
@@ -120,22 +117,6 @@ export function GeneralSettingsTab() {
               onTimezoneChange={setTimezone}
               disabled={!canWrite}
             />
-          </FormField>
-
-          <FormField
-            label="Auto-Refresh Interval"
-            description="How often the dashboard refreshes automatically"
-          >
-            <select
-              value={autoRefresh}
-              onChange={(e) => setAutoRefresh(Number(e.target.value))}
-              disabled={!canWrite}
-              className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value={0}>Disabled</option>
-              <option value={30}>Every 30 seconds</option>
-              <option value={60}>Every 60 seconds</option>
-            </select>
           </FormField>
 
           <FormField

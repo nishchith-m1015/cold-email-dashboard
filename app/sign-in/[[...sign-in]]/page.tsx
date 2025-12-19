@@ -1,116 +1,125 @@
 import { SignIn } from '@clerk/nextjs';
-import { BarChart3, Mail, TrendingUp, Zap } from 'lucide-react';
+import { Mail, TrendingUp, Zap, BarChart3 } from 'lucide-react';
+import Image from 'next/image';
 
 export default function SignInPage() {
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#0f0f14] via-[#141420] to-[#0a0a10] p-12 flex-col justify-between relative overflow-hidden">
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, #3b82f6 1px, transparent 1px)`,
-            backgroundSize: '40px 40px'
-          }} />
-        </div>
-        
-        {/* Gradient orbs */}
-        <div className="absolute top-1/4 -left-20 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl" />
+    <div className="min-h-screen flex bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      {/* Left side - Branding (60%) - Desktop only */}
+      <div className="hidden lg:flex lg:w-3/5 p-12 flex-col justify-between relative overflow-hidden border-r border-slate-800">
+        {/* Subtle accent border */}
+        <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-blue-500/20 to-transparent" />
         
         {/* Logo */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-lg overflow-hidden shadow-lg">
+              <Image src="/logo.png" alt="Logo" width={40} height={40} className="w-full h-full object-cover" />
             </div>
-            <span className="text-xl font-bold text-white">Cold Email Analytics</span>
+            <div>
+              <span className="text-xl font-semibold text-white">Cold Email</span>
+              <span className="block text-[10px] uppercase tracking-wider font-medium text-slate-400">Analytics</span>
+            </div>
           </div>
         </div>
         
         {/* Main content */}
         <div className="relative z-10 space-y-8">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-4">
-              Track your outreach.<br />
-              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold text-white mb-3 leading-tight">
+              Track your outreach.
+              <span className="block bg-gradient-to-r from-blue-400 to-blue-300 bg-clip-text text-transparent">
                 Scale your success.
               </span>
             </h1>
-            <p className="text-[#a1a1aa] text-lg max-w-md">
-              Real-time analytics for cold email campaigns. Monitor sends, replies, 
-              and costs all in one beautiful dashboard.
+            <p className="text-slate-400 text-base max-w-md leading-relaxed">
+              Real-time analytics for cold email campaigns. Monitor performance, track costs, and optimize your outreach.
             </p>
           </div>
           
-          {/* Features */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                <Mail className="w-5 h-5 text-blue-400" />
-              </div>
-              <div>
-                <p className="text-white font-medium">Email Tracking</p>
-                <p className="text-[#71717a] text-sm">Opens, clicks, replies</p>
-              </div>
+          {/* Features - Simplified list */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-slate-300">
+              <Mail className="w-5 h-5 text-blue-400 flex-shrink-0" />
+              <span className="text-sm">Track opens, clicks, and replies</span>
             </div>
-            <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-green-400" />
-              </div>
-              <div>
-                <p className="text-white font-medium">Analytics</p>
-                <p className="text-[#71717a] text-sm">Charts & metrics</p>
-              </div>
+            <div className="flex items-center gap-3 text-slate-300">
+              <TrendingUp className="w-5 h-5 text-blue-400 flex-shrink-0" />
+              <span className="text-sm">Advanced analytics and metrics</span>
             </div>
-            <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-purple-400" />
-              </div>
-              <div>
-                <p className="text-white font-medium">Cost Tracking</p>
-                <p className="text-[#71717a] text-sm">LLM usage & costs</p>
-              </div>
+            <div className="flex items-center gap-3 text-slate-300">
+              <Zap className="w-5 h-5 text-blue-400 flex-shrink-0" />
+              <span className="text-sm">Monitor LLM usage and costs</span>
             </div>
-            <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-orange-400" />
-              </div>
-              <div>
-                <p className="text-white font-medium">Multi-Campaign</p>
-                <p className="text-[#71717a] text-sm">Compare performance</p>
-              </div>
+            <div className="flex items-center gap-3 text-slate-300">
+              <BarChart3 className="w-5 h-5 text-blue-400 flex-shrink-0" />
+              <span className="text-sm">Compare campaign performance</span>
             </div>
           </div>
         </div>
         
         {/* Footer */}
         <div className="relative z-10">
-          <p className="text-[#52525b] text-sm">
-            Built for high-performance outreach teams
+          <p className="text-slate-500 text-sm">
+           Built for high-performance outreach teams
           </p>
         </div>
       </div>
       
       {/* Right side - Sign in form */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md space-y-8">
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-white" />
+      <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-8">
+        <div className="w-full max-w-sm">
+          {/* Mobile logo - Centered */}
+          <div className="lg:hidden flex flex-col items-center justify-center mb-8">
+            <div className="w-16 h-16 rounded-xl overflow-hidden shadow-lg mb-4">
+              <Image src="/logo.png" alt="Logo" width={64} height={64} className="w-full h-full object-cover" />
             </div>
-            <span className="text-xl font-bold text-white">Cold Email Analytics</span>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-white">Cold Email</h1>
+              <p className="text-xs uppercase tracking-widest font-medium text-slate-400 mt-0.5">Analytics</p>
+            </div>
           </div>
           
           <SignIn 
             routing="path"
             path="/sign-in"
             signUpUrl="/sign-up"
+            appearance={{
+              elements: {
+                rootBox: 'w-full',
+                card: 'bg-surface-card border border-border shadow-xl rounded-xl',
+                headerTitle: 'text-xl md:text-2xl font-semibold text-text-primary',
+                headerSubtitle: 'text-text-secondary text-sm',
+                socialButtonsBlockButton: 'bg-surface-elevated border border-border hover:bg-surface-elevated/80 text-text-primary transition-colors',
+                socialButtonsBlockButtonText: 'text-text-primary font-medium text-sm',
+                dividerLine: 'bg-border',
+                dividerText: 'text-text-secondary text-xs',
+                formFieldLabel: 'text-text-secondary text-sm font-medium',
+                formFieldInput: 'bg-surface-elevated border-border text-text-primary placeholder:text-text-secondary/60 focus:border-accent-primary focus:ring-accent-primary/20 text-sm',
+                formButtonPrimary: 'bg-accent-primary hover:bg-accent-primary/90 text-white shadow-sm transition-colors',
+                footerActionLink: 'text-accent-primary hover:text-accent-primary/80',
+                identityPreviewText: 'text-text-primary',
+                identityPreviewEditButton: 'text-accent-primary',
+                formFieldInputShowPasswordButton: 'text-text-secondary hover:text-text-primary',
+                footer: 'hidden',
+              },
+              variables: {
+                colorPrimary: '#3b82f6',
+                colorText: 'var(--text-primary)',
+                colorTextSecondary: 'var(--text-secondary)',
+                colorBackground: 'var(--surface-card)',
+                colorInputBackground: 'var(--surface-elevated)',
+                colorInputText: 'var(--text-primary)',
+                borderRadius: '0.5rem',
+              },
+              layout: {
+                socialButtonsPlacement: 'top',
+                socialButtonsVariant: 'blockButton',
+              },
+            }}
           />
         </div>
       </div>
     </div>
   );
 }
-
