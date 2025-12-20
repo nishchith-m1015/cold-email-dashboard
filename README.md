@@ -121,29 +121,29 @@ graph TB
 
     subgraph API["API LAYER - 40+ Routes"]
         subgraph CoreAPI["Core"]
-            API_DASH[/dashboard/aggregate]
-            API_METRICS[/metrics/*<br/>summary, timeseries]
-            API_SEARCH[/search]
+            API_DASH[Dashboard Aggregate]
+            API_METRICS[Metrics API<br/>summary, timeseries]
+            API_SEARCH[Search API]
         end
 
         subgraph DataAPI["Data"]
-            API_CAMPAIGNS[/campaigns/*]
-            API_CONTACTS[/contacts/*]
-            API_SEQ[/sequences/*]
-            API_NOTIF[/notifications]
+            API_CAMPAIGNS[Campaigns API]
+            API_CONTACTS[Contacts API]
+            API_SEQ[Sequences API]
+            API_NOTIF[Notifications API]
         end
 
         subgraph AdminAPI["Admin"]
-            API_ADMIN[/admin/*<br/>audit, freeze, users]
-            API_WS[/workspaces/*<br/>CRUD, invites, access]
-            API_SETTINGS[/workspaces/settings]
+            API_ADMIN[Admin API<br/>audit, freeze, users]
+            API_WS[Workspaces API<br/>CRUD, invites, access]
+            API_SETTINGS[Workspace Settings]
         end
 
         subgraph IntegrationAPI["Integration"]
-            API_EVENTS[/events<br/>Webhook Receiver]
-            API_TRACK[/track/*<br/>open, click]
-            API_ASK[/ask<br/>AI Chat]
-            API_WEBHOOKS[/webhooks/*<br/>clerk, n8n]
+            API_EVENTS[Events Webhook<br/>Receiver]
+            API_TRACK[Tracking API<br/>open, click]
+            API_ASK[Ask AI<br/>Chat]
+            API_WEBHOOKS[Webhooks<br/>clerk, n8n]
         end
     end
 
