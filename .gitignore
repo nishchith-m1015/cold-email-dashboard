@@ -15,8 +15,15 @@ out/
 .env.*.local
 .env.production
 .env.development
+secret/.env.local
+secret/.env.test
 secret/
 backups/
+
+# === n8n Workflows (contains credentials & personal data) ===
+n8n_workflows.json
+cold-email-system/*.json
+!cold-email-system/README.md
 
 # === IDE / Editor ===
 .cursor/

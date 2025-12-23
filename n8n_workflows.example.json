@@ -1,0 +1,62 @@
+{
+  "_comment": "This is an example structure for n8n workflows. Replace with your actual workflows.",
+  "_instructions": [
+    "1. Export your workflows from n8n",
+    "2. Save to n8n_workflows.json (gitignored)",
+    "3. NEVER commit real workflow exports - they may contain credentials and personal data"
+  ],
+  "workflows": [
+    {
+      "name": "Email 1 - Initial Outreach",
+      "description": "Sends first email in sequence",
+      "nodes": ["PostgreSQL Read", "Filter", "Gmail Send", "PostgreSQL Update"],
+      "triggers": ["Schedule Trigger"]
+    },
+    {
+      "name": "Email 2 - Follow Up",
+      "description": "Sends follow-up email to non-responders",
+      "nodes": ["PostgreSQL Read", "Filter", "Gmail Send", "PostgreSQL Update"],
+      "triggers": ["Schedule Trigger"]
+    },
+    {
+      "name": "Email 3 - Final Follow Up", 
+      "description": "Sends final follow-up email",
+      "nodes": ["PostgreSQL Read", "Filter", "Gmail Send", "PostgreSQL Update"],
+      "triggers": ["Schedule Trigger"]
+    },
+    {
+      "name": "Reply Tracker",
+      "description": "Monitors inbox for replies and updates database",
+      "nodes": ["Gmail Trigger", "PostgreSQL Update"],
+      "triggers": ["Gmail Trigger"]
+    },
+    {
+      "name": "Opt-Out Handler",
+      "description": "Processes unsubscribe requests",
+      "nodes": ["Webhook", "PostgreSQL Update"],
+      "triggers": ["Webhook"]
+    },
+    {
+      "name": "Email Tracking Injector",
+      "description": "Adds tracking pixels and link tracking to emails",
+      "nodes": ["Code Node", "HTML Processing"],
+      "triggers": ["Called by Email workflows"]
+    }
+  ],
+  "required_credentials": [
+    {
+      "type": "PostgreSQL",
+      "name": "Supabase Database",
+      "setup": "Create in n8n → Credentials → PostgreSQL with your Supabase connection string"
+    },
+    {
+      "type": "Gmail OAuth2",
+      "name": "Gmail Account",
+      "setup": "Create in n8n → Credentials → Google OAuth2 API"
+    }
+  ],
+  "environment_variables_needed": [
+    "DASH_WEBHOOK_TOKEN - Must match your dashboard webhook token",
+    "Dashboard URL - Your deployed dashboard URL for tracking endpoints"
+  ]
+}
